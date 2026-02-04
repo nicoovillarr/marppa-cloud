@@ -1,0 +1,36 @@
+import { Inject, Injectable } from "@nestjs/common";
+import { EVENT_REPOSITORY_SYMBOL, EventRepository } from "../repositories/event.repository";
+import { EventPropertyEntity } from "../entities/event-property.entity";
+import { EventResourceEntity } from "../entities/event-resource.entity";
+import { EventEntity } from "../entities/event.entity";
+import { EventWithRelations } from "../models/event-with-relations.model";
+
+@Injectable()
+export class EventService {
+  constructor(
+    @Inject(EVENT_REPOSITORY_SYMBOL)
+    private readonly eventRepository: EventRepository
+  ) { }
+
+  async create(event: EventEntity): Promise<EventEntity> {
+    return this.eventRepository.create(event);
+  }
+
+  async addEventResourse(eventId: number, resourceType: string, resourceId: string): Promise<EventResourceEntity> {
+    const eventResource = new EventResourceEntity(eventId, resourceType, resourceId);
+    return this.eventRepository.addEventResourse(eventId, eventResource);
+  }
+
+  async addEventProperty(eventId: number, key: string, value: string): Promise<EventPropertyEntity> {
+    const eventProperty = new EventPropertyEntity(eventId, key, value);
+    return this.eventRepository.addEventProperty(eventId, eventProperty);
+  }
+
+  async findById(id: number): Promise<EventWithRelations | null> {
+    return this.eventRepository.findById(id);
+  }
+
+  async findMany(): Promise<EventEntity[]> {
+    return this.eventRepository.findMany();
+  }
+}

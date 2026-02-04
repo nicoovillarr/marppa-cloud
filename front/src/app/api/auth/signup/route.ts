@@ -53,7 +53,7 @@ export async function POST(request: Request): Promise<Response> {
     },
   });
 
-  const token = await Security.createSession(user.id);
+  const token = await Security.createSession(user.id, request);
 
   cookieStore.set({
     name: "session",

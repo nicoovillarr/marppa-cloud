@@ -15,13 +15,12 @@ export type DashboardResolveResult = {
 export const resolve: Resolver<DashboardResolveResult> = async ({ params, user }) => {
   const zones = await prisma.zone.findMany();
   const workers = await prisma.worker.findMany();
-  const bits = await prisma.bit.findMany();
 
   return {
     user,
     zones,
     workers,
-    bits,
+    bits: [],
   };
 };
 

@@ -41,7 +41,7 @@ export async function POST(request: Request): Promise<Response> {
     return new CustomResponse().status(401).end();
   }
 
-  const token = await Security.createSession(user.id);
+  const token = await Security.createSession(user.id, request);
 
   cookieStore.set({
     name: "session",

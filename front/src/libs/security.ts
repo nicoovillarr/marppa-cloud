@@ -1,16 +1,18 @@
-import { compareSync, genSaltSync, hashSync } from "bcryptjs";
+import { compare, genSaltSync, hashSync } from "bcryptjs";
+import { UAParser } from "ua-parser-js";
 import { JWT } from "@/types/jwt";
 import { SignJWT, jwtVerify } from "jose";
 import prisma from "./prisma";
 import { User } from "@prisma/client";
 
 import "@/libs/extensions/array-extension";
+import { NextRequest } from "next/server";
 
 export default class Security {
   /**
    * Cipher a password.
    * @param password Password to cipher.
-   * @returns
+   * @returns Hashed password.
    */
   static async hashPassword(password: string): Promise<string> {
     const salt = genSaltSync(10);
@@ -21,13 +23,13 @@ export default class Security {
    * Compare a password with a hash.
    * @param password Password a comparar.
    * @param hash Hash to compare.
-   * @returns
+   * @returns True if the password matches the hash, false otherwise.
    */
   static async comparePassword(
     password: string,
     hash: string
   ): Promise<boolean> {
-    return compareSync(password, hash);
+    return compare(password, hash);
   }
 
   /**
@@ -62,10 +64,11 @@ export default class Security {
   /**
    * Create a session for a user.
    * @param userId User identifier.
-   * @returns
+   * @returns JWT token.
    */
   static async createSession(
     userId: string,
+    req?: Request,
     expirationTime: string = "2h"
   ): Promise<string> {
     const jwt = await new SignJWT({ userId })
@@ -73,10 +76,41 @@ export default class Security {
       .setExpirationTime(expirationTime)
       .sign(new TextEncoder().encode(process.env.JWT_SECRET));
 
+    let userAgent = "Unknown";
+    let ipAddress = "Unknown";
+    let platform = "Unknown";
+    let device = "Unknown";
+    let browser = "Unknown";
+
+    if (req) {
+      if (req.headers.get("user-agent")) {
+        const parser = new UAParser(req.headers.get("user-agent")!);
+        const result = parser.getResult();
+
+        userAgent = result.ua;
+        browser = `${result.browser.name} ${result.browser.version}`;
+        platform = `${result.os.name} ${result.os.version}`;
+        device =
+          result.device.vendor && result.device.model
+            ? `${result.device.vendor} ${result.device.model}`
+            : "Desktop";
+      }
+
+      const forwardedFor = req.headers.get("x-forwarded-for");
+      if (forwardedFor) {
+        ipAddress = forwardedFor.split(",")[0];
+      }
+    }
+
     await prisma.session.create({
       data: {
         token: jwt,
         userId,
+        userAgent,
+        ipAddress,
+        platform,
+        device,
+        browser,
       },
     });
 
@@ -99,7 +133,7 @@ export default class Security {
    * Get logged user data.
    * @returns User data or null if not authenticated.
    */
-  static async getUser(): Promise<User> {
+  static async getUser(req?: NextRequest): Promise<User> {
     const jwt = await Security.getJwt();
     if (!jwt) {
       return null;

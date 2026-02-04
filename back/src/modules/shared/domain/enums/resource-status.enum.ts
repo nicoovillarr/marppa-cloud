@@ -1,0 +1,12 @@
+export enum ResourceStatus {
+  INACTIVE,
+  QUEUED,
+  PROVISIONING,
+  UPDATING,
+  ACTIVE,
+  FAILED,
+  TERMINATING,
+  TERMINATED,
+  DELETING,
+  DELETED,
+}
