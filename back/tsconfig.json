@@ -28,6 +28,8 @@
       "@/company/*": ["./src/modules/company/*"],
       "@/event/*": ["./src/modules/event/*"],
       "@/hive/*": ["./src/modules/hive/*"],
+      "@/mesh/*": ["./src/modules/mesh/*"],
+      "@/orbit/*": ["./src/modules/orbit/*"],
     }
   }
 }

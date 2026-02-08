@@ -320,7 +320,7 @@ model Portal {
   createdAt DateTime @default(now())
   createdBy String
   updatedAt DateTime @updatedAt
-  updatedBy String
+  updatedBy String?
 
   zoneId String?
   zone   Zone?   @relation(fields: [zoneId], references: [id])

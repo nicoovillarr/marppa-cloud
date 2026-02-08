@@ -1,0 +1,27 @@
+import { Transponder } from "@prisma/client";
+import { TransponderEntity } from "../../domain/entities/transponder.entity";
+import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
+
+export class TransponderPrismaMapper {
+  public static toEntity(raw: Transponder): TransponderEntity {
+    return new TransponderEntity(
+      raw.path,
+      raw.port,
+      raw.status as unknown as ResourceStatus,
+      raw.createdBy,
+      raw.portalId,
+      {
+        id: raw.id,
+        mode: raw.mode,
+        cacheEnabled: raw.cacheEnabled,
+        allowCookies: raw.allowCookies,
+        gzipEnabled: raw.gzipEnabled,
+        priority: raw.priority,
+        createdAt: raw.createdAt,
+        updatedAt: raw.updatedAt,
+        updatedBy: raw.updatedBy,
+        nodeId: raw.nodeId ?? undefined,
+      }
+    )
+  }
+}
