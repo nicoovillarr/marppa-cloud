@@ -17,12 +17,12 @@ export class EventApiService {
   }
 
   public async findEventById(id: number): Promise<EventWithRelationsModel> {
-    const eventAggregation = await this.eventService.findById(id);
+    const event = await this.eventService.findById(id);
 
-    if (!eventAggregation) {
+    if (!event) {
       throw new NotFoundError();
     }
 
-    return plainToInstance(EventWithRelationsModel, eventAggregation, { excludeExtraneousValues: true });
+    return plainToInstance(EventWithRelationsModel, event, { excludeExtraneousValues: true });
   }
 }

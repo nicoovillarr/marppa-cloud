@@ -1,38 +1,72 @@
-import { WorkerDiskRepository } from "../repositories/worker-disk.repository";
-import { WorkerImageRepository } from "../repositories/worker-image.repository";
-import { WorkerMmiFamilyRepository } from "../repositories/worker-mmi-family.entity";
-import { WorkerMmiRepository } from "../repositories/worker-mmi.repository";
-import { WorkerRepository } from "../repositories/worker.repository";
-import { WorkerStorageTypeRepository } from "../repositories/worker-storage-type.repository";
+import { WORKER_REPOSITORY_SYMBOL, WorkerRepository } from "../repositories/worker.repository";
 import { WorkerEntity } from "../entities/worker.entity";
+import { NotFoundError } from "@/shared/domain/errors/not-found.error";
+import { UpdateWorkerDto } from "@/hive/presentation/dtos/update-worker.dto";
+import { CreateWorkerDto } from "@/hive/presentation/dtos/create-worker.dto";
+import { getCurrentUser } from "@/auth/infrastructure/als/session.context";
+import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
+import { Inject, Injectable } from "@nestjs/common";
 
+@Injectable()
 export class WorkerService {
   constructor(
+    @Inject(WORKER_REPOSITORY_SYMBOL)
     private readonly workerRepository: WorkerRepository,
-    private readonly workerImageRepository: WorkerImageRepository,
-    private readonly workerMmiRepository: WorkerMmiRepository,
-    private readonly workerMmiFamilyRepository: WorkerMmiFamilyRepository,
-    private readonly workerStorageTypeRepository: WorkerStorageTypeRepository,
-    private readonly workerDiskRepository: WorkerDiskRepository,
   ) { }
 
-  async createWorker(worker: WorkerEntity): Promise<WorkerEntity> {
-    return this.workerRepository.create(worker);
-  }
+  async findById(id: string): Promise<WorkerEntity> {
+    const worker = await this.workerRepository.findById(id);
+    if (!worker) {
+      throw new NotFoundError();
+    }
 
-  async updateWorker(worker: WorkerEntity): Promise<WorkerEntity> {
-    return this.workerRepository.update(worker);
-  }
-
-  async deleteWorker(worker: WorkerEntity): Promise<void> {
-    return this.workerRepository.delete(worker);
-  }
-
-  async findById(id: string): Promise<WorkerEntity | null> {
-    return this.workerRepository.findById(id);
+    return worker;
   }
 
   async findByOwnerId(ownerId: string): Promise<WorkerEntity[]> {
     return this.workerRepository.findByOwnerId(ownerId);
+  }
+
+  async createWorker(data: CreateWorkerDto): Promise<WorkerEntity> {
+    const user = getCurrentUser() ?? { userId: 'u-000001', companyId: 'c-000001' };
+
+    const entity = new WorkerEntity(
+      data.name,
+      ResourceStatus.INACTIVE,
+      data.macAddress,
+      user.userId,
+      data.imageId,
+      data.flavorId,
+      data.ownerId ?? user.companyId,
+    );
+
+    return this.save(entity);
+  }
+
+  async updateWorker(id: string, data: UpdateWorkerDto): Promise<WorkerEntity> {
+    const user = getCurrentUser()!;
+
+    const entity = await this.findById(id);
+    const updated = entity.clone({
+      name: data.name,
+      macAddress: data.macAddress,
+      createdBy: user.userId,
+      imageId: data.imageId,
+      flavorId: data.flavorId,
+    });
+
+    return this.save(updated);
+  }
+
+  deleteWorker(id: string): Promise<void> {
+    return this.workerRepository.delete(id);
+  }
+
+  private save(data: WorkerEntity): Promise<WorkerEntity> {
+    if (data.id == null) {
+      return this.workerRepository.create(data);
+    }
+
+    return this.workerRepository.update(data);
   }
 }

@@ -127,8 +127,8 @@ model Worker {
   imageId Int
   image   WorkerImage @relation(fields: [imageId], references: [id])
 
-  instanceTypeId Int
-  instanceType   WorkerMMI @relation(fields: [instanceTypeId], references: [id])
+  flavorId Int
+  flavor   WorkerFlavor @relation(fields: [flavorId], references: [id])
 
   storages WorkerDisk[]
 
@@ -146,37 +146,39 @@ model WorkerImage {
   architecture       String
   virtualizationType String
 
-  workerStorageTypeId String?
+  workerStorageTypeId Int?
   workerStorageType   WorkerStorageType? @relation(fields: [workerStorageTypeId], references: [id])
 
   workers Worker[]
 }
 
-model WorkerMMIFamily {
-  id          String  @id @default(dbgenerated())
-  name        String
+model WorkerFamily {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
   description String?
 
-  mmis WorkerMMI[]
+  flavors WorkerFlavor[]
 }
 
-model WorkerMMI {
+model WorkerFlavor {
   id       Int    @id @default(autoincrement())
-  type     String
+  name     String
   cpuCores Float
   ramMB    Int
   diskGB   Int
 
-  familyId String
-  family   WorkerMMIFamily @relation(fields: [familyId], references: [id])
+  familyId Int
+  family   WorkerFamily @relation(fields: [familyId], references: [id])
 
   workers Worker[]
+
+  @@unique([familyId, name])
 }
 
 model WorkerStorageType {
-  id          String  @id @default(dbgenerated())
-  name        String
-  description String
+  id          Int  @id @default(autoincrement())
+  name        String @unique
+  description String?
   persistent  Boolean
   attachable  Boolean
   shared      Boolean
@@ -186,7 +188,7 @@ model WorkerStorageType {
 }
 
 model WorkerDisk {
-  id         String  @id @default(dbgenerated())
+  id         Int     @id @default(autoincrement())
   name       String
   sizeGiB    Int
   hostPath   String
@@ -196,7 +198,7 @@ model WorkerDisk {
   ownerId String
   owner   Company @relation(fields: [ownerId], references: [id])
 
-  storageTypeId String
+  storageTypeId Int
   storageType   WorkerStorageType @relation(fields: [storageTypeId], references: [id])
 
   workerId String?
@@ -389,8 +391,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  companyId String?
-  company   Company? @relation(fields: [companyId], references: [id])
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
 
   sessions Session[]
 }
@@ -434,20 +436,20 @@ model Event {
 
 model EventResource {
   id           Int    @id @default(autoincrement())
-  eventId      Int
   resourceType String
   resourceId   String
 
-  event Event @relation(fields: [eventId], references: [id])
+  eventId Int
+  event   Event @relation(fields: [eventId], references: [id])
 }
 
 model EventProperty {
   id      Int    @id @default(autoincrement())
-  eventId Int
   key     String
   value   String
 
-  event Event @relation(fields: [eventId], references: [id])
+  eventId Int
+  event   Event @relation(fields: [eventId], references: [id])
 
   @@unique([eventId, key], name: "unique_event_property")
 }

@@ -8,9 +8,9 @@ export class UserPrismaMapper {
       user.email,
       user.password,
       user.name,
+      user.companyId,
       {
         id: user.id,
-        companyId: user.companyId ?? undefined,
         createdAt: user.createdAt ?? undefined,
         updatedAt: user.updatedAt ?? undefined,
       },

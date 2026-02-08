@@ -3,9 +3,9 @@ import { WorkerEntity } from "../entities/worker.entity";
 export const WORKER_REPOSITORY_SYMBOL = Symbol('WORKER_REPOSITORY');
 
 export abstract class WorkerRepository {
-  abstract create(worker: WorkerEntity): Promise<WorkerEntity>;
-  abstract update(worker: WorkerEntity): Promise<WorkerEntity>;
-  abstract delete(worker: WorkerEntity): Promise<void>;
   abstract findById(id: string): Promise<WorkerEntity | null>;
   abstract findByOwnerId(ownerId: string): Promise<WorkerEntity[]>;
+  abstract create(worker: WorkerEntity): Promise<WorkerEntity>;
+  abstract update(worker: WorkerEntity): Promise<WorkerEntity>;
+  abstract delete(id: string): Promise<void>;
 }

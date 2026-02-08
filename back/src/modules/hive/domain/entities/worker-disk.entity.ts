@@ -1,7 +1,8 @@
+import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
 import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
 
 interface WorkerDiskOptionalProps {
-  id?: string;
+  id?: number;
   mountPoint?: string;
   isBoot?: boolean;
   workerId?: string;
@@ -11,33 +12,36 @@ interface WorkerDiskOptionalProps {
 }
 
 export class WorkerDiskEntity extends PatchableEntity {
-  public readonly id: string | null;
-  public readonly mountPoint: string | null;
-  public readonly isBoot: boolean | null;
-  public readonly workerId: string | null;
-  public readonly createdAt: Date | null;
-  public readonly updatedAt: Date | null;
-  public readonly updatedBy: string | null;
+
+  @PrimaryKey()
+  public readonly id?: number;
+
+  public readonly mountPoint?: string;
+  public readonly isBoot: boolean;
+  public readonly workerId?: string;
+  public readonly createdAt?: Date;
+  public readonly updatedAt?: Date;
+  public readonly updatedBy?: string;
 
   constructor(
     public readonly name: string,
     public readonly sizeGiB: number,
     public readonly hostPath: string,
     public readonly ownerId: string,
-    public readonly storageTypeId: string,
+    public readonly storageTypeId: number,
     public readonly createdBy: string,
 
     optionals: WorkerDiskOptionalProps = {},
   ) {
     super();
 
-    this.id = optionals.id ?? null;
-    this.mountPoint = optionals.mountPoint ?? null;
-    this.isBoot = optionals.isBoot ?? null;
-    this.workerId = optionals.workerId ?? null;
-    this.createdAt = optionals.createdAt ?? null;
-    this.updatedAt = optionals.updatedAt ?? null;
-    this.updatedBy = optionals.updatedBy ?? null;
+    this.id = optionals.id;
+    this.mountPoint = optionals.mountPoint;
+    this.isBoot = optionals.isBoot ?? false;
+    this.workerId = optionals.workerId;
+    this.createdAt = optionals.createdAt;
+    this.updatedAt = optionals.updatedAt;
+    this.updatedBy = optionals.updatedBy;
   }
 
   toObject(): Record<string, any> {
@@ -56,5 +60,25 @@ export class WorkerDiskEntity extends PatchableEntity {
       updatedAt: this.updatedAt,
       updatedBy: this.updatedBy,
     };
+  }
+
+  static fromObject(data: Record<string, any>): WorkerDiskEntity {
+    return new WorkerDiskEntity(
+      data.name,
+      data.sizeGiB,
+      data.hostPath,
+      data.ownerId,
+      data.storageTypeId,
+      data.createdBy,
+      {
+        id: data.id,
+        mountPoint: data.mountPoint,
+        isBoot: data.isBoot,
+        workerId: data.workerId,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        updatedBy: data.updatedBy,
+      }
+    );
   }
 }

@@ -1,18 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CompanyPrismaService } from './company-prisma.service';
+import { CompanyPrismaRepository } from './company-prisma.repository';
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { CompanyEntity } from '../../domain/entities/company.entity';
 
-describe('CompanyPrismaService (Integration)', () => {
-  let repository: CompanyPrismaService;
+describe('CompanyPrismaRepository (Integration)', () => {
+  let repository: CompanyPrismaRepository;
   let prisma: PrismaService;
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CompanyPrismaService, PrismaService],
+      providers: [CompanyPrismaRepository, PrismaService],
     }).compile();
 
-    repository = module.get<CompanyPrismaService>(CompanyPrismaService);
+    repository = module.get<CompanyPrismaRepository>(CompanyPrismaRepository);
     prisma = module.get<PrismaService>(PrismaService);
   });
 

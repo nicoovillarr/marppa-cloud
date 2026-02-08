@@ -34,7 +34,8 @@ describe('UserPrismaRepository (Integration)', () => {
       const user = new UserEntity(
         `${testEmailPrefix}-create@example.com`,
         'hashedPassword123',
-        'Integration Test User'
+        'Integration Test User',
+        'c-000001',
       );
 
       const result = await repository.createUser(user);
@@ -93,6 +94,7 @@ describe('UserPrismaRepository (Integration)', () => {
         `${testEmailPrefix}-create@example.com`,
         'newHashedPassword456',
         'Updated Test User',
+        'c-000001',
         {
           id: createdUserId,
         }
@@ -119,7 +121,8 @@ describe('UserPrismaRepository (Integration)', () => {
       const user = new UserEntity(
         `${testEmailPrefix}-cleanup@example.com`,
         'hashedPassword789',
-        'Cleanup Test User'
+        'Cleanup Test User',
+        'c-000001',
       );
 
       const result = await repository.createUser(user);

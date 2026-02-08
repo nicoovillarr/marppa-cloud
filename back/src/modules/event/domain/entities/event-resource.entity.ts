@@ -1,3 +1,4 @@
+import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
 import { BaseEntity } from "@/shared/domain/entities/base.entity";
 
 interface EventResourceOptionalProps {
@@ -5,7 +6,9 @@ interface EventResourceOptionalProps {
 }
 
 export class EventResourceEntity extends BaseEntity {
-  public readonly id: number | null;
+  
+  @PrimaryKey()
+  public readonly id?: number;
 
   constructor(
     public readonly eventId: number,
@@ -15,7 +18,7 @@ export class EventResourceEntity extends BaseEntity {
   ) {
     super();
 
-    this.id = optionals.id ?? null;
+    this.id = optionals.id;
   }
 
   toObject() {

@@ -5,12 +5,12 @@ export class WorkerStorageTypePrismaMapper {
   static toEntity(raw: WorkerStorageType): WorkerStorageTypeEntity {
     return new WorkerStorageTypeEntity(
       raw.name,
-      raw.description,
       raw.persistent,
       raw.attachable,
       raw.shared,
       {
         id: raw.id,
+        description: raw.description ?? undefined,
       }
     )
   }

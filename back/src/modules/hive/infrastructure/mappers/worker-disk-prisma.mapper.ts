@@ -1,5 +1,5 @@
 import { WorkerDiskEntity } from "@/hive/domain/entities/worker-disk.entity";
-import { WorkerDisk } from "@prisma/client";
+import { Prisma, WorkerDisk } from "@prisma/client";
 
 export class WorkerDiskPrismaMapper {
   static toEntity(raw: WorkerDisk): WorkerDiskEntity {

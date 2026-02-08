@@ -4,6 +4,7 @@ export class JwtEntity extends BaseEntity {
   constructor(
     public readonly userId: string,
     public readonly email: string,
+    public readonly companyId: string,
     public readonly type: 'access' | 'refresh',
   ) {
     super();
@@ -13,6 +14,7 @@ export class JwtEntity extends BaseEntity {
     return {
       userId: this.userId,
       email: this.email,
+      companyId: this.companyId,
       type: this.type,
     };
   }

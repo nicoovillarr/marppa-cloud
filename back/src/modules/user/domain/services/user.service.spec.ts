@@ -19,9 +19,9 @@ describe('UserService', () => {
     'test@example.com',
     'hashedPassword123',
     'Test User',
+    'c-000001',
     {
       id: 'u-000001',
-      companyId: 'c-000001',
     }
   );
 
@@ -68,6 +68,7 @@ describe('UserService', () => {
         email: 'test@example.com',
         password: 'password123',
         name: 'Test User',
+        companyId: 'c-000001',
       };
 
       mockUserRepository.emailExists.mockResolvedValue(false);
@@ -87,6 +88,7 @@ describe('UserService', () => {
         email: 'invalid-email',
         password: 'password123',
         name: 'Test User',
+        companyId: 'c-000001',
       };
 
       await expect(service.createUser(dto)).rejects.toThrow(InvalidEmailError);
@@ -97,6 +99,7 @@ describe('UserService', () => {
         email: 'test@example.com',
         password: 'password123',
         name: 'Test User',
+        companyId: 'c-000001',
       };
 
       mockUserRepository.emailExists.mockResolvedValue(true);
@@ -110,7 +113,8 @@ describe('UserService', () => {
       const newUser = new UserEntity(
         'new@example.com',
         'hashedPassword',
-        'New User'
+        'New User',
+        'c-000001',
       );
 
       mockUserRepository.createUser.mockResolvedValue(newUser);
@@ -127,6 +131,7 @@ describe('UserService', () => {
         'existing@example.com',
         'hashedPassword',
         'Existing User',
+        'c-000001',
         { id: 'u-000001' }
       );
 

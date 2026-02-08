@@ -6,26 +6,20 @@ import { AuthRepository } from '@/auth/domain/repositories/auth.repository';
 import { SessionPrismaMapper } from '@/auth/infrastructure/mappers/session-prisma.mapper';
 
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class AuthPrismaRepository implements AuthRepository {
   constructor(private readonly prisma: PrismaService) { }
 
-  async createSession(session: SessionEntity): Promise<SessionEntity> {
-    const createdSession: Session = await this.prisma.session.create({
-      data: {
-        refreshToken: session.refreshToken,
-        userId: session.userId,
-        ipAddress: session.ipAddress,
-        userAgent: session.userAgent,
-        platform: session.platform,
-        device: session.device,
-        browser: session.browser,
-        expiredAt: session.expiredAt,
-      },
+  async createSession(entity: SessionEntity): Promise<SessionEntity> {
+    const sanitized = PrismaMapper.toCreate(entity);
+
+    const session: Session = await this.prisma.session.create({
+      data: sanitized,
     });
 
-    return SessionPrismaMapper.toEntity(createdSession);
+    return SessionPrismaMapper.toEntity(session);
   }
 
   async deleteSessionByRefreshToken(refreshToken: string): Promise<void> {

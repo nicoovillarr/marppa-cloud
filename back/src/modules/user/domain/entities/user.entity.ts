@@ -1,15 +1,17 @@
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
 import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
 
 interface UserOptionalProps {
   id?: string;
-  companyId?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export class UserEntity extends PatchableEntity {
+
+  @PrimaryKey()
   public readonly id?: string;
-  public readonly companyId?: string;
+  
   public readonly createdAt?: Date;
   public readonly updatedAt?: Date;
 
@@ -17,17 +19,17 @@ export class UserEntity extends PatchableEntity {
     public readonly email: string,
     public readonly password: string,
     public readonly name: string,
+    public readonly companyId: string,
     options: UserOptionalProps = {},
   ) {
     super();
 
     this.id = options.id;
-    this.companyId = options.companyId;
     this.createdAt = options.createdAt;
     this.updatedAt = options.updatedAt;
   }
 
-  toObject() {
+  toObject(): Record<string, any> {
     return {
       id: this.id,
       email: this.email,
@@ -39,14 +41,14 @@ export class UserEntity extends PatchableEntity {
     };
   }
 
-  static fromObject(obj: UserEntity) {
+  static fromObject(obj: Record<string, any>): UserEntity {
     return new UserEntity(
       obj.email,
       obj.password,
       obj.name,
+      obj.companyId,
       {
         id: obj.id,
-        companyId: obj.companyId,
         createdAt: obj.createdAt,
         updatedAt: obj.updatedAt,
       },

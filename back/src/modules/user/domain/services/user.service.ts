@@ -24,7 +24,7 @@ export class UserService {
   ) { }
 
   async createUser(data: CreateUserDto) {
-    const { email, password, name } = data;
+    const { email, password, name, companyId } = data;
     const emailLower = email.toLowerCase();
 
     if (!this.isValidEmail(emailLower)) {
@@ -42,6 +42,7 @@ export class UserService {
       emailLower,
       hash,
       name,
+      companyId,
     );
 
     return await this.saveUser(userEntity);

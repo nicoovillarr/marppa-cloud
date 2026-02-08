@@ -1,3 +1,4 @@
+import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
 import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
 import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
 
@@ -9,10 +10,13 @@ interface WorkerOptionalProps {
 }
 
 export class WorkerEntity extends PatchableEntity {
-  public readonly id: string | null;
-  public readonly createdAt: Date | null;
-  public readonly updatedAt: Date | null;
-  public readonly updatedBy: string | null;
+
+  @PrimaryKey()
+  public readonly id?: string;
+  
+  public readonly createdAt?: Date;
+  public readonly updatedAt?: Date;
+  public readonly updatedBy?: string;
 
   constructor(
     public readonly name: string,
@@ -20,16 +24,16 @@ export class WorkerEntity extends PatchableEntity {
     public readonly macAddress: string,
     public readonly createdBy: string,
     public readonly imageId: number,
-    public readonly instanceTypeId: number,
+    public readonly flavorId: number,
     public readonly ownerId: string,
     optionals: WorkerOptionalProps = {}
   ) {
     super();
 
-    this.id = optionals.id ?? null;
-    this.createdAt = optionals.createdAt ?? null;
-    this.updatedAt = optionals.updatedAt ?? null;
-    this.updatedBy = optionals.updatedBy ?? null;
+    this.id = optionals.id;
+    this.createdAt = optionals.createdAt;
+    this.updatedAt = optionals.updatedAt;
+    this.updatedBy = optionals.updatedBy;
   }
 
   toObject(): Record<string, any> {
@@ -44,7 +48,25 @@ export class WorkerEntity extends PatchableEntity {
       updatedBy: this.updatedBy,
       ownerId: this.ownerId,
       imageId: this.imageId,
-      instanceTypeId: this.instanceTypeId,
+      flavorId: this.flavorId,
     };
+  }
+
+  static fromObject(data: Record<string, any>): WorkerEntity {
+    return new WorkerEntity(
+      data.name,
+      data.status,
+      data.macAddress,
+      data.createdBy,
+      data.imageId,
+      data.flavorId,
+      data.ownerId,
+      {
+        id: data.id,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        updatedBy: data.updatedBy,
+      }
+    );
   }
 }

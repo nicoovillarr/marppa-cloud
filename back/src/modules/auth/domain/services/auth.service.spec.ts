@@ -18,9 +18,9 @@ describe('AuthService', () => {
     'test@example.com',
     'hashedPassword123',
     'Test User',
+    'c-000001',
     {
       id: 'u-000001',
-      companyId: 'c-000001',
     }
   );
 
@@ -47,7 +47,8 @@ describe('AuthService', () => {
   const mockJwtEntity: JwtEntity = new JwtEntity(
     'u-000001',
     'test@example.com',
-    'refresh'
+    'c-000001',
+    'refresh',
   );
 
   const mockAuthRepository = {

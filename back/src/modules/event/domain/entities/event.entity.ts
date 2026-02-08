@@ -1,3 +1,4 @@
+import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
 import { BaseEntity } from "@/shared/domain/entities/base.entity";
 
 interface EventOptionalProps {
@@ -13,13 +14,16 @@ interface EventOptionalProps {
 }
 
 export class EventEntity extends BaseEntity {
-  public readonly id: number | null;
-  public readonly notes: string | null;
-  public readonly data: Record<string, unknown> | unknown[] | null;
-  public readonly retries: number;
-  public readonly processedAt: Date | null;
-  public readonly failedAt: Date | null;
-  public readonly isVisible: boolean;
+
+  @PrimaryKey()
+  public readonly id?: number;
+  
+  public readonly notes?: string;
+  public readonly data?: Record<string, unknown> | unknown[];
+  public readonly retries?: number;
+  public readonly processedAt?: Date;
+  public readonly failedAt?: Date;
+  public readonly isVisible?: boolean;
 
   constructor(
     public readonly type: string,
@@ -29,12 +33,12 @@ export class EventEntity extends BaseEntity {
   ) {
     super();
 
-    this.id = optionals.id ?? null;
-    this.notes = optionals.notes ?? null;
-    this.data = optionals.data ?? null;
+    this.id = optionals.id ?? undefined;
+    this.notes = optionals.notes ?? undefined;
+    this.data = optionals.data ?? undefined;
     this.retries = optionals.retries ?? 0;
-    this.processedAt = optionals.processedAt ?? null;
-    this.failedAt = optionals.failedAt ?? null;
+    this.processedAt = optionals.processedAt ?? undefined;
+    this.failedAt = optionals.failedAt ?? undefined;
     this.isVisible = optionals.isVisible ?? true;
   }
 

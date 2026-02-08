@@ -1,3 +1,4 @@
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
 import { BaseEntity } from '@/shared/domain/entities/base.entity';
 
 interface SessionOptionalProps {
@@ -7,7 +8,10 @@ interface SessionOptionalProps {
 }
 
 export class SessionEntity extends BaseEntity {
+
+  // @PrimaryKey()
   public readonly refreshToken?: string;
+  
   public readonly createdAt?: Date;
   public readonly expiredAt?: Date;
 

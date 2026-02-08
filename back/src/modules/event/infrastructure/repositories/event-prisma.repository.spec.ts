@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventPrismaRepository } from './event-prisma.repository';
-import { PrismaClient } from '@prisma/client';
 import { EventEntity } from '../../domain/entities/event.entity';
 import { EventResourceEntity } from '../../domain/entities/event-resource.entity';
 import { EventPropertyEntity } from '../../domain/entities/event-property.entity';
+import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 
 describe('EventPrismaRepository (Integration)', () => {
   const eventTypeKey = 'SYSTEM_TEST_EVENT';
@@ -12,15 +12,15 @@ describe('EventPrismaRepository (Integration)', () => {
   const workerId = 'w-000001';
 
   let repository: EventPrismaRepository;
-  let prisma: PrismaClient;
+  let prisma: PrismaService;
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [EventPrismaRepository, PrismaClient],
+      providers: [EventPrismaRepository, PrismaService],
     }).compile();
 
     repository = module.get<EventPrismaRepository>(EventPrismaRepository);
-    prisma = module.get<PrismaClient>(PrismaClient);
+    prisma = module.get<PrismaService>(PrismaService);
   });
 
   afterAll(async () => {

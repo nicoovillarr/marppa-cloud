@@ -1,6 +1,6 @@
 import { WorkerEntity } from "@/hive/domain/entities/worker.entity";
 import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
-import { Worker } from "@prisma/client";
+import { Prisma, Worker } from "@prisma/client";
 
 export class WorkerPrismaMapper {
   static toEntity(raw: Worker): WorkerEntity {
@@ -10,7 +10,7 @@ export class WorkerPrismaMapper {
       raw.macAddress,
       raw.createdBy,
       raw.imageId,
-      raw.instanceTypeId,
+      raw.flavorId,
       raw.ownerId,
       {
         id: raw.id,
@@ -18,6 +18,6 @@ export class WorkerPrismaMapper {
         updatedAt: raw.updatedAt ?? undefined,
         updatedBy: raw.updatedBy ?? undefined,
       }
-    )
+    );
   }
 }

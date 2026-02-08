@@ -14,7 +14,7 @@ export class JwtTokenGenerator implements TokenGenerator {
   ): Promise<string> {
     const { SignJWT } = await import('jose');
 
-    const jwtEntity = new JwtEntity(user.id!, user.email, type);
+    const jwtEntity = new JwtEntity(user.id!, user.email, user.companyId!, type);
 
     return await new SignJWT({ ...jwtEntity })
       .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
@@ -33,6 +33,7 @@ export class JwtTokenGenerator implements TokenGenerator {
     return new JwtEntity(
       payload.userId as string,
       payload.email as string,
+      payload.companyId as string,
       payload.type as 'access' | 'refresh',
     );
   }

@@ -1,3 +1,4 @@
+import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
 import { BaseEntity } from "@/shared/domain/entities/base.entity";
 
 interface EventPropertyOptionalProps {
@@ -5,7 +6,8 @@ interface EventPropertyOptionalProps {
 }
 
 export class EventPropertyEntity extends BaseEntity {
-  public readonly id: number | null;
+  @PrimaryKey()
+  public readonly id?: number;
 
   constructor(
     public readonly eventId: number,
@@ -15,7 +17,7 @@ export class EventPropertyEntity extends BaseEntity {
   ) {
     super();
 
-    this.id = optionals.id ?? null;
+    this.id = optionals.id;
   }
 
   toObject() {
