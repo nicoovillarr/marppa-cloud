@@ -5,6 +5,7 @@ import { UserModule } from '@/user/user.module';
 import { CompanyModule } from '@/company/company.module';
 import { EventModule } from '@/event/event.module';
 import { HiveModule } from '@/hive/hive.module';
+import { MeshModule } from './modules/mesh/mesh.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { HiveModule } from '@/hive/hive.module';
     CompanyModule,
     EventModule,
     HiveModule,
+    MeshModule,
   ],
 })
 export class AppModule { }

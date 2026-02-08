@@ -3,7 +3,7 @@ import { EVENT_REPOSITORY_SYMBOL, EventRepository } from "../repositories/event.
 import { EventPropertyEntity } from "../entities/event-property.entity";
 import { EventResourceEntity } from "../entities/event-resource.entity";
 import { EventEntity } from "../entities/event.entity";
-import { EventWithRelations } from "../models/event-with-relations.model";
+import { EventWithRelationsModel } from "../models/event-with-relations.model";
 
 @Injectable()
 export class EventService {
@@ -26,7 +26,7 @@ export class EventService {
     return this.eventRepository.addEventProperty(eventId, eventProperty);
   }
 
-  async findById(id: number): Promise<EventWithRelations | null> {
+  async findById(id: number): Promise<EventWithRelationsModel | null> {
     return this.eventRepository.findById(id);
   }
 

@@ -6,6 +6,7 @@ import { CreateWorkerDto } from "@/hive/presentation/dtos/create-worker.dto";
 import { getCurrentUser } from "@/auth/infrastructure/als/session.context";
 import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
 import { Inject, Injectable } from "@nestjs/common";
+import { UnauthorizedError } from "@/shared/domain/errors/unauthorized.error";
 
 @Injectable()
 export class WorkerService {
@@ -28,7 +29,10 @@ export class WorkerService {
   }
 
   async createWorker(data: CreateWorkerDto): Promise<WorkerEntity> {
-    const user = getCurrentUser() ?? { userId: 'u-000001', companyId: 'c-000001' };
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
 
     const entity = new WorkerEntity(
       data.name,
@@ -44,13 +48,16 @@ export class WorkerService {
   }
 
   async updateWorker(id: string, data: UpdateWorkerDto): Promise<WorkerEntity> {
-    const user = getCurrentUser()!;
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
 
     const entity = await this.findById(id);
     const updated = entity.clone({
       name: data.name,
       macAddress: data.macAddress,
-      createdBy: user.userId,
+      updatedBy: user.userId,
       imageId: data.imageId,
       flavorId: data.flavorId,
     });

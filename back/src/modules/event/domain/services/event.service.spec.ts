@@ -4,7 +4,7 @@ import { EventRepository, EVENT_REPOSITORY_SYMBOL } from '../repositories/event.
 import { EventEntity } from '../entities/event.entity';
 import { EventResourceEntity } from '../entities/event-resource.entity';
 import { EventPropertyEntity } from '../entities/event-property.entity';
-import { EventWithRelations } from '../models/event-with-relations.model';
+import { EventWithRelationsModel } from '../models/event-with-relations.model';
 
 describe('EventService', () => {
   let service: EventService;
@@ -35,7 +35,7 @@ describe('EventService', () => {
     'active'
   );
 
-  const mockEventWithRelations: EventWithRelations = new EventWithRelations({
+  const mockEventWithRelations: EventWithRelationsModel = new EventWithRelationsModel({
     event: mockEvent,
     resources: [mockEventResource],
     properties: [mockEventProperty],

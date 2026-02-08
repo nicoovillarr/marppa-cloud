@@ -5,6 +5,7 @@ import { NotFoundError } from "@/shared/domain/errors/not-found.error";
 import { CreateWorkerDiskDto } from "@/hive/presentation/dtos/create-worker-disk.dto";
 import { UpdateWorkerDiskDto } from "@/hive/presentation/dtos/update-worker-disk.dto";
 import { getCurrentUser } from "@/auth/infrastructure/als/session.context";
+import { UnauthorizedError } from "@/shared/domain/errors/unauthorized.error";
 
 @Injectable()
 export class WorkerDiskService {
@@ -27,7 +28,10 @@ export class WorkerDiskService {
   }
 
   async create(data: CreateWorkerDiskDto): Promise<WorkerDiskEntity> {
-    const user = getCurrentUser() ?? { userId: 'u-000001', companyId: 'c-000001' };
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
     
     const workerDisk = new WorkerDiskEntity(
       data.name,

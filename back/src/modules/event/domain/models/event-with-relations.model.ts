@@ -8,7 +8,7 @@ interface EventwithRelationsProps {
   properties?: EventPropertyEntity[];
 }
 
-export class EventWithRelations {
+export class EventWithRelationsModel {
   public readonly event: EventEntity;
   public readonly resources: EventResourceEntity[];
   public readonly properties: EventPropertyEntity[]

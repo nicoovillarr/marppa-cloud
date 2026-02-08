@@ -5,7 +5,7 @@ import { EventPropertyEntity } from "../../domain/entities/event-property.entity
 import { EventResourceEntity } from "../../domain/entities/event-resource.entity";
 import { EventEntity } from "../../domain/entities/event.entity";
 import { EventPrismaMapper } from "../mappers/event-prisma.mapper";
-import { EventWithRelations } from "../../domain/models/event-with-relations.model";
+import { EventWithRelationsModel } from "../../domain/models/event-with-relations.model";
 import { EventResourcePrismaMapper } from "../mappers/event-resource-prisma.mappers";
 import { EventPropertyPrismaMapper } from "../mappers/event-property-prisma.mapper";
 import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
@@ -17,7 +17,7 @@ export class EventPrismaRepository implements EventRepository {
     private readonly prisma: PrismaService
   ) { }
 
-  async findById(id: number): Promise<EventWithRelations | null> {
+  async findById(id: number): Promise<EventWithRelationsModel | null> {
     const eventFound = await this.prisma.event.findUnique({
       where: { id },
       include: {
@@ -30,7 +30,7 @@ export class EventPrismaRepository implements EventRepository {
       return null;
     }
 
-    return new EventWithRelations({
+    return new EventWithRelationsModel({
       event: EventPrismaMapper.toEntity(eventFound),
       resources: eventFound.resources.map(r => EventResourcePrismaMapper.toEntity(r)),
       properties: eventFound.properties.map(p => EventPropertyPrismaMapper.toEntity(p))
