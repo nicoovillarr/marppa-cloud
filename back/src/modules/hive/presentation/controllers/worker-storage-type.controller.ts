@@ -1,8 +1,8 @@
-import { WorkerStorageTypeApiService } from "@/hive/application/services/worker-storage-type-api.service";
+import { WorkerStorageTypeApiService } from "@/hive/application/services/worker-storage-type.api-service";
 import { Get, Param, Post, Body, Put, Delete, Controller } from "@nestjs/common";
 import { CreateWorkerStorageTypeDto } from "../dtos/create-worker-storage-type.dto";
 import { UpdateWorkerStorageTypeDto } from "../dtos/update-worker-storage-type.dto";
-import { WorkerStorageTypeModel } from "@/hive/application/models/worker-storage-type.model";
+import { WorkerStorageTypeModel } from "@/hive/application/models/worker-storage-type.response-model";
 
 @Controller('hive/storage-type')
 export class WorkerStorageTypeController {

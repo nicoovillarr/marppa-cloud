@@ -1,5 +1,5 @@
-import { WorkerModel } from "@/hive/application/models/worker.model";
-import { WorkerApiService } from "@/hive/application/services/worker-api.service";
+import { WorkerModel } from "@/hive/application/models/worker.response-model";
+import { WorkerApiService } from "@/hive/application/services/worker.api-service";
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
 import { CreateWorkerDto } from "../dtos/create-worker.dto";
 import { UpdateWorkerDto } from "../dtos/update-worker.dto";

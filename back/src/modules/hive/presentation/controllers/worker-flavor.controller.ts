@@ -1,5 +1,5 @@
-import { WorkerFlavorModel } from "@/hive/application/models/worker-flavor.model";
-import { WorkerFlavorApiService } from "@/hive/application/services/worker-flavor-api.service";
+import { WorkerFlavorModel } from "@/hive/application/models/worker-flavor.response-model";
+import { WorkerFlavorApiService } from "@/hive/application/services/worker-flavor.api-service";
 import { Get, Param, Post, Body, Put, Delete, Controller } from "@nestjs/common";
 import { CreateWorkerFlavorDto } from "../dtos/create-worker-flavor.dto";
 import { UpdateWorkerFlavorDto } from "../dtos/update-worker-flavor.dto";

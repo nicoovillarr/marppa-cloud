@@ -1,5 +1,5 @@
-import { WorkerDiskModel } from "@/hive/application/models/worker-disk.model";
-import { WorkerDiskApiService } from "@/hive/application/services/worker-disk-api.service";
+import { WorkerDiskModel } from "@/hive/application/models/worker-disk.response-model";
+import { WorkerDiskApiService } from "@/hive/application/services/worker-disk.api-service";
 import { Get, Param, Post, Body, Put, Delete, Controller } from "@nestjs/common";
 import { CreateWorkerDiskDto } from "../dtos/create-worker-disk.dto";
 import { UpdateWorkerDiskDto } from "../dtos/update-worker-disk.dto";

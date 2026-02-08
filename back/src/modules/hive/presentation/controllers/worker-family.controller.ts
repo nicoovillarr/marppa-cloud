@@ -1,5 +1,5 @@
-import { WorkerFamilyModel } from "@/hive/application/models/worker-family.model";
-import { WorkerFamilyApiService } from "@/hive/application/services/worker-family-api.service";
+import { WorkerFamilyModel } from "@/hive/application/models/worker-family.response-model";
+import { WorkerFamilyApiService } from "@/hive/application/services/worker-family.api-service";
 import { Get, Param, Post, Body, Put, Delete, Controller } from "@nestjs/common";
 import { CreateWorkerFamilyDto } from "../dtos/create-worker-family.dto";
 import { UpdateWorkerFamilyDto } from "../dtos/update-worker-family.dto";

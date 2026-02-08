@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from "@nestjs/common";
-import { CompanyApiService } from "../../application/services/company-api.service";
+import { CompanyApiService } from "../../application/services/company.api-service";
 import { CreateCompanyDto } from "../dtos/create-company.dto";
 import { CompanyEntity } from "../../domain/entities/company.entity";
 import { UpdateCompanyDto } from "../dtos/update-company.dto";

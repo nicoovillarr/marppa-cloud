@@ -1,5 +1,5 @@
-import { WorkerImageModel } from "@/hive/application/models/worker-image.model";
-import { WorkerImageApiService } from "@/hive/application/services/worker-image-api.service";
+import { WorkerImageModel } from "@/hive/application/models/worker-image.response-model";
+import { WorkerImageApiService } from "@/hive/application/services/worker-image.api-service";
 import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common";
 import { CreateWorkerImageDto } from "../dtos/create-worker-image.dto";
 import { UpdateWorkerImageDto } from "../dtos/update-worker-image.dto";

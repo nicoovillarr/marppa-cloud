@@ -1,6 +1,6 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 
-import { UserApiService } from '@/user/application/user-api.service';
+import { UserApiService } from '@/user/application/services/user.api-service';
 import { LoggedInGuard } from '@/auth/presentation/guards/logged-in.guard';
 
 @Controller('users')

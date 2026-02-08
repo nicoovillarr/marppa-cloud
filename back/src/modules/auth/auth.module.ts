@@ -2,13 +2,13 @@ import { forwardRef, Module } from '@nestjs/common';
 
 import { SharedModule } from '@/shared/shared.module';
 
-import { AuthApiService } from '@/auth/application/auth-api.service';
+import { AuthApiService } from '@/auth/application/services/auth.api-service';
 import { AUTH_REPOSITORY_SYMBOL } from '@/auth/domain/repositories/auth.repository';
 import { TOKEN_GENERATOR_SYMBOL } from '@/auth/domain/services/token-generator.service';
 import { AuthCache } from '@/auth/infrastructure/cache/auth.cache';
 import { AuthService } from '@/auth/domain/services/auth.service';
 import { JwtTokenGenerator } from '@/auth/infrastructure/services/jwt-token-generator.service';
-import { AuthPrismaRepository } from '@/auth/infrastructure/repositories/auth-prisma.repository';
+import { AuthPrismaRepository } from '@/auth/infrastructure/repositories/auth.prisma-repository';
 import { AuthController } from '@/auth/presentation/controllers/auth.controller';
 import { LoggedInGuard } from '@/auth/presentation/guards/logged-in.guard';
 import { AuthMiddleware } from '@/auth/presentation/middlewares/auth.middleware';

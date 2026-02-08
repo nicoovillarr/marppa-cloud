@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
 
-import { AuthApiService } from '@/auth/application/auth-api.service';
+import { AuthApiService } from '@/auth/application/services/auth.api-service';
 import { LoginUserDto } from '@/auth/presentation/dtos/login-user.dto';
 
 import { CreateUserDto } from '@/auth/presentation/dtos/create-user.dto';
