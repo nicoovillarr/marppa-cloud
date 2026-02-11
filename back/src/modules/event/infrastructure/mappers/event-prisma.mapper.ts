@@ -5,7 +5,7 @@ import { EventTypeKey } from "../../domain/enums/event-type-key.enum";
 export class EventPrismaMapper {
   static toEntity(raw: Event): EventEntity {
     return new EventEntity(
-      raw.type as unknown as EventTypeKey,
+      EventTypeKey[raw.type as string],
       raw.createdBy,
       raw.companyId,
       {

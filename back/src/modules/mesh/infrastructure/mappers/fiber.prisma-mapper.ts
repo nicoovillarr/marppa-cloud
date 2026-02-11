@@ -7,7 +7,7 @@ export class FiberPrismaMapper {
     return new FiberEntity(
       raw.protocol,
       raw.targetPort,
-      raw.status as unknown as ResourceStatus,
+      ResourceStatus[raw.status as string],
       raw.nodeId,
       raw.createdBy,
       {

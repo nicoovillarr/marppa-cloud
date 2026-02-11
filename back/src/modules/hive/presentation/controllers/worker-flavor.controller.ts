@@ -1,4 +1,4 @@
-import { WorkerFlavorModel } from "@/hive/application/models/worker-flavor.response-model";
+import { WorkerFlavorResponseModel } from "@/hive/application/models/worker-flavor.response-model";
 import { WorkerFlavorApiService } from "@/hive/application/services/worker-flavor.api-service";
 import { Get, Param, Post, Body, Put, Delete, Controller } from "@nestjs/common";
 import { CreateWorkerFlavorDto } from "../dtos/create-worker-flavor.dto";
@@ -11,17 +11,17 @@ export class WorkerFlavorController {
   ) { }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<WorkerFlavorModel> {
+  async findById(@Param('id') id: string): Promise<WorkerFlavorResponseModel> {
     return await this.service.findById(Number(id));
   }
 
   @Post()
-  async create(@Body() data: CreateWorkerFlavorDto): Promise<WorkerFlavorModel> {
+  async create(@Body() data: CreateWorkerFlavorDto): Promise<WorkerFlavorResponseModel> {
     return await this.service.create(data);
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: UpdateWorkerFlavorDto): Promise<WorkerFlavorModel> {
+  async update(@Param('id') id: string, @Body() data: UpdateWorkerFlavorDto): Promise<WorkerFlavorResponseModel> {
     return await this.service.update(Number(id), data);
   }
 

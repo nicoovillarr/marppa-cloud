@@ -175,7 +175,11 @@ describe('WorkerService', () => {
       await service.deleteWorker('w-000001');
 
       expect(repository.findById).toHaveBeenCalledWith('w-000001');
-      expect(repository.update).toHaveBeenCalledWith(expect.any(WorkerEntity));
+      expect(repository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: ResourceStatus.DELETING,
+        }) as WorkerEntity,
+      );
     });
   });
 });

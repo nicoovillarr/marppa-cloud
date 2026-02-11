@@ -32,6 +32,7 @@ import { WORKER_STORAGE_TYPE_REPOSITORY_SYMBOL } from "./domain/repositories/wor
 import { SharedModule } from "@/shared/shared.module";
 import { AuthModule } from "@/auth/auth.module";
 import { EventModule } from "@/event/event.module";
+import { MacAddressService } from "./domain/services/mac-address.service";
 
 @Module({
   imports: [SharedModule, AuthModule, EventModule],
@@ -84,7 +85,9 @@ import { EventModule } from "@/event/event.module";
     {
       provide: WORKER_REPOSITORY_SYMBOL,
       useClass: WorkerPrismaRepository
-    }
+    },
+    
+    MacAddressService,
   ],
   exports: []
 })

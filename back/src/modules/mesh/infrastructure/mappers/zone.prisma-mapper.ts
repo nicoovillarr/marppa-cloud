@@ -6,7 +6,7 @@ export class ZonePrismaMapper {
   static toEntity(model: Zone): ZoneEntity {
     return new ZoneEntity(
       model.name,
-      model.status as unknown as ResourceStatus,
+      ResourceStatus[model.status as string],
       model.cidr,
       model.gateway,
       model.createdBy,

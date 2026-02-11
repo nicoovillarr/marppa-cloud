@@ -8,9 +8,9 @@ export class PortalPrismaMapper {
     return new PortalEntity(
       raw.name,
       raw.address,
-      raw.type as unknown as PortalType,
+      PortalType[raw.type as string],
       raw.apiKey,
-      raw.status as unknown as ResourceStatus,
+      ResourceStatus[raw.status as string],
       raw.createdBy,
       raw.ownerId,
       {
@@ -28,7 +28,7 @@ export class PortalPrismaMapper {
         defaultServer: raw.defaultServer,
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
-        updatedBy: raw.updatedBy,
+        updatedBy: raw.updatedBy ?? undefined,
         zoneId: raw.zoneId ?? undefined,
       }
     )

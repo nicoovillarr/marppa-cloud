@@ -7,7 +7,7 @@ export class TransponderPrismaMapper {
     return new TransponderEntity(
       raw.path,
       raw.port,
-      raw.status as unknown as ResourceStatus,
+      ResourceStatus[raw.status as string],
       raw.createdBy,
       raw.portalId,
       {

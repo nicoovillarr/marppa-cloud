@@ -12,7 +12,7 @@ export class NodePrismaRepository implements NodeRepository {
   ) { }
 
   public async findById(zoneId: string, id: string): Promise<NodeEntity | null> {
-    const model = await this.prisma.node.findUnique({
+    const model = await this.prisma.node.findFirst({
       where: { zoneId, id },
     });
 
@@ -42,7 +42,7 @@ export class NodePrismaRepository implements NodeRepository {
   }
 
   public async delete(zoneId: string, id: string): Promise<void> {
-    await this.prisma.node.delete({
+    await this.prisma.node.deleteMany({
       where: { zoneId, id },
     });
   }

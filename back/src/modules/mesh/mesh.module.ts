@@ -17,9 +17,10 @@ import { FIBER_REPOSITORY_SYMBOL } from "./domain/repositories/fiber.repository"
 import { FiberService } from "./domain/services/fiber.service";
 import { FiberPrismaRepository } from "./infrastructure/repositories/fiber.prisma-repository";
 import { NetmaskService } from "./domain/services/netmask.service";
+import { EventModule } from "@/event/event.module";
 
 @Module({
-  imports: [SharedModule, AuthModule],
+  imports: [SharedModule, AuthModule, EventModule],
   controllers: [
     ZoneController,
     NodeController,

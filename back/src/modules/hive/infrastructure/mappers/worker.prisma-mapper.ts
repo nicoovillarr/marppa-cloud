@@ -6,7 +6,7 @@ export class WorkerPrismaMapper {
   static toEntity(raw: Worker): WorkerEntity {
     return new WorkerEntity(
       raw.name,
-      raw.status as unknown as ResourceStatus,
+      ResourceStatus[raw.status as string],
       raw.macAddress,
       raw.createdBy,
       raw.imageId,

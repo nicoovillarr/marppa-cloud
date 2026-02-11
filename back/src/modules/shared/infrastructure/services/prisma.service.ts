@@ -24,7 +24,7 @@ export class PrismaService
           },
         },
       },
-    }) as unknown as PrismaService;
+    }) as PrismaService;
   }
 
   async onModuleInit() {
@@ -43,7 +43,7 @@ export class PrismaService
       Bit: "b-",
       Zone: "z-",
       Node: "n-",
-      Fiber: "f-",
+      // Fiber: "f-",
     };
 
     if (

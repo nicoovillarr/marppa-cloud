@@ -1,4 +1,4 @@
-import { WorkerFamilyModel } from "@/hive/application/models/worker-family.response-model";
+import { WorkerFamilyResponseModel } from "@/hive/application/models/worker-family.response-model";
 import { WorkerFamilyApiService } from "@/hive/application/services/worker-family.api-service";
 import { Get, Param, Post, Body, Put, Delete, Controller } from "@nestjs/common";
 import { CreateWorkerFamilyDto } from "../dtos/create-worker-family.dto";
@@ -11,17 +11,17 @@ export class WorkerFamilyController {
   ) { }
 
   @Get(':id')
-  async findById(@Param('id') id: number): Promise<WorkerFamilyModel> {
+  async findById(@Param('id') id: number): Promise<WorkerFamilyResponseModel> {
     return await this.service.findById(Number(id));
   }
 
   @Post()
-  async create(@Body() data: CreateWorkerFamilyDto): Promise<WorkerFamilyModel> {
+  async create(@Body() data: CreateWorkerFamilyDto): Promise<WorkerFamilyResponseModel> {
     return await this.service.create(data);
   }
 
   @Put(':id')
-  async update(@Param('id') id: number, @Body() data: UpdateWorkerFamilyDto): Promise<WorkerFamilyModel> {
+  async update(@Param('id') id: number, @Body() data: UpdateWorkerFamilyDto): Promise<WorkerFamilyResponseModel> {
     return await this.service.update(Number(id), data);
   }
 

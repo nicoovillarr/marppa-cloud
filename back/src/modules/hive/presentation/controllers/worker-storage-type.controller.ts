@@ -2,7 +2,7 @@ import { WorkerStorageTypeApiService } from "@/hive/application/services/worker-
 import { Get, Param, Post, Body, Put, Delete, Controller } from "@nestjs/common";
 import { CreateWorkerStorageTypeDto } from "../dtos/create-worker-storage-type.dto";
 import { UpdateWorkerStorageTypeDto } from "../dtos/update-worker-storage-type.dto";
-import { WorkerStorageTypeModel } from "@/hive/application/models/worker-storage-type.response-model";
+import { WorkerStorageTypeResponseModel } from "@/hive/application/models/worker-storage-type.response-model";
 
 @Controller('hive/storage-type')
 export class WorkerStorageTypeController {
@@ -11,17 +11,17 @@ export class WorkerStorageTypeController {
   ) { }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<WorkerStorageTypeModel> {
+  async findById(@Param('id') id: string): Promise<WorkerStorageTypeResponseModel> {
     return await this.service.findById(Number(id));
   }
 
   @Post()
-  async create(@Body() data: CreateWorkerStorageTypeDto): Promise<WorkerStorageTypeModel> {
+  async create(@Body() data: CreateWorkerStorageTypeDto): Promise<WorkerStorageTypeResponseModel> {
     return await this.service.create(data);
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: UpdateWorkerStorageTypeDto): Promise<WorkerStorageTypeModel> {
+  async update(@Param('id') id: string, @Body() data: UpdateWorkerStorageTypeDto): Promise<WorkerStorageTypeResponseModel> {
     return await this.service.update(Number(id), data);
   }
 

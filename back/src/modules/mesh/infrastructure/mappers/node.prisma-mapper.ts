@@ -6,7 +6,7 @@ export class NodePrismaMapper {
   static toEntity(raw: Node): NodeEntity {
     return new NodeEntity(
       raw.ipAddress,
-      raw.status as unknown as ResourceStatus,
+      ResourceStatus[raw.status as string],
       raw.zoneId,
       raw.createdBy,
       {

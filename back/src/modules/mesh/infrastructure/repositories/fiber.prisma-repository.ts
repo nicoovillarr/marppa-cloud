@@ -12,7 +12,7 @@ export class FiberPrismaRepository implements FiberRepository {
   ) { }
 
   public async findById(zoneId: string, nodeId: string, fiberId: number): Promise<FiberEntity | null> {
-    const model = await this.prisma.fiber.findUnique({
+    const model = await this.prisma.fiber.findFirst({
       where: {
         id: fiberId,
         node: {
@@ -57,7 +57,7 @@ export class FiberPrismaRepository implements FiberRepository {
   }
 
   public async delete(zoneId: string, nodeId: string, fiberId: number): Promise<void> {
-    await this.prisma.fiber.delete({
+    await this.prisma.fiber.deleteMany({
       where: {
         id: fiberId,
         node: {
