@@ -7,7 +7,7 @@ export const EVENT_REPOSITORY_SYMBOL = Symbol('EVENT_REPOSITORY');
 
 export abstract class EventRepository {
   abstract create(event: EventEntity): Promise<EventEntity>;
-  abstract addEventResourse(eventId: number, eventResource: EventResourceEntity): Promise<EventResourceEntity>;
+  abstract addEventResource(eventId: number, eventResource: EventResourceEntity): Promise<EventResourceEntity>;
   abstract addEventProperty(eventId: number, eventProperty: EventPropertyEntity): Promise<EventPropertyEntity>;
   abstract findById(id: number): Promise<EventWithRelationsModel | null>;
   abstract findMany(): Promise<EventEntity[]>;

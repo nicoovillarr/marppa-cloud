@@ -7,11 +7,14 @@ import { getCurrentUser } from "@/auth/infrastructure/als/session.context";
 import { UnauthorizedError } from "@/shared/domain/errors/unauthorized.error";
 import { CreatePortalDto } from "../../presentation/dtos/create-portal.dto";
 import { UpdatePortalDto } from "../../presentation/dtos/update-portal.dto";
+import { EventService } from "@/event/domain/services/event.service";
+import { EventTypeKey } from "@/event/domain/enums/event-type-key.enum";
 
 @Injectable()
 export class PortalApiService {
   constructor(
     private readonly service: PortalService,
+    private readonly eventService: EventService,
   ) { }
 
   public async findById(id: string): Promise<PortalResponseModel> {
@@ -41,15 +44,35 @@ export class PortalApiService {
 
   public async create(data: CreatePortalDto): Promise<PortalResponseModel> {
     const entity = await this.service.create(data);
+
+    const { id: eventId } = await this.eventService.create({
+      type: EventTypeKey.PORTAL_CREATE,
+    });
+
+    await this.eventService.addEventResource(eventId!, 'Portal', entity.id!.toString());
+
     return plainToInstance(PortalResponseModel, entity, { excludeExtraneousValues: true });
   }
 
   public async update(id: string, data: UpdatePortalDto): Promise<PortalResponseModel> {
     const entity = await this.service.update(id, data);
+
+    const { id: eventId } = await this.eventService.create({
+      type: EventTypeKey.PORTAL_UPDATE,
+    });
+
+    await this.eventService.addEventResource(eventId!, 'Portal', entity.id!.toString());
+
     return plainToInstance(PortalResponseModel, entity, { excludeExtraneousValues: true });
   }
 
   public async delete(id: string): Promise<void> {
-    return this.service.delete(id);
+    await this.service.delete(id);
+
+    const { id: eventId } = await this.eventService.create({
+      type: EventTypeKey.PORTAL_DELETE,
+    });
+
+    await this.eventService.addEventResource(eventId!, 'Portal', id);
   }
 }

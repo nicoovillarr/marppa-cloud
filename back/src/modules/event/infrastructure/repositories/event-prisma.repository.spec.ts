@@ -77,7 +77,7 @@ describe('EventPrismaRepository (Integration)', () => {
         workerId
       );
 
-      const result = await repository.addEventResourse(createdEventId, resource);
+      const result = await repository.addEventResource(createdEventId, resource);
 
       expect(result).toBeDefined();
       expect(result.id).toBeDefined();

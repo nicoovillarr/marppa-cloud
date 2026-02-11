@@ -1,5 +1,6 @@
 import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
 import { BaseEntity } from "@/shared/domain/entities/base.entity";
+import { EventTypeKey } from "../enums/event-type-key.enum";
 
 interface EventOptionalProps {
   id?: number,
@@ -26,7 +27,7 @@ export class EventEntity extends BaseEntity {
   public readonly isVisible?: boolean;
 
   constructor(
-    public readonly type: string,
+    public readonly type: EventTypeKey,
     public readonly createdBy: string,
     public readonly companyId: string,
     optionals: EventOptionalProps = {}

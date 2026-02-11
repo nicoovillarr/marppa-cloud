@@ -41,9 +41,9 @@ export class EventService {
     return this.eventRepository.create(event);
   }
 
-  async addEventResourse(eventId: number, resourceType: string, resourceId: string): Promise<EventResourceEntity> {
+  async addEventResource(eventId: number, resourceType: string, resourceId: string): Promise<EventResourceEntity> {
     const eventResource = new EventResourceEntity(eventId, resourceType, resourceId);
-    return this.eventRepository.addEventResourse(eventId, eventResource);
+    return this.eventRepository.addEventResource(eventId, eventResource);
   }
 
   async addEventProperty(eventId: number, key: string, value: string): Promise<EventPropertyEntity> {

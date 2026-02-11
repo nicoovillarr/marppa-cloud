@@ -4,9 +4,6 @@ export class CreateWorkerDto {
   @IsString()
   name: string;
 
-  @IsString()
-  macAddress: string;
-
   @IsNumber()
   imageId: number;
 

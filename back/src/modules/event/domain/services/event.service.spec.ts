@@ -83,9 +83,9 @@ describe('EventService', () => {
     it('should add a resource to an event', async () => {
       mockEventRepository.addEventResourse.mockResolvedValue(mockEventResource);
 
-      const result = await service.addEventResourse(1, 'WORKER', 'worker-123');
+      const result = await service.addEventResource(1, 'WORKER', 'worker-123');
 
-      expect(repository.addEventResourse).toHaveBeenCalledWith(
+      expect(repository.addEventResource).toHaveBeenCalledWith(
         1,
         expect.any(EventResourceEntity)
       );

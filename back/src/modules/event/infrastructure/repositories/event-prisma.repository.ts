@@ -52,7 +52,7 @@ export class EventPrismaRepository implements EventRepository {
     return EventPrismaMapper.toEntity(event);
   }
 
-  async addEventResourse(eventId: number, eventResource: EventResourceEntity): Promise<EventResourceEntity> {
+  async addEventResource(eventId: number, eventResource: EventResourceEntity): Promise<EventResourceEntity> {
     const eventResourceCreated = await this.prisma.eventResource.create({
       data: {
         eventId,

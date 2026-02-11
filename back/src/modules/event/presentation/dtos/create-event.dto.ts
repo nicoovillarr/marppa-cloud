@@ -1,8 +1,9 @@
-import { IsString, IsOptional, IsObject } from 'class-validator';
+import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
+import { IsEnum, IsString, IsOptional, IsObject } from 'class-validator';
 
 export class CreateEventDto {
-  @IsString()
-  type: string;
+  @IsEnum(EventTypeKey)
+  type: EventTypeKey;
 
   @IsString()
   @IsOptional()

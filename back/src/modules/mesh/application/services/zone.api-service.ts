@@ -5,12 +5,15 @@ import { CreateZoneDto } from "../../presentation/dtos/create-zone.dto";
 import { UpdateZoneDto } from "../../presentation/dtos/update-zone.dto";
 import { ZoneResponseModel } from "../models/zone.response-model";
 import { NetmaskService } from "../../domain/services/netmask.service";
+import { EventService } from "@/event/domain/services/event.service";
+import { EventTypeKey } from "@/event/domain/enums/event-type-key.enum";
 
 @Injectable()
 export class ZoneApiService {
   constructor(
     private readonly zoneService: ZoneService,
     private readonly netmaskService: NetmaskService,
+    private readonly eventService: EventService,
   ) { }
 
   public async findById(id: string): Promise<ZoneResponseModel> {
@@ -30,6 +33,12 @@ export class ZoneApiService {
 
     const entity = await this.zoneService.create(data, cidr, gateway);
 
+    const { id: eventId } = await this.eventService.create({
+      type: EventTypeKey.ZONE_CREATE,
+    });
+
+    await this.eventService.addEventResource(eventId!, 'Zone', entity.id!.toString());
+
     return plainToInstance(ZoneResponseModel, entity, { excludeExtraneousValues: true });
   }
 
@@ -38,7 +47,13 @@ export class ZoneApiService {
     return plainToInstance(ZoneResponseModel, entity, { excludeExtraneousValues: true });
   }
 
-  public delete(id: string): Promise<void> {
-    return this.zoneService.delete(id);
+  public async delete(id: string): Promise<void> {
+    await this.zoneService.delete(id);
+
+    const { id: eventId } = await this.eventService.create({
+      type: EventTypeKey.ZONE_DELETE,
+    });
+
+    await this.eventService.addEventResource(eventId!, 'Zone', id);
   }
 }

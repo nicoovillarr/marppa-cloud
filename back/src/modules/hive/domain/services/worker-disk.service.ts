@@ -32,7 +32,7 @@ export class WorkerDiskService {
     if (!user) {
       throw new UnauthorizedError();
     }
-    
+
     const workerDisk = new WorkerDiskEntity(
       data.name,
       data.sizeGiB,

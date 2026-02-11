@@ -1,15 +1,21 @@
 import { Event } from "@prisma/client";
 import { EventEntity } from "../../domain/entities/event.entity";
+import { EventTypeKey } from "../../domain/enums/event-type-key.enum";
 
 export class EventPrismaMapper {
   static toEntity(raw: Event): EventEntity {
-    return new EventEntity(raw.type, raw.createdBy, raw.companyId, {
-      id: raw.id,
-      notes: raw.notes ?? undefined,
-      data: raw.data as Record<string, unknown> | unknown[] | null ?? undefined,
-      retries: raw.retries ?? undefined,
-      processedAt: raw.processedAt ?? undefined,
-      failedAt: raw.failedAt ?? undefined,
-    });
+    return new EventEntity(
+      raw.type as unknown as EventTypeKey,
+      raw.createdBy,
+      raw.companyId,
+      {
+        id: raw.id,
+        notes: raw.notes ?? undefined,
+        data: raw.data as Record<string, unknown> | unknown[] | null ?? undefined,
+        retries: raw.retries ?? undefined,
+        processedAt: raw.processedAt ?? undefined,
+        failedAt: raw.failedAt ?? undefined,
+      }
+    );
   }
 }

@@ -7,12 +7,16 @@ import { getCurrentUser } from "@/auth/infrastructure/als/session.context";
 import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
 import { Inject, Injectable } from "@nestjs/common";
 import { UnauthorizedError } from "@/shared/domain/errors/unauthorized.error";
+import { MacAddressService } from "./mac-address.service";
+import { WorkerInvalidStatusError } from "../errors/worker-invalid-status.error";
 
 @Injectable()
 export class WorkerService {
   constructor(
     @Inject(WORKER_REPOSITORY_SYMBOL)
     private readonly workerRepository: WorkerRepository,
+
+    private readonly macAddressService: MacAddressService,
   ) { }
 
   async findById(id: string): Promise<WorkerEntity> {
@@ -34,10 +38,12 @@ export class WorkerService {
       throw new UnauthorizedError();
     }
 
+    const macAddress = this.macAddressService.generate();
+
     const entity = new WorkerEntity(
       data.name,
-      ResourceStatus.INACTIVE,
-      data.macAddress,
+      ResourceStatus.PROVISIONING,
+      macAddress,
       user.userId,
       data.imageId,
       data.flavorId,
@@ -45,6 +51,46 @@ export class WorkerService {
     );
 
     return this.save(entity);
+  }
+
+  async startWorker(id: string): Promise<void> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const entity = await this.findById(id);
+
+    if (entity.status !== ResourceStatus.INACTIVE) {
+      throw new WorkerInvalidStatusError(ResourceStatus.INACTIVE, entity.status);
+    }
+
+    const updated = entity.clone({
+      status: ResourceStatus.QUEUED,
+      updatedBy: user.userId,
+    });
+
+    await this.save(updated);
+  }
+
+  async stopWorker(id: string): Promise<void> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const entity = await this.findById(id);
+
+    if (entity.status !== ResourceStatus.ACTIVE) {
+      throw new WorkerInvalidStatusError(ResourceStatus.ACTIVE, entity.status);
+    }
+
+    const updated = entity.clone({
+      status: ResourceStatus.STOPPING,
+      updatedBy: user.userId,
+    });
+
+    await this.save(updated);
   }
 
   async updateWorker(id: string, data: UpdateWorkerDto): Promise<WorkerEntity> {
@@ -56,17 +102,30 @@ export class WorkerService {
     const entity = await this.findById(id);
     const updated = entity.clone({
       name: data.name,
-      macAddress: data.macAddress,
       updatedBy: user.userId,
-      imageId: data.imageId,
-      flavorId: data.flavorId,
     });
 
     return this.save(updated);
   }
 
-  deleteWorker(id: string): Promise<void> {
-    return this.workerRepository.delete(id);
+  async deleteWorker(id: string): Promise<void> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const entity = await this.findById(id);
+
+    if (entity.status !== ResourceStatus.INACTIVE) {
+      throw new WorkerInvalidStatusError(ResourceStatus.INACTIVE, entity.status);
+    }
+
+    const updated = entity.clone({
+      status: ResourceStatus.DELETING,
+      updatedBy: user.userId,
+    });
+
+    await this.save(updated);
   }
 
   private save(data: WorkerEntity): Promise<WorkerEntity> {
