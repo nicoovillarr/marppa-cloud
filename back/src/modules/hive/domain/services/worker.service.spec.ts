@@ -7,6 +7,7 @@ import { CreateWorkerDto } from '@/hive/presentation/dtos/create-worker.dto';
 import { UpdateWorkerDto } from '@/hive/presentation/dtos/update-worker.dto';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import * as sessionContext from '@/auth/infrastructure/als/session.context';
+import { MacAddressService } from './mac-address.service';
 
 describe('WorkerService', () => {
   let service: WorkerService;
@@ -41,6 +42,8 @@ describe('WorkerService', () => {
           provide: WORKER_REPOSITORY_SYMBOL,
           useValue: mockWorkerRepository,
         },
+
+        MacAddressService,
       ],
     }).compile();
 
@@ -93,7 +96,6 @@ describe('WorkerService', () => {
     it('should create a worker successfully', async () => {
       const dto: CreateWorkerDto = {
         name: 'New Worker',
-        macAddress: 'AA:BB:CC:DD:EE:FF',
         imageId: 1,
         flavorId: 1,
       };
@@ -114,7 +116,6 @@ describe('WorkerService', () => {
     it('should use provided ownerId if specified', async () => {
       const dto: CreateWorkerDto = {
         name: 'New Worker',
-        macAddress: 'AA:BB:CC:DD:EE:FF',
         imageId: 1,
         flavorId: 1,
         ownerId: 'c-custom',
@@ -137,10 +138,7 @@ describe('WorkerService', () => {
   describe('updateWorker', () => {
     it('should update a worker successfully', async () => {
       const dto: UpdateWorkerDto = {
-        name: 'Updated Worker',
-        macAddress: 'FF:EE:DD:CC:BB:AA',
-        imageId: 2,
-        flavorId: 2,
+        name: 'Updated Worker'
       };
 
       jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
@@ -161,9 +159,6 @@ describe('WorkerService', () => {
     it('should throw NotFoundError if worker not found', async () => {
       const dto: UpdateWorkerDto = {
         name: 'Updated Worker',
-        macAddress: 'FF:EE:DD:CC:BB:AA',
-        imageId: 2,
-        flavorId: 2,
       };
 
       mockWorkerRepository.findById.mockResolvedValue(null);
@@ -174,11 +169,13 @@ describe('WorkerService', () => {
 
   describe('deleteWorker', () => {
     it('should delete a worker', async () => {
-      mockWorkerRepository.delete.mockResolvedValue(undefined);
+      mockWorkerRepository.findById.mockResolvedValue(mockWorker);
+      mockWorkerRepository.update.mockResolvedValue(mockWorker);
 
       await service.deleteWorker('w-000001');
 
-      expect(repository.delete).toHaveBeenCalledWith('w-000001');
+      expect(repository.findById).toHaveBeenCalledWith('w-000001');
+      expect(repository.update).toHaveBeenCalledWith(expect.any(WorkerEntity));
     });
   });
 });

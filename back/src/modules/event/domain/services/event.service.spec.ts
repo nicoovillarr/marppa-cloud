@@ -5,13 +5,15 @@ import { EventEntity } from '../entities/event.entity';
 import { EventResourceEntity } from '../entities/event-resource.entity';
 import { EventPropertyEntity } from '../entities/event-property.entity';
 import { EventWithRelationsModel } from '../models/event-with-relations.model';
+import { EventTypeKey } from '../enums/event-type-key.enum';
+import { CreateEventDto } from '@/event/presentation/dtos/create-event.dto';
 
 describe('EventService', () => {
   let service: EventService;
   let repository: EventRepository;
 
   const mockEvent: EventEntity = new EventEntity(
-    'SYSTEM_TEST_EVENT',
+    EventTypeKey.SYSTEM_TEST_EVENT,
     'u-000001',
     'c-000001',
     {
@@ -19,7 +21,7 @@ describe('EventService', () => {
       notes: 'Test event',
       data: { key: 'value' },
       retries: 0,
-      isVisible: false,
+      isVisible: true,
     }
   );
 
@@ -43,7 +45,7 @@ describe('EventService', () => {
 
   const mockEventRepository = {
     create: jest.fn(),
-    addEventResourse: jest.fn(),
+    addEventResource: jest.fn(),
     addEventProperty: jest.fn(),
     findById: jest.fn(),
     findMany: jest.fn(),
@@ -72,16 +74,24 @@ describe('EventService', () => {
     it('should create an event', async () => {
       mockEventRepository.create.mockResolvedValue(mockEvent);
 
-      const result = await service.create(mockEvent);
+      const dto: CreateEventDto = {
+        type: EventTypeKey.SYSTEM_TEST_EVENT,
+        createdBy: 'u-000001',
+        companyId: 'c-000001',
+        notes: 'Test event',
+        data: { key: 'value' }
+      }
 
-      expect(repository.create).toHaveBeenCalledWith(mockEvent);
+      const result = await service.create(dto);
+
+      expect(repository.create).toHaveBeenCalledWith(expect.any(EventEntity));
       expect(result).toEqual(mockEvent);
     });
   });
 
-  describe('addEventResourse', () => {
+  describe('addEventResource', () => {
     it('should add a resource to an event', async () => {
-      mockEventRepository.addEventResourse.mockResolvedValue(mockEventResource);
+      mockEventRepository.addEventResource.mockResolvedValue(mockEventResource);
 
       const result = await service.addEventResource(1, 'WORKER', 'worker-123');
 

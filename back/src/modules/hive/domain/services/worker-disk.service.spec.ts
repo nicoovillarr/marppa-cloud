@@ -18,7 +18,7 @@ describe('WorkerDiskService', () => {
     1,
     'u-000001',
     {
-      id: 'wd-000001',
+      id: 1,
       mountPoint: '/mnt/data',
       isBoot: false,
       workerId: 'w-000001',
@@ -56,16 +56,16 @@ describe('WorkerDiskService', () => {
     it('should return a worker disk by id', async () => {
       mockWorkerDiskRepository.findById.mockResolvedValue(mockWorkerDisk);
 
-      const result = await service.findById('wd-000001');
+      const result = await service.findById(1);
 
-      expect(repository.findById).toHaveBeenCalledWith('wd-000001');
+      expect(repository.findById).toHaveBeenCalledWith(1);
       expect(result).toEqual(mockWorkerDisk);
     });
 
     it('should throw NotFoundError if worker disk not found', async () => {
       mockWorkerDiskRepository.findById.mockResolvedValue(null);
 
-      await expect(service.findById('wd-999999')).rejects.toThrow(NotFoundError);
+      await expect(service.findById(999999)).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -147,9 +147,9 @@ describe('WorkerDiskService', () => {
       mockWorkerDiskRepository.findById.mockResolvedValue(mockWorkerDisk);
       mockWorkerDiskRepository.update.mockResolvedValue(mockWorkerDisk);
 
-      const result = await service.update('wd-000001', dto);
+      const result = await service.update(1, dto);
 
-      expect(repository.findById).toHaveBeenCalledWith('wd-000001');
+      expect(repository.findById).toHaveBeenCalledWith(1);
       expect(repository.update).toHaveBeenCalledWith(expect.any(WorkerDiskEntity));
       expect(result).toEqual(mockWorkerDisk);
     });
@@ -168,7 +168,7 @@ describe('WorkerDiskService', () => {
 
       mockWorkerDiskRepository.findById.mockResolvedValue(null);
 
-      await expect(service.update('wd-999999', dto)).rejects.toThrow(NotFoundError);
+      await expect(service.update(999999, dto)).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -176,9 +176,9 @@ describe('WorkerDiskService', () => {
     it('should delete a worker disk', async () => {
       mockWorkerDiskRepository.delete.mockResolvedValue(undefined);
 
-      await service.delete('wd-000001');
+      await service.delete(1);
 
-      expect(repository.delete).toHaveBeenCalledWith('wd-000001');
+      expect(repository.delete).toHaveBeenCalledWith(1);
     });
   });
 });
