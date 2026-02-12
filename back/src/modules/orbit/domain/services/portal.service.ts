@@ -23,7 +23,7 @@ export class PortalService {
     return this.portalRepository.findByOwnerId(ownerId);
   }
 
-  public async create(data: CreatePortalDto): Promise<PortalEntity> {
+  public create(data: CreatePortalDto): Promise<PortalEntity> {
     const user = getCurrentUser();
     if (user == null) {
       throw new UnauthorizedError();
@@ -51,7 +51,7 @@ export class PortalService {
       }
     );
 
-    return await this.save(portal);
+    return this.save(portal);
   }
 
   public async update(id: string, data: UpdatePortalDto): Promise<PortalEntity> {
