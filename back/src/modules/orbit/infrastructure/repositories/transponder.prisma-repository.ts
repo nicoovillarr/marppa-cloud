@@ -3,7 +3,9 @@ import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
 import { TransponderPrismaMapper } from "../mappers/transponder.prisma-mapper";
 import { TransponderEntity } from "../../domain/entities/transponder.entity";
 import { PrismaMapper } from "@/shared/infrastructure/mappers/prisma.mapper";
+import { Injectable } from "@nestjs/common";
 
+@Injectable()
 export class TransponderPrismaRepository implements TransponderRepository {
   constructor(
     private readonly prisma: PrismaService,

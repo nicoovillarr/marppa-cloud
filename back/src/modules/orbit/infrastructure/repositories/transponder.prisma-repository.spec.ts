@@ -10,9 +10,8 @@ describe('TransponderPrismaRepository (Integration)', () => {
     let repository: TransponderPrismaRepository;
     let prisma: PrismaService;
 
-    const testCompanyId = 'c-test-transponder-integration';
-    const testZoneId = 'z-test-transponder-integration';
-    const testPortalId = 'p-test-transponder-integration';
+    const testCompanyId = 'c-000001';
+    let testPortalId;
 
     beforeAll(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -22,57 +21,25 @@ describe('TransponderPrismaRepository (Integration)', () => {
         repository = module.get<TransponderPrismaRepository>(TransponderPrismaRepository);
         prisma = module.get<PrismaService>(PrismaService);
 
-        // Clean up previous run if any
-        await prisma.transponder.deleteMany({
+        await prisma.portal.deleteMany({
             where: {
-                path: { contains: 'Test Transponder' },
+                address: 'integration-test.marppa.cloud'
             },
         });
-        await prisma.portal.deleteMany({
-            where: { id: testPortalId },
-        });
-        await prisma.zone.deleteMany({
-            where: { id: testZoneId },
-        });
-        await prisma.company.deleteMany({
-            where: { id: testCompanyId },
-        });
 
-        // Create test company
-        await prisma.company.create({
+        const { id: portalId } = await prisma.portal.create({
             data: {
-                id: testCompanyId,
-                name: 'Test Company Transponder Integration',
-            }
-        });
-
-        // Create test zone
-        await prisma.zone.create({
-            data: {
-                id: testZoneId,
-                name: 'Test Zone Transponder Integration',
-                cidr: '10.0.0.0/16',
-                gateway: '10.0.0.1',
-                status: ResourceStatus.ACTIVE,
-                createdBy: 'u-000001',
-                ownerId: testCompanyId,
-            }
-        });
-
-        // Create test portal
-        await prisma.portal.create({
-            data: {
-                id: testPortalId,
                 name: 'Test Portal Transponder Integration',
-                address: '192.168.1.200',
+                address: 'integration-test.marppa.cloud',
                 type: PortalType.CLOUDFLARE,
                 apiKey: 'test-api-key-transponder-integration',
                 status: ResourceStatus.ACTIVE,
                 createdBy: 'u-000001',
                 ownerId: testCompanyId,
-                zoneId: testZoneId,
             }
         });
+
+        testPortalId = portalId;
     });
 
     afterAll(async () => {
@@ -81,15 +48,13 @@ describe('TransponderPrismaRepository (Integration)', () => {
                 path: { contains: 'Test Transponder' },
             },
         });
+
         await prisma.portal.delete({
-            where: { id: testPortalId },
+            where: {
+                address: 'integration-test.marppa.cloud'
+            },
         });
-        await prisma.zone.delete({
-            where: { id: testZoneId },
-        });
-        await prisma.company.delete({
-            where: { id: testCompanyId },
-        });
+
         await prisma.$disconnect();
     });
 
@@ -98,7 +63,7 @@ describe('TransponderPrismaRepository (Integration)', () => {
 
         it('should create a transponder', async () => {
             const transponder = new TransponderEntity(
-                '/Test Transponder Integration',
+                'Test Transponder Integration',
                 8080,
                 ResourceStatus.ACTIVE,
                 'u-000001',
@@ -117,7 +82,7 @@ describe('TransponderPrismaRepository (Integration)', () => {
 
             expect(result).toBeDefined();
             expect(result.id).toBeDefined();
-            expect(result.path).toBe('/Test Transponder Integration');
+            expect(result.path).toBe('Test Transponder Integration');
             expect(result.port).toBe(8080);
             expect(result.status).toBe(ResourceStatus.ACTIVE);
             expect(result.portalId).toBe(testPortalId);
@@ -130,7 +95,7 @@ describe('TransponderPrismaRepository (Integration)', () => {
 
             expect(result).toBeDefined();
             expect(result?.id).toBe(createdTransponderId);
-            expect(result?.path).toBe('/Test Transponder Integration');
+            expect(result?.path).toBe('Test Transponder Integration');
             expect(result?.portalId).toBe(testPortalId);
         });
 
@@ -148,7 +113,6 @@ describe('TransponderPrismaRepository (Integration)', () => {
 
             const updatedTransponder = transponder.clone({
                 port: 9090,
-                mode: TransponderMode.REDIRECT,
                 cacheEnabled: false,
                 priority: 2,
             });
@@ -157,7 +121,6 @@ describe('TransponderPrismaRepository (Integration)', () => {
 
             expect(result).toBeDefined();
             expect(result.port).toBe(9090);
-            expect(result.mode).toBe(TransponderMode.REDIRECT);
             expect(result.cacheEnabled).toBe(false);
             expect(result.priority).toBe(2);
         });

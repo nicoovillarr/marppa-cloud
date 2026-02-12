@@ -8,7 +8,7 @@ describe('ZonePrismaRepository (Integration)', () => {
     let repository: ZonePrismaRepository;
     let prisma: PrismaService;
 
-    const testCompanyId = 'c-test-zone-integration';
+    const testCompanyId = 'c-000001';
 
     beforeAll(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -18,24 +18,10 @@ describe('ZonePrismaRepository (Integration)', () => {
         repository = module.get<ZonePrismaRepository>(ZonePrismaRepository);
         prisma = module.get<PrismaService>(PrismaService);
 
-        // Clean up passed run if any
         await prisma.zone.deleteMany({
             where: {
                 name: { contains: 'Test Zone' },
             },
-        });
-        // We need to delete by ID to be safe or just use upsert. 
-        // But delete is safer to start clean.
-        await prisma.company.deleteMany({
-            where: { id: testCompanyId },
-        });
-
-        // Create a test company
-        await prisma.company.create({
-            data: {
-                id: testCompanyId,
-                name: 'Test Company Zone Integration',
-            }
         });
     });
 
@@ -45,9 +31,7 @@ describe('ZonePrismaRepository (Integration)', () => {
                 name: { contains: 'Test Zone' },
             },
         });
-        await prisma.company.delete({
-            where: { id: testCompanyId },
-        });
+
         await prisma.$disconnect();
     });
 

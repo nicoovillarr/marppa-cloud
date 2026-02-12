@@ -43,7 +43,8 @@ export class PrismaService
       Bit: "b-",
       Zone: "z-",
       Node: "n-",
-      // Fiber: "f-",
+      Portal: "p-",
+      Transponder: "t-",
     };
 
     if (

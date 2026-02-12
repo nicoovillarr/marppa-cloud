@@ -18,14 +18,14 @@ describe('WorkerFlavorPrismaRepository (Integration)', () => {
     repository = module.get<WorkerFlavorPrismaRepository>(WorkerFlavorPrismaRepository);
     prisma = module.get<PrismaService>(PrismaService);
 
-    // Create a test family for the flavors
-    const family = await prisma.workerFamily.create({
+    const { id: familyId } = await prisma.workerFamily.create({
       data: {
         name: `${testNamePrefix}-family`,
         description: 'Test family for flavors',
       },
     });
-    testFamilyId = family.id;
+
+    testFamilyId = familyId;
   });
 
   afterAll(async () => {
@@ -62,6 +62,7 @@ describe('WorkerFlavorPrismaRepository (Integration)', () => {
       expect(result.cpuCores).toBe(4);
       expect(result.ramMB).toBe(8192);
       expect(result.diskGB).toBe(100);
+      
       createdFlavorId = result.id!;
     });
 

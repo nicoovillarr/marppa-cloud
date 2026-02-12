@@ -77,7 +77,6 @@ describe('AuthPrismaRepository (Integration)', () => {
     it('should delete (soft delete) a session by refresh token', async () => {
       await repository.deleteSessionByRefreshToken(createdSessionRefreshToken);
 
-      // Verify the session is soft deleted (expiredAt is set)
       const session = await prisma.session.findFirst({
         where: { refreshToken: createdSessionRefreshToken },
       });

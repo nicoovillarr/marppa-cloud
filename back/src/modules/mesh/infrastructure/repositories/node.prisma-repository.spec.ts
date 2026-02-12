@@ -8,8 +8,8 @@ describe('NodePrismaRepository (Integration)', () => {
     let repository: NodePrismaRepository;
     let prisma: PrismaService;
 
-    const testCompanyId = 'c-test-node-integration';
-    const testZoneId = 'z-test-node-integration';
+    const testCompanyId = 'c-000001';
+    let testZoneId;
 
     beforeAll(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -19,28 +19,8 @@ describe('NodePrismaRepository (Integration)', () => {
         repository = module.get<NodePrismaRepository>(NodePrismaRepository);
         prisma = module.get<PrismaService>(PrismaService);
 
-        // Cleanup
-        await prisma.node.deleteMany({
-            where: { zoneId: testZoneId },
-        });
-        await prisma.zone.deleteMany({
-            where: { id: testZoneId },
-        });
-        await prisma.company.deleteMany({
-            where: { id: testCompanyId },
-        });
-
-        // Create prerequisites
-        await prisma.company.create({
+        const { id: zoneId } = await prisma.zone.create({
             data: {
-                id: testCompanyId,
-                name: 'Test Company Node Integration',
-            }
-        });
-
-        await prisma.zone.create({
-            data: {
-                id: testZoneId,
                 name: 'Test Zone Node Integration',
                 cidr: '10.0.0.0/16',
                 gateway: '10.0.0.1',
@@ -49,6 +29,8 @@ describe('NodePrismaRepository (Integration)', () => {
                 updatedBy: 'system',
             }
         });
+
+        testZoneId = zoneId;
     });
 
     afterAll(async () => {
@@ -57,12 +39,11 @@ describe('NodePrismaRepository (Integration)', () => {
                 zoneId: testZoneId,
             },
         });
-        await prisma.zone.delete({
+
+        await prisma.zone.deleteMany({
             where: { id: testZoneId },
         });
-        await prisma.company.delete({
-            where: { id: testCompanyId },
-        });
+
         await prisma.$disconnect();
     });
 

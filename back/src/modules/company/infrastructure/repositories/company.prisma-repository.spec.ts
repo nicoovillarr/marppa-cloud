@@ -22,6 +22,7 @@ describe('CompanyPrismaRepository (Integration)', () => {
         name: { contains: 'Integration Test' },
       },
     });
+
     await prisma.$disconnect();
   });
 

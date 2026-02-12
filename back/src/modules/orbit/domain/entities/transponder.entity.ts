@@ -1,3 +1,4 @@
+import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
 import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
 import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
 import { TransponderMode } from "@prisma/client";
@@ -16,7 +17,10 @@ interface TransponderOptionalProps {
 }
 
 export class TransponderEntity extends PatchableEntity {
+
+  @PrimaryKey()
   public readonly id?: string;
+  
   public readonly mode?: TransponderMode;
   public readonly cacheEnabled?: boolean;
   public readonly allowCookies?: boolean;

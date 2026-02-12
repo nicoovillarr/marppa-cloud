@@ -1,6 +1,7 @@
 import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
 import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
 import { PortalType } from "../enum/portal-type.enum";
+import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
 
 interface PortalOptionalProps {
   id?: string;
@@ -22,7 +23,10 @@ interface PortalOptionalProps {
 }
 
 export class PortalEntity extends PatchableEntity {
+  
+  @PrimaryKey()
   public readonly id?: string;
+  
   public readonly description?: string;
   public readonly lastSyncAt?: Date;
   public readonly lastPublicIP?: string;

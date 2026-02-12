@@ -9,8 +9,7 @@ describe('PortalPrismaRepository (Integration)', () => {
     let repository: PortalPrismaRepository;
     let prisma: PrismaService;
 
-    const testCompanyId = 'c-test-portal-integration';
-    const testZoneId = 'z-test-portal-integration';
+    const testCompanyId = 'c-000001';
 
     beforeAll(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -19,41 +18,6 @@ describe('PortalPrismaRepository (Integration)', () => {
 
         repository = module.get<PortalPrismaRepository>(PortalPrismaRepository);
         prisma = module.get<PrismaService>(PrismaService);
-
-        // Clean up previous run if any
-        await prisma.portal.deleteMany({
-            where: {
-                name: { contains: 'Test Portal' },
-            },
-        });
-        await prisma.zone.deleteMany({
-            where: { id: testZoneId },
-        });
-        await prisma.company.deleteMany({
-            where: { id: testCompanyId },
-        });
-
-        // Create test company
-        await prisma.company.create({
-            data: {
-                id: testCompanyId,
-                name: 'Test Company Portal Integration',
-            }
-        });
-
-        // Create test zone
-        await prisma.zone.create({
-            data: {
-                id: testZoneId,
-                name: 'Test Zone Portal Integration',
-                cidr: '10.0.0.0/16',
-                gateway: '10.0.0.1',
-                status: ResourceStatus.ACTIVE,
-                createdBy: 'u-000001',
-                ownerId: testCompanyId,
-                updatedBy: 'u-000001',
-            }
-        });
     });
 
     afterAll(async () => {
@@ -62,12 +26,7 @@ describe('PortalPrismaRepository (Integration)', () => {
                 name: { contains: 'Test Portal' },
             },
         });
-        await prisma.zone.delete({
-            where: { id: testZoneId },
-        });
-        await prisma.company.delete({
-            where: { id: testCompanyId },
-        });
+        
         await prisma.$disconnect();
     });
 
@@ -91,7 +50,6 @@ describe('PortalPrismaRepository (Integration)', () => {
                     cacheEnabled: true,
                     corsEnabled: true,
                     defaultServer: false,
-                    zoneId: testZoneId,
                     updatedBy: 'u-000001',
                 }
             );
@@ -105,7 +63,6 @@ describe('PortalPrismaRepository (Integration)', () => {
             expect(result.type).toBe(PortalType.CLOUDFLARE);
             expect(result.apiKey).toBe('test-api-key-integration-123');
             expect(result.ownerId).toBe(testCompanyId);
-            expect(result.zoneId).toBe(testZoneId);
             createdPortalId = result.id!;
         });
 

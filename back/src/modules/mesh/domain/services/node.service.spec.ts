@@ -46,7 +46,6 @@ describe('NodeService', () => {
         service = module.get<NodeService>(NodeService);
         repository = module.get<NodeRepository>(NODE_REPOSITORY_SYMBOL);
 
-        // Spy on getCurrentUser
         jest.spyOn(SessionContext, 'getCurrentUser').mockReturnValue({
             userId: 'u-000001',
             companyId: 'c-000001',
