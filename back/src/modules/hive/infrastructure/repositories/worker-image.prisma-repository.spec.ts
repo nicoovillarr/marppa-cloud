@@ -9,6 +9,8 @@ describe('WorkerImagePrismaRepository (Integration)', () => {
   let repository: WorkerImagePrismaRepository;
   let prisma: PrismaService;
 
+  let testWorkerStorageTypeId;
+
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [WorkerImagePrismaRepository, PrismaService],
@@ -16,6 +18,18 @@ describe('WorkerImagePrismaRepository (Integration)', () => {
 
     repository = module.get<WorkerImagePrismaRepository>(WorkerImagePrismaRepository);
     prisma = module.get<PrismaService>(PrismaService);
+
+    const { id: workerStorageTypeId } = await prisma.workerStorageType.create({
+      data: {
+        name: `${testNamePrefix}-type`,
+        description: 'Created by integration test',
+        attachable: true,
+        shared: false,
+        persistent: true,
+      },
+    });
+
+    testWorkerStorageTypeId = workerStorageTypeId;
   });
 
   afterAll(async () => {
@@ -24,6 +38,13 @@ describe('WorkerImagePrismaRepository (Integration)', () => {
         name: { contains: testNamePrefix },
       },
     });
+
+    await prisma.workerStorageType.delete({
+      where: {
+        id: testWorkerStorageTypeId,
+      },
+    });
+
     await prisma.$disconnect();
   });
 
@@ -41,7 +62,7 @@ describe('WorkerImagePrismaRepository (Integration)', () => {
         {
           description: 'Test image description',
           osVersion: '11.0',
-          workerStorageTypeId: 1,
+          workerStorageTypeId: testWorkerStorageTypeId,
         }
       );
 

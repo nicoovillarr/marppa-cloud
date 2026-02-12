@@ -10,6 +10,8 @@ describe('WorkerPrismaRepository (Integration)', () => {
   let repository: WorkerPrismaRepository;
   let prisma: PrismaService;
 
+  let testWorkerFamilyId, testWorkerFlavorId, testWorkerImageId;
+
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [WorkerPrismaRepository, PrismaService],
@@ -17,6 +19,43 @@ describe('WorkerPrismaRepository (Integration)', () => {
 
     repository = module.get<WorkerPrismaRepository>(WorkerPrismaRepository);
     prisma = module.get<PrismaService>(PrismaService);
+
+    const { id: workerFamilyId } = await prisma.workerFamily.create({
+      data: {
+        name: `${testNamePrefix}-family`,
+      },
+    });
+
+    const { id: workerFlavorId } = await prisma.workerFlavor.create({
+      data: {
+        name: `${testNamePrefix}-flavor`,
+        diskGB: 10,
+        ramMB: 1024,
+        cpuCores: 1,
+        family: {
+          connect: {
+            id: workerFamilyId,
+          },
+        },
+      },
+    });
+
+    const { id: workerImageId } = await prisma.workerImage.create({
+      data: {
+        name: `${testNamePrefix}-image`,
+        description: 'Created by integration test',
+        osVersion: '11.0',
+        architecture: 'amd64',
+        imageUrl: 'https://example.com/image.qcow2',
+        osFamily: 'debian',
+        osType: 'linux',
+        virtualizationType: 'kvm',
+      },
+    });
+
+    testWorkerFamilyId = workerFamilyId;
+    testWorkerFlavorId = workerFlavorId;
+    testWorkerImageId = workerImageId;
   });
 
   afterAll(async () => {
@@ -25,6 +64,25 @@ describe('WorkerPrismaRepository (Integration)', () => {
         name: { contains: testNamePrefix },
       },
     });
+
+    await prisma.workerFlavor.delete({
+      where: {
+        id: testWorkerFlavorId,
+      },
+    });
+
+    await prisma.workerImage.delete({
+      where: {
+        id: testWorkerImageId,
+      },
+    });
+
+    await prisma.workerFamily.delete({
+      where: {
+        id: testWorkerFamilyId,
+      },
+    });
+
     await prisma.$disconnect();
   });
 
@@ -37,8 +95,8 @@ describe('WorkerPrismaRepository (Integration)', () => {
         ResourceStatus.INACTIVE,
         '00:11:22:33:44:55',
         'u-000001',
-        1,
-        1,
+        testWorkerImageId,
+        testWorkerFlavorId,
         'c-000001',
       );
 

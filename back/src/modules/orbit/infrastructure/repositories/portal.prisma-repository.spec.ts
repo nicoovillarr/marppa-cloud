@@ -10,6 +10,7 @@ describe('PortalPrismaRepository (Integration)', () => {
     let prisma: PrismaService;
 
     const testCompanyId = 'c-000001';
+    const testAddress = `integration-test-${Date.now()}.marppa.cloud`;
 
     beforeAll(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -36,7 +37,7 @@ describe('PortalPrismaRepository (Integration)', () => {
         it('should create a portal', async () => {
             const portal = new PortalEntity(
                 'Test Portal Integration',
-                '192.168.1.100',
+                testAddress,
                 PortalType.CLOUDFLARE,
                 'test-api-key-integration-123',
                 ResourceStatus.ACTIVE,
@@ -59,7 +60,7 @@ describe('PortalPrismaRepository (Integration)', () => {
             expect(result).toBeDefined();
             expect(result.id).toBeDefined();
             expect(result.name).toBe('Test Portal Integration');
-            expect(result.address).toBe('192.168.1.100');
+            expect(result.address).toBe(testAddress);
             expect(result.type).toBe(PortalType.CLOUDFLARE);
             expect(result.apiKey).toBe('test-api-key-integration-123');
             expect(result.ownerId).toBe(testCompanyId);
@@ -72,7 +73,7 @@ describe('PortalPrismaRepository (Integration)', () => {
             expect(result).toBeDefined();
             expect(result?.id).toBe(createdPortalId);
             expect(result?.name).toBe('Test Portal Integration');
-            expect(result?.address).toBe('192.168.1.100');
+            expect(result?.address).toBe(testAddress);
         });
 
         it('should find portals by owner id', async () => {

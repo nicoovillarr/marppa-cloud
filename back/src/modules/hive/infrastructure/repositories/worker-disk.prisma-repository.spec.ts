@@ -9,6 +9,8 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
   let repository: WorkerDiskPrismaRepository;
   let prisma: PrismaService;
 
+  let testWorkerStorageTypeId;
+
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [WorkerDiskPrismaRepository, PrismaService],
@@ -16,6 +18,18 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
 
     repository = module.get<WorkerDiskPrismaRepository>(WorkerDiskPrismaRepository);
     prisma = module.get<PrismaService>(PrismaService);
+
+    const { id: workerStorageTypeId } = await prisma.workerStorageType.create({
+      data: {
+        name: `${testNamePrefix}-type`,
+        description: 'Created by integration test',
+        attachable: true,
+        shared: false,
+        persistent: true,
+      },
+    });
+
+    testWorkerStorageTypeId = workerStorageTypeId;
   });
 
   afterAll(async () => {
@@ -24,6 +38,13 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
         name: { contains: testNamePrefix },
       },
     });
+
+    await prisma.workerStorageType.delete({
+      where: {
+        id: testWorkerStorageTypeId,
+      },
+    });
+
     await prisma.$disconnect();
   });
 
@@ -36,7 +57,7 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
         100,
         '/dev/test1',
         'c-000001',
-        1,
+        testWorkerStorageTypeId,
         'u-000001',
         {
           mountPoint: '/mnt/test',

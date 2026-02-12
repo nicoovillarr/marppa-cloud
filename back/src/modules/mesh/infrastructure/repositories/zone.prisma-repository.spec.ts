@@ -17,12 +17,6 @@ describe('ZonePrismaRepository (Integration)', () => {
 
         repository = module.get<ZonePrismaRepository>(ZonePrismaRepository);
         prisma = module.get<PrismaService>(PrismaService);
-
-        await prisma.zone.deleteMany({
-            where: {
-                name: { contains: 'Test Zone' },
-            },
-        });
     });
 
     afterAll(async () => {

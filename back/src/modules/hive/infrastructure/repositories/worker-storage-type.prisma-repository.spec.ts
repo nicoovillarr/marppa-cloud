@@ -24,6 +24,7 @@ describe('WorkerStorageTypePrismaRepository (Integration)', () => {
         name: { contains: testNamePrefix },
       },
     });
+    
     await prisma.$disconnect();
   });
 
