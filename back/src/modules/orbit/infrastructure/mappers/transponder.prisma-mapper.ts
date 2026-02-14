@@ -19,7 +19,7 @@ export class TransponderPrismaMapper {
         priority: raw.priority,
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
-        updatedBy: raw.updatedBy,
+        updatedBy: raw.updatedBy ?? undefined,
         nodeId: raw.nodeId ?? undefined,
       }
     )
