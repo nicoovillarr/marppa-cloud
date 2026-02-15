@@ -7,7 +7,6 @@ export class BadRequestError extends DomainError {
 
   constructor(
     message: string = 'The request came in crooked. Straighten it out and try again.',
-
   ) {
     super(message);
   }

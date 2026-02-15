@@ -1,15 +1,13 @@
-import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
-import { Injectable } from "@nestjs/common";
-import { PortalPrismaMapper } from "../mappers/portal.prisma-mapper";
-import { PortalEntity } from "../../domain/entities/portal.entity";
-import { PrismaMapper } from "@/shared/infrastructure/mappers/prisma.mapper";
-import { PortalRepository } from "../../domain/repositories/portal.repository";
+import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { Injectable } from '@nestjs/common';
+import { PortalPrismaMapper } from '../mappers/portal.prisma-mapper';
+import { PortalEntity } from '../../domain/entities/portal.entity';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
+import { PortalRepository } from '../../domain/repositories/portal.repository';
 
 @Injectable()
 export class PortalPrismaRepository implements PortalRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findById(portalId: string): Promise<PortalEntity | null> {
     const portal = await this.prisma.portal.findUnique({

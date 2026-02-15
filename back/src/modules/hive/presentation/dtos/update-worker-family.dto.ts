@@ -1,3 +1,3 @@
-import { CreateWorkerFamilyDto } from "./create-worker-family.dto";
+import { CreateWorkerFamilyDto } from './create-worker-family.dto';
 
-export class UpdateWorkerFamilyDto extends CreateWorkerFamilyDto { }
+export class UpdateWorkerFamilyDto extends CreateWorkerFamilyDto {}

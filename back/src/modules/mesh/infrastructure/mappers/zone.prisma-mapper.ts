@@ -1,6 +1,6 @@
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
-import { ZoneEntity } from "../../domain/entities/zone.entity";
-import { Zone } from "@prisma/client";
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { ZoneEntity } from '../../domain/entities/zone.entity';
+import { Zone } from '@prisma/client';
 
 export class ZonePrismaMapper {
   static toEntity(model: Zone): ZoneEntity {
@@ -17,7 +17,7 @@ export class ZonePrismaMapper {
         createdAt: model.createdAt,
         updatedAt: model.updatedAt,
         updatedBy: model.updatedBy,
-      }
+      },
     );
   }
 }

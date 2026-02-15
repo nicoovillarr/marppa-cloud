@@ -1,7 +1,7 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
-import { TransponderMode } from "@prisma/client";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { TransponderMode } from '@prisma/client';
 
 interface TransponderOptionalProps {
   id?: string;
@@ -17,10 +17,9 @@ interface TransponderOptionalProps {
 }
 
 export class TransponderEntity extends PatchableEntity {
-
   @PrimaryKey()
   public readonly id?: string;
-  
+
   public readonly mode?: TransponderMode;
   public readonly cacheEnabled?: boolean;
   public readonly allowCookies?: boolean;
@@ -37,7 +36,7 @@ export class TransponderEntity extends PatchableEntity {
     public readonly status: ResourceStatus,
     public readonly createdBy: string,
     public readonly portalId: string,
-    optionals: TransponderOptionalProps = {}
+    optionals: TransponderOptionalProps = {},
   ) {
     super();
 
@@ -91,7 +90,7 @@ export class TransponderEntity extends PatchableEntity {
         updatedAt: object.updatedAt,
         updatedBy: object.updatedBy,
         nodeId: object.nodeId,
-      }
+      },
     );
   }
 }

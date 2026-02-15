@@ -8,10 +8,9 @@ interface SessionOptionalProps {
 }
 
 export class SessionEntity extends BaseEntity {
-
   // @PrimaryKey()
   public readonly refreshToken?: string;
-  
+
   public readonly createdAt?: Date;
   public readonly expiredAt?: Date;
 

@@ -1,18 +1,21 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { WorkerDiskRepository, WORKER_DISK_REPOSITORY_SYMBOL } from "../repositories/worker-disk.repository";
-import { WorkerDiskEntity } from "../entities/worker-disk.entity";
-import { NotFoundError } from "@/shared/domain/errors/not-found.error";
-import { CreateWorkerDiskDto } from "@/hive/presentation/dtos/create-worker-disk.dto";
-import { UpdateWorkerDiskDto } from "@/hive/presentation/dtos/update-worker-disk.dto";
-import { getCurrentUser } from "@/auth/infrastructure/als/session.context";
-import { UnauthorizedError } from "@/shared/domain/errors/unauthorized.error";
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  WorkerDiskRepository,
+  WORKER_DISK_REPOSITORY_SYMBOL,
+} from '../repositories/worker-disk.repository';
+import { WorkerDiskEntity } from '../entities/worker-disk.entity';
+import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { CreateWorkerDiskDto } from '@/hive/presentation/dtos/create-worker-disk.dto';
+import { UpdateWorkerDiskDto } from '@/hive/presentation/dtos/update-worker-disk.dto';
+import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 
 @Injectable()
 export class WorkerDiskService {
   constructor(
     @Inject(WORKER_DISK_REPOSITORY_SYMBOL)
     private readonly workerDiskRepository: WorkerDiskRepository,
-  ) { }
+  ) {}
 
   async findById(id: number): Promise<WorkerDiskEntity> {
     const workerDisk = await this.workerDiskRepository.findById(id);
@@ -44,13 +47,16 @@ export class WorkerDiskService {
         mountPoint: data.mountPoint,
         isBoot: data.isBoot,
         workerId: data.workerId ?? undefined,
-      }
+      },
     );
 
     return this.save(workerDisk);
   }
 
-  async update(id: number, data: UpdateWorkerDiskDto): Promise<WorkerDiskEntity> {
+  async update(
+    id: number,
+    data: UpdateWorkerDiskDto,
+  ): Promise<WorkerDiskEntity> {
     const workerDisk = await this.findById(id);
 
     workerDisk.clone({

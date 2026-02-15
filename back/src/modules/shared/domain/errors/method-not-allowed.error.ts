@@ -7,7 +7,6 @@ export class MethodNotAllowedError extends DomainError {
 
   constructor(
     message: string = "It's not done like that. Try a method that doesn't bring shame.",
-
   ) {
     super(message);
   }

@@ -10,7 +10,7 @@ import { Request } from 'express';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   async use(req: Request, _: any, next: () => void) {
     const token = req.cookies?.access_token;

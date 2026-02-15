@@ -1,3 +1,3 @@
-import { CreateWorkerFlavorDto } from "./create-worker-flavor.dto";
+import { CreateWorkerFlavorDto } from './create-worker-flavor.dto';
 
-export class UpdateWorkerFlavorDto extends CreateWorkerFlavorDto { }
+export class UpdateWorkerFlavorDto extends CreateWorkerFlavorDto {}

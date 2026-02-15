@@ -1,16 +1,16 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { CompanyRepository } from "../../domain/repositories/company.repository";
-import { CompanyEntity } from "../../domain/entities/company.entity";
-import { CompanyPrismaMapper } from "../mappers/company.prisma-mapper";
-import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
-import { PrismaMapper } from "@/shared/infrastructure/mappers/prisma.mapper";
+import { Inject, Injectable } from '@nestjs/common';
+import { CompanyRepository } from '../../domain/repositories/company.repository';
+import { CompanyEntity } from '../../domain/entities/company.entity';
+import { CompanyPrismaMapper } from '../mappers/company.prisma-mapper';
+import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class CompanyPrismaRepository implements CompanyRepository {
   constructor(
     @Inject()
-    private readonly prisma: PrismaService
-  ) { }
+    private readonly prisma: PrismaService,
+  ) {}
 
   async findById(id: string): Promise<CompanyEntity | null> {
     const company = await this.prisma.company.findUnique({

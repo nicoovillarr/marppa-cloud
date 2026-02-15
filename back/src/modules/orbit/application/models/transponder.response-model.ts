@@ -1,7 +1,7 @@
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
-import { TransponderMode } from "../../domain/enum/transponder-mode.enum";
-import { Expose } from "class-transformer";
+import { TransponderMode } from '../../domain/enum/transponder-mode.enum';
+import { Expose } from 'class-transformer';
 
 export class TransponderResponseModel {
   @Expose()

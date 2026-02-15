@@ -1,5 +1,5 @@
-import { NodeEntity } from "../entities/node.entity";
-import { ZoneEntity } from "../entities/zone.entity";
+import { NodeEntity } from '../entities/node.entity';
+import { ZoneEntity } from '../entities/zone.entity';
 
 interface ZoneWithNodesProps {
   zone: ZoneEntity;
@@ -18,7 +18,7 @@ export class ZoneWithNodesModel {
   toObject() {
     return {
       ...this.zone.toObject(),
-      nodes: this.nodes.map(n => n.toObject()),
+      nodes: this.nodes.map((n) => n.toObject()),
     };
   }
 }

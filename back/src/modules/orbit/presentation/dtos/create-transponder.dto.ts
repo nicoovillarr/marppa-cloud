@@ -1,5 +1,12 @@
-import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
-import { TransponderMode } from "../../domain/enum/transponder-mode.enum";
+import {
+  IsBoolean,
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { TransponderMode } from '../../domain/enum/transponder-mode.enum';
 
 export class CreateTransponderDto {
   @IsString()

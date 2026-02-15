@@ -8,10 +8,9 @@ interface UserOptionalProps {
 }
 
 export class UserEntity extends PatchableEntity {
-
   @PrimaryKey()
   public readonly id?: string;
-  
+
   public readonly createdAt?: Date;
   public readonly updatedAt?: Date;
 
@@ -42,16 +41,10 @@ export class UserEntity extends PatchableEntity {
   }
 
   static fromObject(obj: Record<string, any>): UserEntity {
-    return new UserEntity(
-      obj.email,
-      obj.password,
-      obj.name,
-      obj.companyId,
-      {
-        id: obj.id,
-        createdAt: obj.createdAt,
-        updatedAt: obj.updatedAt,
-      },
-    );
+    return new UserEntity(obj.email, obj.password, obj.name, obj.companyId, {
+      id: obj.id,
+      createdAt: obj.createdAt,
+      updatedAt: obj.updatedAt,
+    });
   }
 }

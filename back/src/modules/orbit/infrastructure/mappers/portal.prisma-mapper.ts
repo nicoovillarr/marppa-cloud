@@ -1,7 +1,7 @@
-import { Portal } from "@prisma/client";
-import { PortalEntity } from "../../domain/entities/portal.entity";
-import { PortalType } from "../../domain/enum/portal-type.enum";
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
+import { Portal } from '@prisma/client';
+import { PortalEntity } from '../../domain/entities/portal.entity';
+import { PortalType } from '../../domain/enum/portal-type.enum';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 export class PortalPrismaMapper {
   public static toEntity(raw: Portal): PortalEntity {
@@ -30,7 +30,7 @@ export class PortalPrismaMapper {
         updatedAt: raw.updatedAt,
         updatedBy: raw.updatedBy ?? undefined,
         zoneId: raw.zoneId ?? undefined,
-      }
-    )
+      },
+    );
   }
 }

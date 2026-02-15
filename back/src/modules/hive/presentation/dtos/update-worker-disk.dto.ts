@@ -1,3 +1,3 @@
-import { CreateWorkerDiskDto } from "./create-worker-disk.dto";
+import { CreateWorkerDiskDto } from './create-worker-disk.dto';
 
-export class UpdateWorkerDiskDto extends CreateWorkerDiskDto { }
+export class UpdateWorkerDiskDto extends CreateWorkerDiskDto {}

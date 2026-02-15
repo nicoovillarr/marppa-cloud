@@ -1,6 +1,6 @@
-import { Expose } from "class-transformer";
-import { PortalType } from "../../domain/enum/portal-type.enum";
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
+import { Expose } from 'class-transformer';
+import { PortalType } from '../../domain/enum/portal-type.enum';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 export class PortalResponseModel {
   @Expose()

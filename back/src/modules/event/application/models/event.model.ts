@@ -1,4 +1,4 @@
-import { Expose } from "class-transformer";
+import { Expose } from 'class-transformer';
 
 export class EventModel {
   @Expose() id: number | null;

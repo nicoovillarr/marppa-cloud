@@ -1,19 +1,23 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { WorkerStorageTypeRepository, WORKER_STORAGE_TYPE_REPOSITORY_SYMBOL } from "../repositories/worker-storage-type.repository";
-import { WorkerStorageTypeEntity } from "../entities/worker-storage-type.entity";
-import { NotFoundError } from "@/shared/domain/errors/not-found.error";
-import { CreateWorkerStorageTypeDto } from "@/hive/presentation/dtos/create-worker-storage-type.dto";
-import { UpdateWorkerStorageTypeDto } from "@/hive/presentation/dtos/update-worker-storage-type.dto";
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  WorkerStorageTypeRepository,
+  WORKER_STORAGE_TYPE_REPOSITORY_SYMBOL,
+} from '../repositories/worker-storage-type.repository';
+import { WorkerStorageTypeEntity } from '../entities/worker-storage-type.entity';
+import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { CreateWorkerStorageTypeDto } from '@/hive/presentation/dtos/create-worker-storage-type.dto';
+import { UpdateWorkerStorageTypeDto } from '@/hive/presentation/dtos/update-worker-storage-type.dto';
 
 @Injectable()
 export class WorkerStorageTypeService {
   constructor(
     @Inject(WORKER_STORAGE_TYPE_REPOSITORY_SYMBOL)
     private readonly workerStorageTypeRepository: WorkerStorageTypeRepository,
-  ) { }
+  ) {}
 
   async findById(id: number): Promise<WorkerStorageTypeEntity> {
-    const workerStorageType = await this.workerStorageTypeRepository.findById(id);
+    const workerStorageType =
+      await this.workerStorageTypeRepository.findById(id);
     if (!workerStorageType) {
       throw new NotFoundError();
     }
@@ -21,7 +25,9 @@ export class WorkerStorageTypeService {
     return workerStorageType;
   }
 
-  async createWorkerStorageType(data: CreateWorkerStorageTypeDto): Promise<WorkerStorageTypeEntity> {
+  async createWorkerStorageType(
+    data: CreateWorkerStorageTypeDto,
+  ): Promise<WorkerStorageTypeEntity> {
     const entity = new WorkerStorageTypeEntity(
       data.name,
       data.persistent,
@@ -29,13 +35,16 @@ export class WorkerStorageTypeService {
       data.shared,
       {
         description: data.description,
-      }
+      },
     );
 
     return this.save(entity);
   }
 
-  async updateWorkerStorageType(id: number, data: UpdateWorkerStorageTypeDto): Promise<WorkerStorageTypeEntity> {
+  async updateWorkerStorageType(
+    id: number,
+    data: UpdateWorkerStorageTypeDto,
+  ): Promise<WorkerStorageTypeEntity> {
     const entity = await this.findById(id);
     const updated = entity.clone({
       name: data.name,
@@ -52,7 +61,9 @@ export class WorkerStorageTypeService {
     return this.workerStorageTypeRepository.delete(id);
   }
 
-  private save(data: WorkerStorageTypeEntity): Promise<WorkerStorageTypeEntity> {
+  private save(
+    data: WorkerStorageTypeEntity,
+  ): Promise<WorkerStorageTypeEntity> {
     if (data.id == null) {
       return this.workerStorageTypeRepository.create(data);
     }

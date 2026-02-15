@@ -7,7 +7,6 @@ export class ForbiddenError extends DomainError {
 
   constructor(
     message: string = "Access forbidden. Trying to insist won't make you any more authorized.",
-
   ) {
     super(message);
   }

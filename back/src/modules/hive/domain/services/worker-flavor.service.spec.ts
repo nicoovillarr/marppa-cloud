@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerFlavorService } from './worker-flavor.service';
-import { WorkerFlavorRepository, WORKER_FLAVOR_REPOSITORY_SYMBOL } from '../repositories/worker-flavor.repository';
+import {
+  WorkerFlavorRepository,
+  WORKER_FLAVOR_REPOSITORY_SYMBOL,
+} from '../repositories/worker-flavor.repository';
 import { WorkerFlavorEntity } from '../entities/worker-flavor.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerFlavorDto } from '@/hive/presentation/dtos/create-worker-flavor.dto';
@@ -18,7 +21,7 @@ describe('WorkerFlavorService', () => {
     1,
     {
       id: 1,
-    }
+    },
   );
 
   const mockWorkerFlavorRepository = {
@@ -40,7 +43,9 @@ describe('WorkerFlavorService', () => {
     }).compile();
 
     service = module.get<WorkerFlavorService>(WorkerFlavorService);
-    repository = module.get<WorkerFlavorRepository>(WORKER_FLAVOR_REPOSITORY_SYMBOL);
+    repository = module.get<WorkerFlavorRepository>(
+      WORKER_FLAVOR_REPOSITORY_SYMBOL,
+    );
   });
 
   afterEach(() => {
@@ -78,7 +83,9 @@ describe('WorkerFlavorService', () => {
 
       const result = await service.createWorkerFlavor(dto);
 
-      expect(repository.create).toHaveBeenCalledWith(expect.any(WorkerFlavorEntity));
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.any(WorkerFlavorEntity),
+      );
       expect(result).toEqual(mockWorkerFlavor);
     });
   });
@@ -99,7 +106,9 @@ describe('WorkerFlavorService', () => {
       const result = await service.updateWorkerFlavor(1, dto);
 
       expect(repository.findById).toHaveBeenCalledWith(1);
-      expect(repository.update).toHaveBeenCalledWith(expect.any(WorkerFlavorEntity));
+      expect(repository.update).toHaveBeenCalledWith(
+        expect.any(WorkerFlavorEntity),
+      );
       expect(result).toEqual(mockWorkerFlavor);
     });
 
@@ -114,7 +123,9 @@ describe('WorkerFlavorService', () => {
 
       mockWorkerFlavorRepository.findById.mockResolvedValue(null);
 
-      await expect(service.updateWorkerFlavor(999, dto)).rejects.toThrow(NotFoundError);
+      await expect(service.updateWorkerFlavor(999, dto)).rejects.toThrow(
+        NotFoundError,
+      );
     });
   });
 

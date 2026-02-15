@@ -1,4 +1,4 @@
-import { PortalEntity } from "../entities/portal.entity";
+import { PortalEntity } from '../entities/portal.entity';
 
 export const PORTAL_REPOSITORY = Symbol('PORTAL_REPOSITORY');
 

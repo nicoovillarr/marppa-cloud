@@ -1,15 +1,13 @@
-import { WorkerStorageTypeEntity } from "@/hive/domain/entities/worker-storage-type.entity";
-import { WorkerStorageTypeRepository } from "@/hive/domain/repositories/worker-storage-type.repository";
-import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
-import { WorkerStorageTypePrismaMapper } from "../mappers/worker-storage-type.prisma-mapper";
-import { Injectable } from "@nestjs/common";
-import { PrismaMapper } from "@/shared/infrastructure/mappers/prisma.mapper";
+import { WorkerStorageTypeEntity } from '@/hive/domain/entities/worker-storage-type.entity';
+import { WorkerStorageTypeRepository } from '@/hive/domain/repositories/worker-storage-type.repository';
+import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { WorkerStorageTypePrismaMapper } from '../mappers/worker-storage-type.prisma-mapper';
+import { Injectable } from '@nestjs/common';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class WorkerStorageTypePrismaRepository implements WorkerStorageTypeRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: number): Promise<WorkerStorageTypeEntity | null> {
     const workerStorageType = await this.prisma.workerStorageType.findUnique({
@@ -25,7 +23,9 @@ export class WorkerStorageTypePrismaRepository implements WorkerStorageTypeRepos
     return WorkerStorageTypePrismaMapper.toEntity(workerStorageType);
   }
 
-  async create(entity: WorkerStorageTypeEntity): Promise<WorkerStorageTypeEntity> {
+  async create(
+    entity: WorkerStorageTypeEntity,
+  ): Promise<WorkerStorageTypeEntity> {
     const sanitized = PrismaMapper.toCreate(entity);
 
     const workerStorageType = await this.prisma.workerStorageType.create({
@@ -35,7 +35,9 @@ export class WorkerStorageTypePrismaRepository implements WorkerStorageTypeRepos
     return WorkerStorageTypePrismaMapper.toEntity(workerStorageType);
   }
 
-  async update(entity: WorkerStorageTypeEntity): Promise<WorkerStorageTypeEntity> {
+  async update(
+    entity: WorkerStorageTypeEntity,
+  ): Promise<WorkerStorageTypeEntity> {
     const sanitized = PrismaMapper.toCreate(entity);
 
     const workerStorageType = await this.prisma.workerStorageType.update({

@@ -1,15 +1,13 @@
-import { WorkerFamilyEntity } from "@/hive/domain/entities/worker-family.entity";
-import { WorkerFamilyRepository } from "@/hive/domain/repositories/worker-family.repository";
-import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
-import { Injectable } from "@nestjs/common";
-import { WorkerFamilyPrismaMapper } from "../mappers/worker-family.prisma-mapper";
-import { PrismaMapper } from "@/shared/infrastructure/mappers/prisma.mapper";
+import { WorkerFamilyEntity } from '@/hive/domain/entities/worker-family.entity';
+import { WorkerFamilyRepository } from '@/hive/domain/repositories/worker-family.repository';
+import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { Injectable } from '@nestjs/common';
+import { WorkerFamilyPrismaMapper } from '../mappers/worker-family.prisma-mapper';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class WorkerFamilyPrismaRepository implements WorkerFamilyRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: number): Promise<WorkerFamilyEntity | null> {
     const workerFamily = await this.prisma.workerFamily.findUnique({
@@ -55,5 +53,4 @@ export class WorkerFamilyPrismaRepository implements WorkerFamilyRepository {
       },
     });
   }
-
 }

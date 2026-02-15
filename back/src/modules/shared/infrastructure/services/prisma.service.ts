@@ -5,7 +5,8 @@ import { Utils } from 'src/libs/utils';
 @Injectable()
 export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy {
+  implements OnModuleInit, OnModuleDestroy
+{
   constructor() {
     super({
       log:
@@ -37,29 +38,33 @@ export class PrismaService
 
   private processIds(model: string, data: any): void {
     const prefix = {
-      Company: "c-",
-      User: "u-",
-      Worker: "w-",
-      Bit: "b-",
-      Zone: "z-",
-      Node: "n-",
-      Portal: "p-",
-      Transponder: "t-",
+      Company: 'c-',
+      User: 'u-',
+      Worker: 'w-',
+      Bit: 'b-',
+      Zone: 'z-',
+      Node: 'n-',
+      Portal: 'p-',
+      Transponder: 't-',
     };
 
     if (
       prefix[model] &&
       data &&
-      typeof data === "object" &&
-      (!("id" in data) || data.id == null)
+      typeof data === 'object' &&
+      (!('id' in data) || data.id == null)
     ) {
       data.id = data.id || Utils.generateUUID(prefix[model], 6);
     }
 
-    if (data && typeof data === "object") {
+    if (data && typeof data === 'object') {
       Object.keys(data).forEach((key) => {
-        if (data[key] && typeof data[key] === "object" && "create" in data[key]) {
-          this.processIds(key.capitalize(), data[key]["create"]);
+        if (
+          data[key] &&
+          typeof data[key] === 'object' &&
+          'create' in data[key]
+        ) {
+          this.processIds(key.capitalize(), data[key]['create']);
         }
       });
     }

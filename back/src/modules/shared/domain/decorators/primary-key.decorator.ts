@@ -8,7 +8,7 @@ export function PrimaryKey() {
     Reflect.defineMetadata(
       PRIMARY_KEY_METADATA,
       [...existing, propertyKey],
-      target
+      target,
     );
   };
 }

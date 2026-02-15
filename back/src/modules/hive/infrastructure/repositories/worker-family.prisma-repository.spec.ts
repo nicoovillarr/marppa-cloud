@@ -14,7 +14,9 @@ describe('WorkerFamilyPrismaRepository (Integration)', () => {
       providers: [WorkerFamilyPrismaRepository, PrismaService],
     }).compile();
 
-    repository = module.get<WorkerFamilyPrismaRepository>(WorkerFamilyPrismaRepository);
+    repository = module.get<WorkerFamilyPrismaRepository>(
+      WorkerFamilyPrismaRepository,
+    );
     prisma = module.get<PrismaService>(PrismaService);
   });
 
@@ -31,12 +33,9 @@ describe('WorkerFamilyPrismaRepository (Integration)', () => {
     let createdFamilyId: number;
 
     it('should create a worker family', async () => {
-      const family = new WorkerFamilyEntity(
-        `${testNamePrefix}-create`,
-        {
-          description: 'Test family description',
-        }
-      );
+      const family = new WorkerFamilyEntity(`${testNamePrefix}-create`, {
+        description: 'Test family description',
+      });
 
       const result = await repository.create(family);
 

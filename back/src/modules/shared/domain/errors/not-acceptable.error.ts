@@ -7,7 +7,6 @@ export class NotAcceptableError extends DomainError {
 
   constructor(
     message: string = "The server doesn't like what you asked for at all.",
-
   ) {
     super(message);
   }

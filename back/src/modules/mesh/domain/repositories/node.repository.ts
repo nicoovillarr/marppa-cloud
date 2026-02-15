@@ -1,6 +1,6 @@
-import { NodeEntity } from "../entities/node.entity";
+import { NodeEntity } from '../entities/node.entity';
 
-export const NODE_REPOSITORY_SYMBOL = Symbol('NODE_REPOSITORY')
+export const NODE_REPOSITORY_SYMBOL = Symbol('NODE_REPOSITORY');
 
 export abstract class NodeRepository {
   abstract findById(zoneId: string, id: string): Promise<NodeEntity | null>;

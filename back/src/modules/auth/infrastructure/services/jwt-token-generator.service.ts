@@ -6,7 +6,7 @@ import { JwtEntity } from '@/auth/domain/entities/jwt.entity';
 
 @Injectable()
 export class JwtTokenGenerator implements TokenGenerator {
-  constructor() { }
+  constructor() {}
 
   async generateJwt(
     user: UserEntity,
@@ -14,7 +14,7 @@ export class JwtTokenGenerator implements TokenGenerator {
   ): Promise<string> {
     const { SignJWT } = await import('jose');
 
-    const jwtEntity = new JwtEntity(user.id!, user.email, user.companyId!, type);
+    const jwtEntity = new JwtEntity(user.id!, user.email, user.companyId, type);
 
     return await new SignJWT({ ...jwtEntity })
       .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })

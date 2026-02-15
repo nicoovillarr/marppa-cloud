@@ -1,5 +1,5 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
 
 interface WorkerDiskOptionalProps {
   id?: number;
@@ -12,7 +12,6 @@ interface WorkerDiskOptionalProps {
 }
 
 export class WorkerDiskEntity extends PatchableEntity {
-
   @PrimaryKey()
   public readonly id?: number;
 
@@ -78,7 +77,7 @@ export class WorkerDiskEntity extends PatchableEntity {
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
         updatedBy: data.updatedBy,
-      }
+      },
     );
   }
 }

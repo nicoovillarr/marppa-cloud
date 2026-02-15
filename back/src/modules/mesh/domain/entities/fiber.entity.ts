@@ -1,6 +1,6 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
-import { ResourceStatus } from "@prisma/client";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
+import { ResourceStatus } from '@prisma/client';
 
 interface FiberOptionalProps {
   id?: number;
@@ -11,7 +11,6 @@ interface FiberOptionalProps {
 }
 
 export class FiberEntity extends PatchableEntity {
-
   @PrimaryKey()
   public readonly id?: number;
 

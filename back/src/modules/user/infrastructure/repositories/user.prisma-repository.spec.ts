@@ -64,19 +64,25 @@ describe('UserPrismaRepository (Integration)', () => {
     });
 
     it('should check if email exists', async () => {
-      const exists = await repository.emailExists(`${testEmailPrefix}-create@example.com`);
+      const exists = await repository.emailExists(
+        `${testEmailPrefix}-create@example.com`,
+      );
 
       expect(exists).toBe(true);
     });
 
     it('should return false for non-existent email', async () => {
-      const exists = await repository.emailExists(`${testEmailPrefix}-nonexistent@example.com`);
+      const exists = await repository.emailExists(
+        `${testEmailPrefix}-nonexistent@example.com`,
+      );
 
       expect(exists).toBe(false);
     });
 
     it('should find a user by email', async () => {
-      const result = await repository.findUserByEmail(`${testEmailPrefix}-create@example.com`);
+      const result = await repository.findUserByEmail(
+        `${testEmailPrefix}-create@example.com`,
+      );
 
       expect(result).toBeDefined();
       expect(result?.id).toBe(createdUserId);
@@ -84,7 +90,9 @@ describe('UserPrismaRepository (Integration)', () => {
     });
 
     it('should return null for non-existent email', async () => {
-      const result = await repository.findUserByEmail(`${testEmailPrefix}-notfound@example.com`);
+      const result = await repository.findUserByEmail(
+        `${testEmailPrefix}-notfound@example.com`,
+      );
 
       expect(result).toBeNull();
     });
@@ -97,7 +105,7 @@ describe('UserPrismaRepository (Integration)', () => {
         'c-000001',
         {
           id: createdUserId,
-        }
+        },
       );
 
       const result = await repository.updateUser(updatedUser);

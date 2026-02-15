@@ -1,4 +1,4 @@
-import { WorkerDiskEntity } from "../entities/worker-disk.entity";
+import { WorkerDiskEntity } from '../entities/worker-disk.entity';
 
 export const WORKER_DISK_REPOSITORY_SYMBOL = Symbol('WORKER_DISK_REPOSITORY');
 

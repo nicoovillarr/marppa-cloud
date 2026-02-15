@@ -7,7 +7,6 @@ export class TooManyRequestsError extends DomainError {
 
   constructor(
     message: string = 'Too many requests. Are you okay? Do you need to talk to someone?',
-
   ) {
     super(message);
   }

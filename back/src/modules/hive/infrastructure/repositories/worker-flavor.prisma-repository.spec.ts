@@ -15,7 +15,9 @@ describe('WorkerFlavorPrismaRepository (Integration)', () => {
       providers: [WorkerFlavorPrismaRepository, PrismaService],
     }).compile();
 
-    repository = module.get<WorkerFlavorPrismaRepository>(WorkerFlavorPrismaRepository);
+    repository = module.get<WorkerFlavorPrismaRepository>(
+      WorkerFlavorPrismaRepository,
+    );
     prisma = module.get<PrismaService>(PrismaService);
 
     const { id: familyId } = await prisma.workerFamily.create({
@@ -62,7 +64,7 @@ describe('WorkerFlavorPrismaRepository (Integration)', () => {
       expect(result.cpuCores).toBe(4);
       expect(result.ramMB).toBe(8192);
       expect(result.diskGB).toBe(100);
-      
+
       createdFlavorId = result.id!;
     });
 

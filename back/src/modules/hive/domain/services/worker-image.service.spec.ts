@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerImageService } from './worker-image.service';
-import { WorkerImageRepository, WORKER_IMAGE_REPOSITORY_SYMBOL } from '../repositories/worker-image.repository';
+import {
+  WorkerImageRepository,
+  WORKER_IMAGE_REPOSITORY_SYMBOL,
+} from '../repositories/worker-image.repository';
 import { WorkerImageEntity } from '../entities/worker-image.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerImageDto } from '@/hive/presentation/dtos/create-worker-image.dto';
@@ -22,7 +25,7 @@ describe('WorkerImageService', () => {
       description: 'Test image description',
       osVersion: '11.0',
       workerStorageTypeId: 1,
-    }
+    },
   );
 
   const mockWorkerImageRepository = {
@@ -44,7 +47,9 @@ describe('WorkerImageService', () => {
     }).compile();
 
     service = module.get<WorkerImageService>(WorkerImageService);
-    repository = module.get<WorkerImageRepository>(WORKER_IMAGE_REPOSITORY_SYMBOL);
+    repository = module.get<WorkerImageRepository>(
+      WORKER_IMAGE_REPOSITORY_SYMBOL,
+    );
   });
 
   afterEach(() => {
@@ -86,7 +91,9 @@ describe('WorkerImageService', () => {
 
       const result = await service.create(dto);
 
-      expect(repository.create).toHaveBeenCalledWith(expect.any(WorkerImageEntity));
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.any(WorkerImageEntity),
+      );
       expect(result).toEqual(mockWorkerImage);
     });
 
@@ -129,7 +136,9 @@ describe('WorkerImageService', () => {
       const result = await service.update(1, dto);
 
       expect(repository.findById).toHaveBeenCalledWith(1);
-      expect(repository.update).toHaveBeenCalledWith(expect.any(WorkerImageEntity));
+      expect(repository.update).toHaveBeenCalledWith(
+        expect.any(WorkerImageEntity),
+      );
       expect(result).toEqual(mockWorkerImage);
     });
 

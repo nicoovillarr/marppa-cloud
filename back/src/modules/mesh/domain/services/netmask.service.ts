@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import { Netmask } from "netmask";
+import { Injectable } from '@nestjs/common';
+import { Netmask } from 'netmask';
 
 @Injectable()
 export class NetmaskService {
@@ -8,13 +8,16 @@ export class NetmaskService {
    * @param size - The size of the subnet to create.
    * @returns The details of the new subnet.
    */
-  public getNextCidr(lastCidr: string = '10.0.1.0', size: number = 8): {
+  public getNextCidr(
+    lastCidr: string = '10.0.1.0',
+    size: number = 8,
+  ): {
     cidr: string;
     gateway: string;
   } {
     const nextIpNum =
       this.ipToNumber(lastCidr) +
-      Math.pow(2, 32 - Number(lastCidr.split("/")[1]));
+      Math.pow(2, 32 - Number(lastCidr.split('/')[1]));
 
     const nextIp = this.numberToIp(nextIpNum);
     const gateway = this.numberToIp(nextIpNum + 1);
@@ -40,9 +43,7 @@ export class NetmaskService {
     const endIpNum = this.ipToNumber(baseBlock.broadcast);
 
     const parsed = new Set(
-      usedIps
-        .map((ip) => this.ipToNumber(ip))
-        .concat(this.ipToNumber(gateway))
+      usedIps.map((ip) => this.ipToNumber(ip)).concat(this.ipToNumber(gateway)),
     );
 
     let currentIp = startIpNum + 1;
@@ -57,7 +58,7 @@ export class NetmaskService {
     }
 
     if (ip == '') {
-      throw new Error("No available IP found");
+      throw new Error('No available IP found');
     }
 
     return ip;
@@ -74,14 +75,14 @@ export class NetmaskService {
     const remaining = Array.from({ length: 5 }, () =>
       Math.floor(Math.random() * 256)
         .toString(16)
-        .padStart(2, "0")
-        .toLowerCase()
+        .padStart(2, '0')
+        .toLowerCase(),
     );
 
     return [
-      firstByte.toString(16).padStart(2, "0").toLowerCase(),
+      firstByte.toString(16).padStart(2, '0').toLowerCase(),
       ...remaining,
-    ].join(":");
+    ].join(':');
   }
 
   /**
@@ -92,15 +93,15 @@ export class NetmaskService {
   protected ipToNumber(ip: string): number {
     const cidrRegex = /^(?:\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
     if (!cidrRegex.test(ip)) {
-      throw new Error("Invalid IP address format");
+      throw new Error('Invalid IP address format');
     }
 
-    if (ip.includes("/")) {
-      ip = ip.split("/")[0];
+    if (ip.includes('/')) {
+      ip = ip.split('/')[0];
     }
 
     const number = ip
-      .split(".")
+      .split('.')
       .reduce((acc, oct) => (acc << 8) + Number(oct), 0);
     console.log(`Converted IP ${ip} to number: ${number}`);
     return number;
@@ -112,6 +113,6 @@ export class NetmaskService {
    * @returns The IP address in string format.
    */
   protected numberToIp(num: number): string {
-    return [24, 16, 8, 0].map((shift) => (num >> shift) & 255).join(".");
+    return [24, 16, 8, 0].map((shift) => (num >> shift) & 255).join('.');
   }
 }

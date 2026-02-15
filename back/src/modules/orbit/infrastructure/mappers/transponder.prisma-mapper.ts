@@ -1,6 +1,6 @@
-import { Transponder } from "@prisma/client";
-import { TransponderEntity } from "../../domain/entities/transponder.entity";
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
+import { Transponder } from '@prisma/client';
+import { TransponderEntity } from '../../domain/entities/transponder.entity';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 export class TransponderPrismaMapper {
   public static toEntity(raw: Transponder): TransponderEntity {
@@ -21,7 +21,7 @@ export class TransponderPrismaMapper {
         updatedAt: raw.updatedAt,
         updatedBy: raw.updatedBy ?? undefined,
         nodeId: raw.nodeId ?? undefined,
-      }
-    )
+      },
+    );
   }
 }

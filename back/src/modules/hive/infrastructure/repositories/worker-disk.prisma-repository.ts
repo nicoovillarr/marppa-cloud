@@ -1,15 +1,13 @@
-import { WorkerDiskEntity } from "@/hive/domain/entities/worker-disk.entity";
-import { WorkerDiskRepository } from "@/hive/domain/repositories/worker-disk.repository";
-import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
-import { WorkerDiskPrismaMapper } from "../mappers/worker-disk.prisma-mapper";
-import { Injectable } from "@nestjs/common";
-import { PrismaMapper } from "@/shared/infrastructure/mappers/prisma.mapper";
+import { WorkerDiskEntity } from '@/hive/domain/entities/worker-disk.entity';
+import { WorkerDiskRepository } from '@/hive/domain/repositories/worker-disk.repository';
+import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { WorkerDiskPrismaMapper } from '../mappers/worker-disk.prisma-mapper';
+import { Injectable } from '@nestjs/common';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class WorkerDiskPrismaRepository implements WorkerDiskRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: number): Promise<WorkerDiskEntity | null> {
     const workerDisk = await this.prisma.workerDisk.findUnique({
@@ -32,7 +30,9 @@ export class WorkerDiskPrismaRepository implements WorkerDiskRepository {
       },
     });
 
-    return workerDisks.map((workerDisk) => WorkerDiskPrismaMapper.toEntity(workerDisk));
+    return workerDisks.map((workerDisk) =>
+      WorkerDiskPrismaMapper.toEntity(workerDisk),
+    );
   }
 
   async create(entity: WorkerDiskEntity): Promise<WorkerDiskEntity> {
@@ -65,5 +65,4 @@ export class WorkerDiskPrismaRepository implements WorkerDiskRepository {
       },
     });
   }
-
 }

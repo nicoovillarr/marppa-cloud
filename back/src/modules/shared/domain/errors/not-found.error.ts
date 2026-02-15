@@ -7,7 +7,6 @@ export class NotFoundError extends DomainError {
 
   constructor(
     message: string = "I didn't find it. Maybe it never existed. Maybe you dreamt it.",
-
   ) {
     super(message);
   }

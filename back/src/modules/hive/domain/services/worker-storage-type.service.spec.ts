@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerStorageTypeService } from './worker-storage-type.service';
-import { WorkerStorageTypeRepository, WORKER_STORAGE_TYPE_REPOSITORY_SYMBOL } from '../repositories/worker-storage-type.repository';
+import {
+  WorkerStorageTypeRepository,
+  WORKER_STORAGE_TYPE_REPOSITORY_SYMBOL,
+} from '../repositories/worker-storage-type.repository';
 import { WorkerStorageTypeEntity } from '../entities/worker-storage-type.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerStorageTypeDto } from '@/hive/presentation/dtos/create-worker-storage-type.dto';
@@ -10,16 +13,11 @@ describe('WorkerStorageTypeService', () => {
   let service: WorkerStorageTypeService;
   let repository: WorkerStorageTypeRepository;
 
-  const mockWorkerStorageType: WorkerStorageTypeEntity = new WorkerStorageTypeEntity(
-    'Test Storage Type',
-    true,
-    true,
-    false,
-    {
+  const mockWorkerStorageType: WorkerStorageTypeEntity =
+    new WorkerStorageTypeEntity('Test Storage Type', true, true, false, {
       id: 1,
       description: 'Test storage type description',
-    }
-  );
+    });
 
   const mockWorkerStorageTypeRepository = {
     findById: jest.fn(),
@@ -40,7 +38,9 @@ describe('WorkerStorageTypeService', () => {
     }).compile();
 
     service = module.get<WorkerStorageTypeService>(WorkerStorageTypeService);
-    repository = module.get<WorkerStorageTypeRepository>(WORKER_STORAGE_TYPE_REPOSITORY_SYMBOL);
+    repository = module.get<WorkerStorageTypeRepository>(
+      WORKER_STORAGE_TYPE_REPOSITORY_SYMBOL,
+    );
   });
 
   afterEach(() => {
@@ -49,7 +49,9 @@ describe('WorkerStorageTypeService', () => {
 
   describe('findById', () => {
     it('should return a worker storage type by id', async () => {
-      mockWorkerStorageTypeRepository.findById.mockResolvedValue(mockWorkerStorageType);
+      mockWorkerStorageTypeRepository.findById.mockResolvedValue(
+        mockWorkerStorageType,
+      );
 
       const result = await service.findById(1);
 
@@ -74,11 +76,15 @@ describe('WorkerStorageTypeService', () => {
         description: 'New storage type description',
       };
 
-      mockWorkerStorageTypeRepository.create.mockResolvedValue(mockWorkerStorageType);
+      mockWorkerStorageTypeRepository.create.mockResolvedValue(
+        mockWorkerStorageType,
+      );
 
       const result = await service.createWorkerStorageType(dto);
 
-      expect(repository.create).toHaveBeenCalledWith(expect.any(WorkerStorageTypeEntity));
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.any(WorkerStorageTypeEntity),
+      );
       expect(result).toEqual(mockWorkerStorageType);
     });
 
@@ -90,7 +96,9 @@ describe('WorkerStorageTypeService', () => {
         shared: false,
       };
 
-      mockWorkerStorageTypeRepository.create.mockResolvedValue(mockWorkerStorageType);
+      mockWorkerStorageTypeRepository.create.mockResolvedValue(
+        mockWorkerStorageType,
+      );
 
       await service.createWorkerStorageType(dto);
 
@@ -105,16 +113,22 @@ describe('WorkerStorageTypeService', () => {
         name: 'Updated Storage Type',
         persistent: false,
         attachable: false,
-        shared: false
+        shared: false,
       };
 
-      mockWorkerStorageTypeRepository.findById.mockResolvedValue(mockWorkerStorageType);
-      mockWorkerStorageTypeRepository.update.mockResolvedValue(mockWorkerStorageType);
+      mockWorkerStorageTypeRepository.findById.mockResolvedValue(
+        mockWorkerStorageType,
+      );
+      mockWorkerStorageTypeRepository.update.mockResolvedValue(
+        mockWorkerStorageType,
+      );
 
       const result = await service.updateWorkerStorageType(1, dto);
 
       expect(repository.findById).toHaveBeenCalledWith(1);
-      expect(repository.update).toHaveBeenCalledWith(expect.any(WorkerStorageTypeEntity));
+      expect(repository.update).toHaveBeenCalledWith(
+        expect.any(WorkerStorageTypeEntity),
+      );
       expect(result).toEqual(mockWorkerStorageType);
     });
 
@@ -123,12 +137,14 @@ describe('WorkerStorageTypeService', () => {
         name: 'Updated Storage Type',
         persistent: false,
         attachable: false,
-        shared: false
+        shared: false,
       };
 
       mockWorkerStorageTypeRepository.findById.mockResolvedValue(null);
 
-      await expect(service.updateWorkerStorageType(999999, dto)).rejects.toThrow(NotFoundError);
+      await expect(
+        service.updateWorkerStorageType(999999, dto),
+      ).rejects.toThrow(NotFoundError);
     });
   });
 

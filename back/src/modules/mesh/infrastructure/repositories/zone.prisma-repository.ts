@@ -1,15 +1,15 @@
-import { Injectable } from "@nestjs/common";
-import { ZoneRepository } from "../../domain/repositories/zone.repository";
-import { ZoneEntity } from "../../domain/entities/zone.entity";
-import { ZonePrismaMapper } from "../mappers/zone.prisma-mapper";
-import { ZoneWithNodesModel } from "../../domain/models/zone-with-nodes.model";
-import { PrismaMapper } from "@/shared/infrastructure/mappers/prisma.mapper";
-import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
-import { NodePrismaMapper } from "../mappers/node.prisma-mapper";
+import { Injectable } from '@nestjs/common';
+import { ZoneRepository } from '../../domain/repositories/zone.repository';
+import { ZoneEntity } from '../../domain/entities/zone.entity';
+import { ZonePrismaMapper } from '../mappers/zone.prisma-mapper';
+import { ZoneWithNodesModel } from '../../domain/models/zone-with-nodes.model';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
+import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { NodePrismaMapper } from '../mappers/node.prisma-mapper';
 
 @Injectable()
 export class ZonePrismaRepository implements ZoneRepository {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: string): Promise<ZoneEntity | null> {
     const model = await this.prisma.zone.findUnique({
@@ -38,7 +38,7 @@ export class ZonePrismaRepository implements ZoneRepository {
     return new ZoneWithNodesModel({
       zone: ZonePrismaMapper.toEntity(model),
       nodes: model.nodes.map(NodePrismaMapper.toEntity),
-    })
+    });
   }
 
   async findByOwnerId(ownerId: string): Promise<ZoneEntity[]> {
@@ -51,7 +51,7 @@ export class ZonePrismaRepository implements ZoneRepository {
 
   async findLastZone(): Promise<ZoneWithNodesModel | null> {
     const model = await this.prisma.zone.findFirst({
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       include: {
         nodes: true,
       },

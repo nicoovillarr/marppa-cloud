@@ -1,17 +1,26 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
-import { ZoneApiService } from "../../application/services/zone.api-service";
-import { ZoneResponseModel } from "../../application/models/zone.response-model";
-import { CreateZoneDto } from "../dtos/create-zone.dto";
-import { UpdateZoneDto } from "../dtos/update-zone.dto";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
+import { ZoneApiService } from '../../application/services/zone.api-service';
+import { ZoneResponseModel } from '../../application/models/zone.response-model';
+import { CreateZoneDto } from '../dtos/create-zone.dto';
+import { UpdateZoneDto } from '../dtos/update-zone.dto';
 
 @Controller('zones')
 export class ZoneController {
-  constructor(
-    private readonly apiService: ZoneApiService,
-  ) { }
+  constructor(private readonly apiService: ZoneApiService) {}
 
   @Get()
-  public async findByOwnerId(@Query('ownerId') ownerId?: string): Promise<ZoneResponseModel[]> {
+  public async findByOwnerId(
+    @Query('ownerId') ownerId?: string,
+  ): Promise<ZoneResponseModel[]> {
     return this.apiService.findByOwnerId(ownerId);
   }
 
@@ -26,7 +35,10 @@ export class ZoneController {
   }
 
   @Put(':id')
-  public async update(@Param('id') id: string, @Body() data: UpdateZoneDto): Promise<ZoneResponseModel> {
+  public async update(
+    @Param('id') id: string,
+    @Body() data: UpdateZoneDto,
+  ): Promise<ZoneResponseModel> {
     return this.apiService.update(id, data);
   }
 

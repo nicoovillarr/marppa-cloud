@@ -1,17 +1,19 @@
-import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
-import { Injectable } from "@nestjs/common";
-import { FiberRepository } from "../../domain/repositories/fiber.repository";
-import { PrismaMapper } from "@/shared/infrastructure/mappers/prisma.mapper";
-import { FiberEntity } from "../../domain/entities/fiber.entity";
-import { FiberPrismaMapper } from "../mappers/fiber.prisma-mapper";
+import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { Injectable } from '@nestjs/common';
+import { FiberRepository } from '../../domain/repositories/fiber.repository';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
+import { FiberEntity } from '../../domain/entities/fiber.entity';
+import { FiberPrismaMapper } from '../mappers/fiber.prisma-mapper';
 
 @Injectable()
 export class FiberPrismaRepository implements FiberRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-  public async findById(zoneId: string, nodeId: string, fiberId: number): Promise<FiberEntity | null> {
+  public async findById(
+    zoneId: string,
+    nodeId: string,
+    fiberId: number,
+  ): Promise<FiberEntity | null> {
     const model = await this.prisma.fiber.findFirst({
       where: {
         id: fiberId,
@@ -19,8 +21,8 @@ export class FiberPrismaRepository implements FiberRepository {
           id: nodeId,
           zone: {
             id: zoneId,
-          }
-        }
+          },
+        },
       },
     });
 
@@ -31,15 +33,18 @@ export class FiberPrismaRepository implements FiberRepository {
     return FiberPrismaMapper.toEntity(model);
   }
 
-  public async findByNodeId(zoneId: string, nodeId: string): Promise<FiberEntity[]> {
+  public async findByNodeId(
+    zoneId: string,
+    nodeId: string,
+  ): Promise<FiberEntity[]> {
     const models = await this.prisma.fiber.findMany({
       where: {
         node: {
           id: nodeId,
           zone: {
             id: zoneId,
-          }
-        }
+          },
+        },
       },
     });
 
@@ -56,7 +61,11 @@ export class FiberPrismaRepository implements FiberRepository {
     return FiberPrismaMapper.toEntity(model);
   }
 
-  public async delete(zoneId: string, nodeId: string, fiberId: number): Promise<void> {
+  public async delete(
+    zoneId: string,
+    nodeId: string,
+    fiberId: number,
+  ): Promise<void> {
     await this.prisma.fiber.deleteMany({
       where: {
         id: fiberId,
@@ -64,8 +73,8 @@ export class FiberPrismaRepository implements FiberRepository {
           id: nodeId,
           zone: {
             id: zoneId,
-          }
-        }
+          },
+        },
       },
     });
   }

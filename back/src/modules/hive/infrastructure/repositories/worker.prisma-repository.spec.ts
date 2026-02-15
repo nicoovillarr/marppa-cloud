@@ -129,7 +129,7 @@ describe('WorkerPrismaRepository (Integration)', () => {
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
-      const found = result.find(w => w.id === createdWorkerId);
+      const found = result.find((w) => w.id === createdWorkerId);
       expect(found).toBeDefined();
     });
 

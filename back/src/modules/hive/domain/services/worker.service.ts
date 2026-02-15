@@ -1,14 +1,17 @@
-import { WORKER_REPOSITORY_SYMBOL, WorkerRepository } from "../repositories/worker.repository";
-import { WorkerEntity } from "../entities/worker.entity";
-import { NotFoundError } from "@/shared/domain/errors/not-found.error";
-import { UpdateWorkerDto } from "@/hive/presentation/dtos/update-worker.dto";
-import { CreateWorkerDto } from "@/hive/presentation/dtos/create-worker.dto";
-import { getCurrentUser } from "@/auth/infrastructure/als/session.context";
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
-import { Inject, Injectable } from "@nestjs/common";
-import { UnauthorizedError } from "@/shared/domain/errors/unauthorized.error";
-import { MacAddressService } from "./mac-address.service";
-import { WorkerInvalidStatusError } from "../errors/worker-invalid-status.error";
+import {
+  WORKER_REPOSITORY_SYMBOL,
+  WorkerRepository,
+} from '../repositories/worker.repository';
+import { WorkerEntity } from '../entities/worker.entity';
+import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { UpdateWorkerDto } from '@/hive/presentation/dtos/update-worker.dto';
+import { CreateWorkerDto } from '@/hive/presentation/dtos/create-worker.dto';
+import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { Inject, Injectable } from '@nestjs/common';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { MacAddressService } from './mac-address.service';
+import { WorkerInvalidStatusError } from '../errors/worker-invalid-status.error';
 
 @Injectable()
 export class WorkerService {
@@ -17,7 +20,7 @@ export class WorkerService {
     private readonly workerRepository: WorkerRepository,
 
     private readonly macAddressService: MacAddressService,
-  ) { }
+  ) {}
 
   async findById(id: string): Promise<WorkerEntity> {
     const worker = await this.workerRepository.findById(id);
@@ -62,7 +65,10 @@ export class WorkerService {
     const entity = await this.findById(id);
 
     if (entity.status !== ResourceStatus.INACTIVE) {
-      throw new WorkerInvalidStatusError(ResourceStatus.INACTIVE, entity.status);
+      throw new WorkerInvalidStatusError(
+        ResourceStatus.INACTIVE,
+        entity.status,
+      );
     }
 
     const updated = entity.clone({
@@ -117,7 +123,10 @@ export class WorkerService {
     const entity = await this.findById(id);
 
     if (entity.status !== ResourceStatus.INACTIVE) {
-      throw new WorkerInvalidStatusError(ResourceStatus.INACTIVE, entity.status);
+      throw new WorkerInvalidStatusError(
+        ResourceStatus.INACTIVE,
+        entity.status,
+      );
     }
 
     const updated = entity.clone({

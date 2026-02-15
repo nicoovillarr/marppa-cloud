@@ -5,9 +5,7 @@ import { UserService } from '@/user/domain/services/user.service';
 
 @Injectable()
 export class UserApiService {
-  constructor(
-    private readonly userService: UserService,
-  ) { }
+  constructor(private readonly userService: UserService) { }
 
   async findCurrentUser(): Promise<UserEntity | null> {
     return await this.userService.findCurrentUser();

@@ -1,17 +1,26 @@
-import { WorkerApiService } from "@/hive/application/services/worker.api-service";
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
-import { CreateWorkerDto } from "../dtos/create-worker.dto";
-import { UpdateWorkerDto } from "../dtos/update-worker.dto";
-import { WorkerResponseModel } from "@/hive/application/models/worker.response-model";
+import { WorkerApiService } from '@/hive/application/services/worker.api-service';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
+import { CreateWorkerDto } from '../dtos/create-worker.dto';
+import { UpdateWorkerDto } from '../dtos/update-worker.dto';
+import { WorkerResponseModel } from '@/hive/application/models/worker.response-model';
 
 @Controller('hive/worker')
 export class WorkerController {
-  constructor(
-    private readonly service: WorkerApiService,
-  ) { }
+  constructor(private readonly service: WorkerApiService) {}
 
   @Get()
-  async findByOwnerId(@Query('ownerId') ownerId: string): Promise<WorkerResponseModel[]> {
+  async findByOwnerId(
+    @Query('ownerId') ownerId: string,
+  ): Promise<WorkerResponseModel[]> {
     return await this.service.findByOwnerId(ownerId);
   }
 
@@ -26,7 +35,10 @@ export class WorkerController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: UpdateWorkerDto): Promise<WorkerResponseModel> {
+  async update(
+    @Param('id') id: string,
+    @Body() data: UpdateWorkerDto,
+  ): Promise<WorkerResponseModel> {
     return await this.service.update(id, data);
   }
 

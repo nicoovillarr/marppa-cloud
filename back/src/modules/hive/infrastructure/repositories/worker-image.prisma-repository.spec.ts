@@ -16,7 +16,9 @@ describe('WorkerImagePrismaRepository (Integration)', () => {
       providers: [WorkerImagePrismaRepository, PrismaService],
     }).compile();
 
-    repository = module.get<WorkerImagePrismaRepository>(WorkerImagePrismaRepository);
+    repository = module.get<WorkerImagePrismaRepository>(
+      WorkerImagePrismaRepository,
+    );
     prisma = module.get<PrismaService>(PrismaService);
 
     const { id: workerStorageTypeId } = await prisma.workerStorageType.create({
@@ -63,7 +65,7 @@ describe('WorkerImagePrismaRepository (Integration)', () => {
           description: 'Test image description',
           osVersion: '11.0',
           workerStorageTypeId: testWorkerStorageTypeId,
-        }
+        },
       );
 
       const result = await repository.create(image);

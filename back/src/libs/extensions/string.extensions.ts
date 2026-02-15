@@ -1,4 +1,4 @@
-export { };
+export {};
 
 declare global {
   interface String {
@@ -8,7 +8,7 @@ declare global {
 }
 
 String.prototype.sanitize = function (): string {
-  return this.trim().replace(/\s{2,}/g, " ");
+  return this.trim().replace(/\s{2,}/g, ' ');
 };
 
 String.prototype.capitalize = function (): string {

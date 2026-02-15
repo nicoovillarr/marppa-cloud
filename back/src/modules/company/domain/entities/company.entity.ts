@@ -1,8 +1,8 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
 
 export interface CompanyOptionalProps {
-  id?: string
+  id?: string;
   alias?: string;
   description?: string;
   createdAt?: Date;
@@ -11,10 +11,9 @@ export interface CompanyOptionalProps {
 }
 
 export class CompanyEntity extends PatchableEntity {
-  
   @PrimaryKey()
   public readonly id?: string;
-  
+
   public readonly alias?: string;
   public readonly description?: string;
   public readonly createdAt?: Date;
@@ -23,7 +22,7 @@ export class CompanyEntity extends PatchableEntity {
 
   constructor(
     public readonly name: string,
-    optionals: CompanyOptionalProps = {}
+    optionals: CompanyOptionalProps = {},
   ) {
     super();
 
@@ -48,16 +47,13 @@ export class CompanyEntity extends PatchableEntity {
   }
 
   static fromObject(object: Record<string, any>): CompanyEntity {
-    return new CompanyEntity(
-      object.name,
-      {
-        id: object.id,
-        alias: object.alias,
-        description: object.description,
-        createdAt: object.createdAt,
-        updatedAt: object.updatedAt,
-        parentCompanyId: object.parentCompanyId,
-      }
-    );
+    return new CompanyEntity(object.name, {
+      id: object.id,
+      alias: object.alias,
+      description: object.description,
+      createdAt: object.createdAt,
+      updatedAt: object.updatedAt,
+      parentCompanyId: object.parentCompanyId,
+    });
   }
 }

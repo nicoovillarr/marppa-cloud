@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
 
 import { AuthApiService } from '@/auth/application/services/auth.api-service';
 import { LoginUserDto } from '@/auth/presentation/dtos/login-user.dto';
 
 import { CreateUserDto } from '@/auth/presentation/dtos/create-user.dto';
+import { LoggedInGuard } from '../guards/logged-in.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -19,8 +21,15 @@ export class AuthController {
     return await this.authApiService.login(data, req);
   }
 
+  @Post('logout')
+  @UseGuards(LoggedInGuard)
+  async logout(@Req() req: Request) {
+    return await this.authApiService.logout(req);
+  }
+
   @Get('tick')
-  async tick(@Query('refreshToken') refreshToken: string, @Req() req: Request) {
-    return await this.authApiService.tick(refreshToken, req);
+  @UseGuards(LoggedInGuard)
+  async tick(@Req() req: Request) {
+    return await this.authApiService.tick(req);
   }
 }

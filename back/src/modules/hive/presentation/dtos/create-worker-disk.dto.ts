@@ -1,4 +1,10 @@
-import { IsBoolean, IsDate, IsNumber, IsString, IsOptional } from "class-validator";
+import {
+  IsBoolean,
+  IsDate,
+  IsNumber,
+  IsString,
+  IsOptional,
+} from 'class-validator';
 
 export class CreateWorkerDiskDto {
   @IsString()

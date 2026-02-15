@@ -1,5 +1,5 @@
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
-import { Expose } from "class-transformer";
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { Expose } from 'class-transformer';
 
 export class NodeResponseModel {
   @Expose()

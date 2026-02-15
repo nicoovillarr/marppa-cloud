@@ -5,7 +5,6 @@ export class InvalidTokenError extends DomainError {
 
   constructor(
     message: string = "Invalid token. I don't know whose that is, but it's not yours.",
-
   ) {
     super(message);
   }

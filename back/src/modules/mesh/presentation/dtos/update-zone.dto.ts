@@ -1,3 +1,3 @@
-import { CreateZoneDto } from "./create-zone.dto";
+import { CreateZoneDto } from './create-zone.dto';
 
 export class UpdateZoneDto extends CreateZoneDto {}

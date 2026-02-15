@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Request } from 'express';
 
 import { AuthCache } from '@/auth/infrastructure/cache/auth.cache';
 import { AuthService } from '@/auth/domain/services/auth.service';
@@ -8,6 +9,7 @@ import { UserService } from '@/user/domain/services/user.service';
 import { CreateUserDto } from '@/auth/presentation/dtos/create-user.dto';
 import { JwtEntity } from '@/auth/domain/entities/jwt.entity';
 import { Utils } from 'src/libs/utils';
+import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 
 @Injectable()
 export class AuthApiService {
@@ -17,7 +19,10 @@ export class AuthApiService {
     private readonly cache: AuthCache,
   ) { }
 
-  async register(data: CreateUserDto, req: Request): Promise<{
+  async register(
+    data: CreateUserDto,
+    req: Request,
+  ): Promise<{
     accessToken: string;
     refreshToken: string;
   }> {
@@ -31,7 +36,11 @@ export class AuthApiService {
 
     const requestData = Utils.parseRequestData(req);
 
-    await this.authService.createSessionForUser(user.id!, refreshToken, requestData);
+    await this.authService.createSessionForUser(
+      user.id,
+      refreshToken,
+      requestData,
+    );
 
     return {
       accessToken,
@@ -39,7 +48,10 @@ export class AuthApiService {
     };
   }
 
-  async login(data: LoginUserDto, req: Request): Promise<{
+  async login(
+    data: LoginUserDto,
+    req: Request,
+  ): Promise<{
     accessToken: string;
     refreshToken: string;
   }> {
@@ -64,7 +76,11 @@ export class AuthApiService {
 
     const requestData = Utils.parseRequestData(req);
 
-    await this.authService.createSessionForUser(user.id!, refreshToken, requestData);
+    await this.authService.createSessionForUser(
+      user.id!,
+      refreshToken,
+      requestData,
+    );
 
     return {
       accessToken,
@@ -72,18 +88,32 @@ export class AuthApiService {
     };
   }
 
-  async tick(oldRefreshToken: string, req: Request): Promise<{
+  async logout(req: Request) {
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      throw new Error('No refresh token found');
+    }
+
+    await this.authService.invalidateSession(refreshToken);
+  }
+
+  async tick(req: Request): Promise<{
     accessToken: string;
     refreshToken: string;
   }> {
+    const oldRefreshToken = req.cookies.refresh_token;
+    if (!oldRefreshToken) {
+      throw new Error('No refresh token found');
+    }
+
     const userId = await this.validateRefreshToken(oldRefreshToken);
     if (!userId) {
-      throw new Error('User not found');
+      throw new NotFoundError();
     }
 
     const user = await this.userService.findUserById(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundError();
     }
 
     const { accessToken, refreshToken: newRefreshToken } =
@@ -91,7 +121,11 @@ export class AuthApiService {
 
     const requestData = Utils.parseRequestData(req);
 
-    await this.authService.createSessionForUser(user.id!, newRefreshToken, requestData);
+    await this.authService.createSessionForUser(
+      user.id!,
+      newRefreshToken,
+      requestData,
+    );
 
     return {
       accessToken,

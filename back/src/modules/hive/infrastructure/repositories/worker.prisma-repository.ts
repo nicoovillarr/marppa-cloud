@@ -1,15 +1,13 @@
-import { WorkerEntity } from "@/hive/domain/entities/worker.entity";
-import { WorkerRepository } from "@/hive/domain/repositories/worker.repository";
-import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
-import { Injectable } from "@nestjs/common";
-import { WorkerPrismaMapper } from "../mappers/worker.prisma-mapper";
-import { PrismaMapper } from "@/shared/infrastructure/mappers/prisma.mapper";
+import { WorkerEntity } from '@/hive/domain/entities/worker.entity';
+import { WorkerRepository } from '@/hive/domain/repositories/worker.repository';
+import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { Injectable } from '@nestjs/common';
+import { WorkerPrismaMapper } from '../mappers/worker.prisma-mapper';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class WorkerPrismaRepository implements WorkerRepository {
-  constructor(
-    private readonly prisma: PrismaService
-  ) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: string): Promise<WorkerEntity | null> {
     const worker = await this.prisma.worker.findUnique({
@@ -65,5 +63,4 @@ export class WorkerPrismaRepository implements WorkerRepository {
       },
     });
   }
-
 }

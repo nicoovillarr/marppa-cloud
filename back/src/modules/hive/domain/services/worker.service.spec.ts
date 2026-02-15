@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerService } from './worker.service';
-import { WorkerRepository, WORKER_REPOSITORY_SYMBOL } from '../repositories/worker.repository';
+import {
+  WorkerRepository,
+  WORKER_REPOSITORY_SYMBOL,
+} from '../repositories/worker.repository';
 import { WorkerEntity } from '../entities/worker.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerDto } from '@/hive/presentation/dtos/create-worker.dto';
@@ -23,7 +26,7 @@ describe('WorkerService', () => {
     'c-000001',
     {
       id: 'w-000001',
-    }
+    },
   );
 
   const mockWorkerRepository = {
@@ -138,7 +141,7 @@ describe('WorkerService', () => {
   describe('updateWorker', () => {
     it('should update a worker successfully', async () => {
       const dto: UpdateWorkerDto = {
-        name: 'Updated Worker'
+        name: 'Updated Worker',
       };
 
       jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
@@ -163,7 +166,9 @@ describe('WorkerService', () => {
 
       mockWorkerRepository.findById.mockResolvedValue(null);
 
-      await expect(service.updateWorker('w-999999', dto)).rejects.toThrow(NotFoundError);
+      await expect(service.updateWorker('w-999999', dto)).rejects.toThrow(
+        NotFoundError,
+      );
     });
   });
 

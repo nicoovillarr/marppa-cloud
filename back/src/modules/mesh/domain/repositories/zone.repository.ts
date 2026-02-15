@@ -1,7 +1,7 @@
-import { ZoneEntity } from "../entities/zone.entity";
-import { ZoneWithNodesModel as ZoneWithNodesModel } from "../models/zone-with-nodes.model";
+import { ZoneEntity } from '../entities/zone.entity';
+import { ZoneWithNodesModel as ZoneWithNodesModel } from '../models/zone-with-nodes.model';
 
-export const ZONE_REPOSITORY_SYMBOL = Symbol('ZONE_REPOSITORY')
+export const ZONE_REPOSITORY_SYMBOL = Symbol('ZONE_REPOSITORY');
 
 export abstract class ZoneRepository {
   abstract findById(id: string): Promise<ZoneEntity | null>;

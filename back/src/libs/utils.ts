@@ -1,17 +1,18 @@
-import { UAParser } from "ua-parser-js";
-import { RequestData } from "../types";
+import { UAParser } from 'ua-parser-js';
+import { RequestData } from '../types';
+import { Request } from 'express';
 
 export class Utils {
   public static parseRequestData(req: Request): RequestData {
-    let userAgent = "Unknown";
-    let ipAddress = "Unknown";
-    let platform = "Unknown";
-    let device = "Unknown";
-    let browser = "Unknown";
+    let userAgent = 'Unknown';
+    let ipAddress = 'Unknown';
+    let platform = 'Unknown';
+    let device = 'Unknown';
+    let browser = 'Unknown';
 
     if (req) {
-      if (req.headers.get("user-agent")) {
-        const parser = new UAParser(req.headers.get("user-agent")!);
+      if (req.headers['user-agent']) {
+        const parser = new UAParser(req.headers['user-agent'] as string);
         const result = parser.getResult();
 
         userAgent = result.ua;
@@ -20,12 +21,12 @@ export class Utils {
         device =
           result.device.vendor && result.device.model
             ? `${result.device.vendor} ${result.device.model}`
-            : "Desktop";
+            : 'Desktop';
       }
 
-      const forwardedFor = req.headers.get("x-forwarded-for");
+      const forwardedFor = req.headers['x-forwarded-for'];
       if (forwardedFor) {
-        ipAddress = forwardedFor.split(",")[0];
+        ipAddress = (forwardedFor as string).split(',')[0];
       }
     }
 
@@ -38,12 +39,9 @@ export class Utils {
     };
   }
 
-  public static generateUUID(
-    prefix: string = "",
-    length: number = 8
-  ): string {
-    let result = "";
-    const characters = "abcdef0123456789";
+  public static generateUUID(prefix: string = '', length: number = 8): string {
+    let result = '';
+    const characters = 'abcdef0123456789';
     const charactersLength = characters.length;
 
     for (let i = 0; i < length; i++) {
@@ -52,5 +50,4 @@ export class Utils {
 
     return prefix + result;
   }
-
 }

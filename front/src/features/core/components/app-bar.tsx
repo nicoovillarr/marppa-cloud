@@ -1,36 +1,23 @@
 "use client";
 
-import { fetcher } from "@/libs/fetcher";
-import { useAppStore } from "@/store/app-store";
+import useAuth from "@/auth/models/useAuth";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { useShallow } from "zustand/shallow";
+import useUser from "src/features/users/model/useUser";
 
 const LoggedInLinks = [{ href: "/dashboard", label: "Dashboard" }];
 
 export default function AppBar() {
-  const { user } = useAppStore(
-    useShallow((state) => ({
-      user: state.user,
-    }))
-  );
-
-  const onLogout = async () => {
-    const response = await fetcher("/api/auth/logout", "POST");
-    if (response.success) {
-      redirect("/login");
-    } else {
-      alert(response.data.message || "Logout failed");
-    }
-  };
+  const { user } = useUser();
+  const { logout } = useAuth();
 
   return (
     <div className="flex items-center justify-between px-4 bg-white border-b border-gray-200">
       <Link href="/" className="text-lg font-semibold">
         My App
       </Link>
+
       <nav className="flex items-center space-x-4">
-        {user ? (
+        {!!user ? (
           <>
             {LoggedInLinks.map((link) => (
               <Link
@@ -43,7 +30,7 @@ export default function AppBar() {
             ))}
             <button
               className="text-gray-700 hover:text-black"
-              onClick={onLogout}
+              onClick={logout}
             >
               Logout
             </button>

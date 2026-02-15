@@ -1,6 +1,6 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 interface ZoneOptionalProps {
   id?: string;
@@ -11,7 +11,6 @@ interface ZoneOptionalProps {
 }
 
 export class ZoneEntity extends PatchableEntity {
-
   @PrimaryKey()
   public readonly id?: string;
 

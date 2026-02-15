@@ -1,15 +1,13 @@
-import { WorkerImageEntity } from "@/hive/domain/entities/worker-image.entity";
-import { WorkerImageRepository } from "@/hive/domain/repositories/worker-image.repository";
-import { PrismaService } from "@/shared/infrastructure/services/prisma.service";
-import { WorkerImagePrismaMapper } from "../mappers/worker-image.prisma-mapper";
-import { Injectable } from "@nestjs/common";
-import { PrismaMapper } from "@/shared/infrastructure/mappers/prisma.mapper";
+import { WorkerImageEntity } from '@/hive/domain/entities/worker-image.entity';
+import { WorkerImageRepository } from '@/hive/domain/repositories/worker-image.repository';
+import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { WorkerImagePrismaMapper } from '../mappers/worker-image.prisma-mapper';
+import { Injectable } from '@nestjs/common';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class WorkerImagePrismaRepository implements WorkerImageRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: number): Promise<WorkerImageEntity | null> {
     const workerImage = await this.prisma.workerImage.findUnique({
@@ -55,5 +53,4 @@ export class WorkerImagePrismaRepository implements WorkerImageRepository {
       },
     });
   }
-
 }

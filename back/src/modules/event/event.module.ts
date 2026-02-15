@@ -1,11 +1,11 @@
-import { Module } from "@nestjs/common";
-import { EventService } from "./domain/services/event.service";
-import { EVENT_REPOSITORY_SYMBOL } from "./domain/repositories/event.repository";
-import { EventPrismaRepository } from "./infrastructure/repositories/event-prisma.repository";
-import { EventApiService } from "./application/services/event-api.service";
-import { EventController } from "./presentation/controllers/event.controller";
-import { SharedModule } from "@/shared/shared.module";
-import { AuthModule } from "@/auth/auth.module";
+import { Module } from '@nestjs/common';
+import { EventService } from './domain/services/event.service';
+import { EVENT_REPOSITORY_SYMBOL } from './domain/repositories/event.repository';
+import { EventPrismaRepository } from './infrastructure/repositories/event-prisma.repository';
+import { EventApiService } from './application/services/event-api.service';
+import { EventController } from './presentation/controllers/event.controller';
+import { SharedModule } from '@/shared/shared.module';
+import { AuthModule } from '@/auth/auth.module';
 
 @Module({
   imports: [SharedModule, AuthModule],
@@ -16,9 +16,9 @@ import { AuthModule } from "@/auth/auth.module";
 
     {
       provide: EVENT_REPOSITORY_SYMBOL,
-      useClass: EventPrismaRepository
+      useClass: EventPrismaRepository,
     },
   ],
-  exports: [EventService]
+  exports: [EventService],
 })
-export class EventModule { }
+export class EventModule {}

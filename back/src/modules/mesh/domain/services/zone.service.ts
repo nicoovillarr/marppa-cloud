@@ -1,20 +1,23 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { ZONE_REPOSITORY_SYMBOL, ZoneRepository } from "../repositories/zone.repository";
-import { ZoneEntity } from "../entities/zone.entity";
-import { CreateZoneDto } from "../../presentation/dtos/create-zone.dto";
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  ZONE_REPOSITORY_SYMBOL,
+  ZoneRepository,
+} from '../repositories/zone.repository';
+import { ZoneEntity } from '../entities/zone.entity';
+import { CreateZoneDto } from '../../presentation/dtos/create-zone.dto';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
-import { UnauthorizedError } from "@/shared/domain/errors/unauthorized.error";
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
-import { UpdateZoneDto } from "../../presentation/dtos/update-zone.dto";
-import { NotFoundError } from "@/shared/domain/errors/not-found.error";
-import { ZoneWithNodesModel } from "../models/zone-with-nodes.model";
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { UpdateZoneDto } from '../../presentation/dtos/update-zone.dto';
+import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { ZoneWithNodesModel } from '../models/zone-with-nodes.model';
 
 @Injectable()
 export class ZoneService {
   constructor(
     @Inject(ZONE_REPOSITORY_SYMBOL)
     private readonly repository: ZoneRepository,
-  ) { }
+  ) {}
 
   public async findById(id: string): Promise<ZoneEntity> {
     const entity = await this.repository.findById(id);
@@ -51,7 +54,11 @@ export class ZoneService {
     return this.repository.findLastZone();
   }
 
-  public create(entity: CreateZoneDto, cidr: string, gateway: string): Promise<ZoneEntity> {
+  public create(
+    entity: CreateZoneDto,
+    cidr: string,
+    gateway: string,
+  ): Promise<ZoneEntity> {
     const user = getCurrentUser();
     if (!user) {
       throw new UnauthorizedError();
@@ -66,7 +73,7 @@ export class ZoneService {
       user.companyId,
       {
         description: entity.description,
-      }
+      },
     );
 
     return this.save(zone);
@@ -84,7 +91,7 @@ export class ZoneService {
       name: data.name,
       description: data.description,
       updatedBy: user.userId,
-    })
+    });
 
     return this.save(updated);
   }

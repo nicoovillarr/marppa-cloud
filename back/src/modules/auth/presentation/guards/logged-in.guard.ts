@@ -6,7 +6,7 @@ import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 
 @Injectable()
 export class LoggedInGuard implements CanActivate {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   async canActivate(): Promise<boolean> {
     const jwt: JwtEntity | null = getCurrentUser();

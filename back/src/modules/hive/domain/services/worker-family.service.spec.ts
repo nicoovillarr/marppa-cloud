@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerFamilyService } from './worker-family.service';
-import { WorkerFamilyRepository, WORKER_FAMILY_REPOSITORY_SYMBOL } from '../repositories/worker-family.repository';
+import {
+  WorkerFamilyRepository,
+  WORKER_FAMILY_REPOSITORY_SYMBOL,
+} from '../repositories/worker-family.repository';
 import { WorkerFamilyEntity } from '../entities/worker-family.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerFamilyDto } from '@/hive/presentation/dtos/create-worker-family.dto';
@@ -15,7 +18,7 @@ describe('WorkerFamilyService', () => {
     {
       id: 1,
       description: 'Test family description',
-    }
+    },
   );
 
   const mockWorkerFamilyRepository = {
@@ -37,7 +40,9 @@ describe('WorkerFamilyService', () => {
     }).compile();
 
     service = module.get<WorkerFamilyService>(WorkerFamilyService);
-    repository = module.get<WorkerFamilyRepository>(WORKER_FAMILY_REPOSITORY_SYMBOL);
+    repository = module.get<WorkerFamilyRepository>(
+      WORKER_FAMILY_REPOSITORY_SYMBOL,
+    );
   });
 
   afterEach(() => {
@@ -72,7 +77,9 @@ describe('WorkerFamilyService', () => {
 
       const result = await service.create(dto);
 
-      expect(repository.create).toHaveBeenCalledWith(expect.any(WorkerFamilyEntity));
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.any(WorkerFamilyEntity),
+      );
       expect(result).toEqual(mockWorkerFamily);
     });
 
@@ -104,7 +111,9 @@ describe('WorkerFamilyService', () => {
       const result = await service.update(1, dto);
 
       expect(repository.findById).toHaveBeenCalledWith(1);
-      expect(repository.update).toHaveBeenCalledWith(expect.any(WorkerFamilyEntity));
+      expect(repository.update).toHaveBeenCalledWith(
+        expect.any(WorkerFamilyEntity),
+      );
       expect(result).toEqual(mockWorkerFamily);
     });
 

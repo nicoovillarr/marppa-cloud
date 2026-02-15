@@ -7,7 +7,6 @@ export class RequestTimeoutError extends DomainError {
 
   constructor(
     message: string = 'You fell asleep. The server got bored and left.',
-
   ) {
     super(message);
   }

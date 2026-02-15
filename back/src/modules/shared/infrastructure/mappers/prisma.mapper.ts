@@ -1,5 +1,5 @@
-import { PRIMARY_KEY_METADATA } from "@/shared/domain/decorators/primary-key.decorator";
-import { BaseEntity } from "@/shared/domain/entities/base.entity";
+import { PRIMARY_KEY_METADATA } from '@/shared/domain/decorators/primary-key.decorator';
+import { BaseEntity } from '@/shared/domain/entities/base.entity';
 
 export class PrismaMapper {
   static toCreate(value: BaseEntity) {
@@ -23,8 +23,8 @@ export class PrismaMapper {
           deepCopy[foreign] = {
             connect: {
               id: deepCopy[key],
-            }
-          }
+            },
+          };
 
           delete deepCopy[key];
         }
@@ -38,7 +38,7 @@ export class PrismaMapper {
     return (
       Reflect.getMetadata(
         PRIMARY_KEY_METADATA,
-        Object.getPrototypeOf(entity)
+        Object.getPrototypeOf(entity),
       ) ?? []
     );
   }

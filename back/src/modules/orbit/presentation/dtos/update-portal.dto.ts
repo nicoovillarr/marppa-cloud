@@ -1,3 +1,3 @@
-import { CreatePortalDto } from "./create-portal.dto";
+import { CreatePortalDto } from './create-portal.dto';
 
-export class UpdatePortalDto extends CreatePortalDto { }
+export class UpdatePortalDto extends CreatePortalDto {}

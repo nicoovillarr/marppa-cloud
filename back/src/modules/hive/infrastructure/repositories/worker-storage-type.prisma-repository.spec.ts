@@ -14,7 +14,9 @@ describe('WorkerStorageTypePrismaRepository (Integration)', () => {
       providers: [WorkerStorageTypePrismaRepository, PrismaService],
     }).compile();
 
-    repository = module.get<WorkerStorageTypePrismaRepository>(WorkerStorageTypePrismaRepository);
+    repository = module.get<WorkerStorageTypePrismaRepository>(
+      WorkerStorageTypePrismaRepository,
+    );
     prisma = module.get<PrismaService>(PrismaService);
   });
 
@@ -24,7 +26,7 @@ describe('WorkerStorageTypePrismaRepository (Integration)', () => {
         name: { contains: testNamePrefix },
       },
     });
-    
+
     await prisma.$disconnect();
   });
 
@@ -39,7 +41,7 @@ describe('WorkerStorageTypePrismaRepository (Integration)', () => {
         false,
         {
           description: 'Test storage type description',
-        }
+        },
       );
 
       const result = await repository.create(storageType);
@@ -68,7 +70,8 @@ describe('WorkerStorageTypePrismaRepository (Integration)', () => {
     });
 
     it('should update a worker storage type', async () => {
-      const existingStorageType = await repository.findById(createdStorageTypeId);
+      const existingStorageType =
+        await repository.findById(createdStorageTypeId);
       const updatedStorageType = existingStorageType!.clone({
         name: `${testNamePrefix}-updated`,
         persistent: false,

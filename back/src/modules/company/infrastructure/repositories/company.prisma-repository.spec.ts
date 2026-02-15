@@ -69,7 +69,7 @@ describe('CompanyPrismaRepository (Integration)', () => {
       const result = await repository.findAll();
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
-      const found = result.find(c => c.id === createdCompanyId);
+      const found = result.find((c) => c.id === createdCompanyId);
       expect(found).toBeDefined();
     });
 

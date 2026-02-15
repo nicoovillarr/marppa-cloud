@@ -1,5 +1,5 @@
-import { EventProperty } from "@prisma/client";
-import { EventPropertyEntity } from "../../domain/entities/event-property.entity";
+import { EventProperty } from '@prisma/client';
+import { EventPropertyEntity } from '../../domain/entities/event-property.entity';
 
 export class EventPropertyPrismaMapper {
   static toEntity(raw: EventProperty): EventPropertyEntity {
@@ -9,7 +9,7 @@ export class EventPropertyPrismaMapper {
       raw.value ?? undefined,
       {
         id: raw.id ?? undefined,
-      }
+      },
     );
   }
 }

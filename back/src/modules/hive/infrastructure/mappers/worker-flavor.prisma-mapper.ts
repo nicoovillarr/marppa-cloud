@@ -1,5 +1,5 @@
-import { WorkerFlavor } from "@prisma/client";
-import { WorkerFlavorEntity } from "../../domain/entities/worker-flavor.entity";
+import { WorkerFlavor } from '@prisma/client';
+import { WorkerFlavorEntity } from '../../domain/entities/worker-flavor.entity';
 
 export class WorkerFlavorPrismaMapper {
   static toEntity(raw: WorkerFlavor): WorkerFlavorEntity {
@@ -11,7 +11,7 @@ export class WorkerFlavorPrismaMapper {
       raw.familyId,
       {
         id: raw.id,
-      }
+      },
     );
   }
 }

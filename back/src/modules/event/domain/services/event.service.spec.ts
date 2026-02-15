@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventService } from './event.service';
-import { EventRepository, EVENT_REPOSITORY_SYMBOL } from '../repositories/event.repository';
+import {
+  EventRepository,
+  EVENT_REPOSITORY_SYMBOL,
+} from '../repositories/event.repository';
 import { EventEntity } from '../entities/event.entity';
 import { EventResourceEntity } from '../entities/event-resource.entity';
 import { EventPropertyEntity } from '../entities/event-property.entity';
@@ -22,26 +25,27 @@ describe('EventService', () => {
       data: { key: 'value' },
       retries: 0,
       isVisible: true,
-    }
+    },
   );
 
   const mockEventResource: EventResourceEntity = new EventResourceEntity(
     1,
     'WORKER',
-    'w-000001'
+    'w-000001',
   );
 
   const mockEventProperty: EventPropertyEntity = new EventPropertyEntity(
     1,
     'status',
-    'active'
+    'active',
   );
 
-  const mockEventWithRelations: EventWithRelationsModel = new EventWithRelationsModel({
-    event: mockEvent,
-    resources: [mockEventResource],
-    properties: [mockEventProperty],
-  });
+  const mockEventWithRelations: EventWithRelationsModel =
+    new EventWithRelationsModel({
+      event: mockEvent,
+      resources: [mockEventResource],
+      properties: [mockEventProperty],
+    });
 
   const mockEventRepository = {
     create: jest.fn(),
@@ -79,8 +83,8 @@ describe('EventService', () => {
         createdBy: 'u-000001',
         companyId: 'c-000001',
         notes: 'Test event',
-        data: { key: 'value' }
-      }
+        data: { key: 'value' },
+      };
 
       const result = await service.create(dto);
 
@@ -97,7 +101,7 @@ describe('EventService', () => {
 
       expect(repository.addEventResource).toHaveBeenCalledWith(
         1,
-        expect.any(EventResourceEntity)
+        expect.any(EventResourceEntity),
       );
       expect(result).toEqual(mockEventResource);
     });
@@ -111,7 +115,7 @@ describe('EventService', () => {
 
       expect(repository.addEventProperty).toHaveBeenCalledWith(
         1,
-        expect.any(EventPropertyEntity)
+        expect.any(EventPropertyEntity),
       );
       expect(result).toEqual(mockEventProperty);
     });

@@ -1,13 +1,19 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common";
-import { TransponderApiService } from "../../application/services/transponder.api-service";
-import { CreateTransponderDto } from "../dtos/create-transponder.dto";
-import { UpdateTransponderDto } from "../dtos/update-transponder.dto";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
+import { TransponderApiService } from '../../application/services/transponder.api-service';
+import { CreateTransponderDto } from '../dtos/create-transponder.dto';
+import { UpdateTransponderDto } from '../dtos/update-transponder.dto';
 
 @Controller('portals/:portalId/transponders')
 export class TransponderController {
-  constructor(
-    private readonly apiService: TransponderApiService,
-  ) { }
+  constructor(private readonly apiService: TransponderApiService) {}
 
   @Get()
   public findByPortalId(@Param('portalId') portalId: string) {
@@ -20,12 +26,19 @@ export class TransponderController {
   }
 
   @Post()
-  public create(@Param('portalId') portalId: string, @Body() dto: CreateTransponderDto) {
+  public create(
+    @Param('portalId') portalId: string,
+    @Body() dto: CreateTransponderDto,
+  ) {
     return this.apiService.create(portalId, dto);
   }
 
   @Put(':id')
-  public update(@Param('portalId') portalId: string, @Param('id') id: string, @Body() dto: UpdateTransponderDto) {
+  public update(
+    @Param('portalId') portalId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateTransponderDto,
+  ) {
     return this.apiService.update(portalId, id, dto);
   }
 

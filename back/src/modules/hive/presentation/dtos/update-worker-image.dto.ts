@@ -1,3 +1,3 @@
-import { CreateWorkerImageDto } from "./create-worker-image.dto";
+import { CreateWorkerImageDto } from './create-worker-image.dto';
 
-export class UpdateWorkerImageDto extends CreateWorkerImageDto { }
+export class UpdateWorkerImageDto extends CreateWorkerImageDto {}

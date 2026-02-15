@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CompanyService } from './company.service';
-import { CompanyRepository, COMPANY_REPOSITORY_SYMBOL } from '../repositories/company.repository';
+import {
+  CompanyRepository,
+  COMPANY_REPOSITORY_SYMBOL,
+} from '../repositories/company.repository';
 import { CompanyEntity } from '../entities/company.entity';
 import { CreateCompanyDto } from '../../presentation/dtos/create-company.dto';
 import { UpdateCompanyDto } from '../../presentation/dtos/update-company.dto';
@@ -75,7 +78,10 @@ describe('CompanyService', () => {
 
       const result = await service.update('1', dto);
 
-      expect(repository.update).toHaveBeenCalledWith('1', expect.any(CompanyEntity));
+      expect(repository.update).toHaveBeenCalledWith(
+        '1',
+        expect.any(CompanyEntity),
+      );
       expect(result).toEqual(updatedCompany);
     });
   });

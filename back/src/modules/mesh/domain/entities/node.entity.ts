@@ -1,6 +1,6 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
-import { ResourceStatus } from "@prisma/client";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
+import { ResourceStatus } from '@prisma/client';
 
 interface NodeOptionalProps {
   id?: string;
@@ -12,7 +12,6 @@ interface NodeOptionalProps {
 }
 
 export class NodeEntity extends PatchableEntity {
-
   @PrimaryKey()
   public readonly id?: string;
 

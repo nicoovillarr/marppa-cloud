@@ -1,5 +1,5 @@
-import { EventResource } from "@prisma/client";
-import { EventResourceEntity } from "../../domain/entities/event-resource.entity";
+import { EventResource } from '@prisma/client';
+import { EventResourceEntity } from '../../domain/entities/event-resource.entity';
 
 export class EventResourcePrismaMapper {
   static toEntity(raw: EventResource): EventResourceEntity {
@@ -9,7 +9,7 @@ export class EventResourcePrismaMapper {
       raw.resourceId,
       {
         id: raw.id ?? undefined,
-      }
+      },
     );
   }
 }

@@ -1,5 +1,5 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
 
 interface WorkerFamilyOptionalProps {
   id?: number;
@@ -7,10 +7,9 @@ interface WorkerFamilyOptionalProps {
 }
 
 export class WorkerFamilyEntity extends PatchableEntity {
-
   @PrimaryKey()
   public readonly id?: number;
-  
+
   public readonly description?: string;
 
   constructor(
@@ -32,12 +31,9 @@ export class WorkerFamilyEntity extends PatchableEntity {
   }
 
   static fromObject(data: Record<string, any>): WorkerFamilyEntity {
-    return new WorkerFamilyEntity(
-      data.name,
-      {
-        id: data.id,
-        description: data.description,
-      }
-    );
+    return new WorkerFamilyEntity(data.name, {
+      id: data.id,
+      description: data.description,
+    });
   }
 }

@@ -1,7 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
-import { UserRepository, USER_REPOSITORY_SYMBOL } from '../repositories/user.reposity';
-import { PasswordHasher, PASSWORD_HASHER_SYMBOL } from './password-hasher.service';
+import {
+  UserRepository,
+  USER_REPOSITORY_SYMBOL,
+} from '../repositories/user.reposity';
+import {
+  PasswordHasher,
+  PASSWORD_HASHER_SYMBOL,
+} from './password-hasher.service';
 import { UserEntity } from '../entities/user.entity';
 import { CreateUserDto } from '@/auth/presentation/dtos/create-user.dto';
 import { InvalidEmailError } from '../errors/invalid-email.error';
@@ -22,7 +28,7 @@ describe('UserService', () => {
     'c-000001',
     {
       id: 'u-000001',
-    }
+    },
   );
 
   const mockUserRepository = {
@@ -79,7 +85,9 @@ describe('UserService', () => {
 
       expect(repository.emailExists).toHaveBeenCalledWith('test@example.com');
       expect(passwordHasher.hash).toHaveBeenCalledWith('password123');
-      expect(repository.createUser).toHaveBeenCalledWith(expect.any(UserEntity));
+      expect(repository.createUser).toHaveBeenCalledWith(
+        expect.any(UserEntity),
+      );
       expect(result).toEqual(mockUser);
     });
 
@@ -132,7 +140,7 @@ describe('UserService', () => {
         'hashedPassword',
         'Existing User',
         'c-000001',
-        { id: 'u-000001' }
+        { id: 'u-000001' },
       );
 
       mockUserRepository.updateUser.mockResolvedValue(existingUser);
@@ -197,7 +205,9 @@ describe('UserService', () => {
     it('should throw UnauthorizedError if no user in context', async () => {
       jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue(null);
 
-      await expect(service.findCurrentUser()).rejects.toThrow(UnauthorizedError);
+      await expect(service.findCurrentUser()).rejects.toThrow(
+        UnauthorizedError,
+      );
     });
   });
 
@@ -227,16 +237,18 @@ describe('UserService', () => {
 
       const result = await service.findUserByEmail('test@example.com');
 
-      expect(repository.findUserByEmail).toHaveBeenCalledWith('test@example.com');
+      expect(repository.findUserByEmail).toHaveBeenCalledWith(
+        'test@example.com',
+      );
       expect(result).toEqual(mockUser);
     });
 
     it('should throw InvalidCredentialsError if user not found', async () => {
       mockUserRepository.findUserByEmail.mockResolvedValue(null);
 
-      await expect(service.findUserByEmail('notfound@example.com')).rejects.toThrow(
-        InvalidCredentialsError
-      );
+      await expect(
+        service.findUserByEmail('notfound@example.com'),
+      ).rejects.toThrow(InvalidCredentialsError);
     });
   });
 
@@ -244,18 +256,30 @@ describe('UserService', () => {
     it('should return true for matching passwords', async () => {
       mockPasswordHasher.verify.mockResolvedValue(true);
 
-      const result = await service.comparePassword('password123', 'hashedPassword123');
+      const result = await service.comparePassword(
+        'password123',
+        'hashedPassword123',
+      );
 
-      expect(passwordHasher.verify).toHaveBeenCalledWith('password123', 'hashedPassword123');
+      expect(passwordHasher.verify).toHaveBeenCalledWith(
+        'password123',
+        'hashedPassword123',
+      );
       expect(result).toBe(true);
     });
 
     it('should return false for non-matching passwords', async () => {
       mockPasswordHasher.verify.mockResolvedValue(false);
 
-      const result = await service.comparePassword('wrongpassword', 'hashedPassword123');
+      const result = await service.comparePassword(
+        'wrongpassword',
+        'hashedPassword123',
+      );
 
-      expect(passwordHasher.verify).toHaveBeenCalledWith('wrongpassword', 'hashedPassword123');
+      expect(passwordHasher.verify).toHaveBeenCalledWith(
+        'wrongpassword',
+        'hashedPassword123',
+      );
       expect(result).toBe(false);
     });
   });

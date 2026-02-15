@@ -1,14 +1,20 @@
-import { WorkerFlavorResponseModel } from "@/hive/application/models/worker-flavor.response-model";
-import { WorkerFlavorApiService } from "@/hive/application/services/worker-flavor.api-service";
-import { Get, Param, Post, Body, Put, Delete, Controller } from "@nestjs/common";
-import { CreateWorkerFlavorDto } from "../dtos/create-worker-flavor.dto";
-import { UpdateWorkerFlavorDto } from "../dtos/update-worker-flavor.dto";
+import { WorkerFlavorResponseModel } from '@/hive/application/models/worker-flavor.response-model';
+import { WorkerFlavorApiService } from '@/hive/application/services/worker-flavor.api-service';
+import {
+  Get,
+  Param,
+  Post,
+  Body,
+  Put,
+  Delete,
+  Controller,
+} from '@nestjs/common';
+import { CreateWorkerFlavorDto } from '../dtos/create-worker-flavor.dto';
+import { UpdateWorkerFlavorDto } from '../dtos/update-worker-flavor.dto';
 
 @Controller('hive/flavor')
 export class WorkerFlavorController {
-  constructor(
-    private readonly service: WorkerFlavorApiService,
-  ) { }
+  constructor(private readonly service: WorkerFlavorApiService) {}
 
   @Get(':id')
   async findById(@Param('id') id: string): Promise<WorkerFlavorResponseModel> {
@@ -16,12 +22,17 @@ export class WorkerFlavorController {
   }
 
   @Post()
-  async create(@Body() data: CreateWorkerFlavorDto): Promise<WorkerFlavorResponseModel> {
+  async create(
+    @Body() data: CreateWorkerFlavorDto,
+  ): Promise<WorkerFlavorResponseModel> {
     return await this.service.create(data);
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: UpdateWorkerFlavorDto): Promise<WorkerFlavorResponseModel> {
+  async update(
+    @Param('id') id: string,
+    @Body() data: UpdateWorkerFlavorDto,
+  ): Promise<WorkerFlavorResponseModel> {
     return await this.service.update(Number(id), data);
   }
 

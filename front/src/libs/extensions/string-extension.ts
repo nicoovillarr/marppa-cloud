@@ -1,9 +1,10 @@
-export {};
+export { };
 
 declare global {
   interface String {
     sanitize(): string;
     capitalize(): string;
+    trimStartWith(char: string): string;
   }
 }
 
@@ -14,4 +15,12 @@ String.prototype.sanitize = function (): string {
 String.prototype.capitalize = function (): string {
   if (this.length === 0) return this;
   return this.charAt(0).toUpperCase() + this.slice(1);
+};
+
+String.prototype.trimStartWith = function (char: string): string {
+  if (this.startsWith(char)) {
+    return this.slice(1);
+  }
+
+  return this;
 };

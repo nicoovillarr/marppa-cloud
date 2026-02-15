@@ -10,7 +10,7 @@ import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class AuthPrismaRepository implements AuthRepository {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async createSession(entity: SessionEntity): Promise<SessionEntity> {
     const sanitized = PrismaMapper.toCreate(entity);

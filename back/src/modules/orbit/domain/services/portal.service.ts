@@ -1,19 +1,22 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { PORTAL_REPOSITORY, PortalRepository } from "../repositories/portal.repository";
-import { CreatePortalDto } from "../../presentation/dtos/create-portal.dto";
-import { PortalEntity } from "../entities/portal.entity";
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
-import { getCurrentUser } from "@/auth/infrastructure/als/session.context";
-import { UnauthorizedError } from "@/shared/domain/errors/unauthorized.error";
-import { UpdatePortalDto } from "../../presentation/dtos/update-portal.dto";
-import { NotFoundError } from "@/shared/domain/errors/not-found.error";
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  PORTAL_REPOSITORY,
+  PortalRepository,
+} from '../repositories/portal.repository';
+import { CreatePortalDto } from '../../presentation/dtos/create-portal.dto';
+import { PortalEntity } from '../entities/portal.entity';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { UpdatePortalDto } from '../../presentation/dtos/update-portal.dto';
+import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 
 @Injectable()
 export class PortalService {
   constructor(
     @Inject(PORTAL_REPOSITORY)
     private readonly portalRepository: PortalRepository,
-  ) { }
+  ) {}
 
   public async findById(id: string): Promise<PortalEntity | null> {
     return this.portalRepository.findById(id);
@@ -48,13 +51,16 @@ export class PortalService {
         corsEnabled: data.corsEnabled,
         defaultServer: data.defaultServer,
         zoneId: data.zoneId,
-      }
+      },
     );
 
     return this.save(portal);
   }
 
-  public async update(id: string, data: UpdatePortalDto): Promise<PortalEntity> {
+  public async update(
+    id: string,
+    data: UpdatePortalDto,
+  ): Promise<PortalEntity> {
     const user = getCurrentUser();
     if (user == null) {
       throw new UnauthorizedError();

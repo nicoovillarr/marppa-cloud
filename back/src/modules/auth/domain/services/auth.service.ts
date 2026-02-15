@@ -65,6 +65,7 @@ export class AuthService {
 
   async invalidateSession(refreshToken: string): Promise<void> {
     await this.repo.deleteSessionByRefreshToken(refreshToken);
+    this.tokenStorageService.clear();
   }
 
   async findSessionByRefreshToken(

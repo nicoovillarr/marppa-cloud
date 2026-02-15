@@ -23,7 +23,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       code: 'INTERNAL_ERROR',
-      message: 'Error inesperado del servidor',
+      message: 'Unexpected error',
     });
   }
 }

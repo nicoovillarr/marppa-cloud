@@ -7,7 +7,6 @@ export class PaymentRequiredError extends DomainError {
 
   constructor(
     message: string = 'We missed the part where you paid. Minor detail, right?',
-
   ) {
     super(message);
   }

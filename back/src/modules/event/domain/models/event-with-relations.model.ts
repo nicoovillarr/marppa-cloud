@@ -1,6 +1,6 @@
-import { EventPropertyEntity } from "../entities/event-property.entity";
-import { EventResourceEntity } from "../entities/event-resource.entity";
-import { EventEntity } from "../entities/event.entity";
+import { EventPropertyEntity } from '../entities/event-property.entity';
+import { EventResourceEntity } from '../entities/event-resource.entity';
+import { EventEntity } from '../entities/event.entity';
 
 interface EventwithRelationsProps {
   event: EventEntity;
@@ -11,7 +11,7 @@ interface EventwithRelationsProps {
 export class EventWithRelationsModel {
   public readonly event: EventEntity;
   public readonly resources: EventResourceEntity[];
-  public readonly properties: EventPropertyEntity[]
+  public readonly properties: EventPropertyEntity[];
 
   constructor(props: EventwithRelationsProps) {
     this.event = props.event;
@@ -22,8 +22,8 @@ export class EventWithRelationsModel {
   toObject() {
     return {
       ...this.event.toObject(),
-      resources: this.resources.map(r => r.toObject()),
-      properties: this.properties.map(p => p.toObject()),
+      resources: this.resources.map((r) => r.toObject()),
+      properties: this.properties.map((p) => p.toObject()),
     };
   }
 }

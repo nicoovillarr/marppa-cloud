@@ -1,4 +1,4 @@
-import { WorkerEntity } from "../entities/worker.entity";
+import { WorkerEntity } from '../entities/worker.entity';
 
 export const WORKER_REPOSITORY_SYMBOL = Symbol('WORKER_REPOSITORY');
 

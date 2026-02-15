@@ -7,7 +7,6 @@ export class UnauthorizedError extends DomainError {
 
   constructor(
     message: string = 'Permission denied. The system says no. So do I.',
-
   ) {
     super(message);
   }

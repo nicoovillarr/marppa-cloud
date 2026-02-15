@@ -1,12 +1,11 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { BaseEntity } from "@/shared/domain/entities/base.entity";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { BaseEntity } from '@/shared/domain/entities/base.entity';
 
 interface EventResourceOptionalProps {
-  id?: number,
+  id?: number;
 }
 
 export class EventResourceEntity extends BaseEntity {
-  
   @PrimaryKey()
   public readonly id?: number;
 
@@ -14,7 +13,7 @@ export class EventResourceEntity extends BaseEntity {
     public readonly eventId: number,
     public readonly resourceType: string,
     public readonly resourceId: string,
-    optionals: EventResourceOptionalProps = {}
+    optionals: EventResourceOptionalProps = {},
   ) {
     super();
 
@@ -27,6 +26,6 @@ export class EventResourceEntity extends BaseEntity {
       eventId: this.eventId,
       resourceType: this.resourceType,
       resourceId: this.resourceId,
-    }
+    };
   }
 }

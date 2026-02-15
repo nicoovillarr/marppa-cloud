@@ -44,4 +44,4 @@ import { CookiesTokenStorageService } from './infrastructure/services/cookies-to
   ],
   exports: [LoggedInGuard, AuthService, TOKEN_GENERATOR_SYMBOL],
 })
-export class AuthModule { }
+export class AuthModule {}

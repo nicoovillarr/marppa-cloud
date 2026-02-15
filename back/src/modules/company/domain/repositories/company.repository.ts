@@ -1,4 +1,4 @@
-import { CompanyEntity } from "../entities/company.entity";
+import { CompanyEntity } from '../entities/company.entity';
 
 export const COMPANY_REPOSITORY_SYMBOL = Symbol('COMPANY_REPOSITORY');
 

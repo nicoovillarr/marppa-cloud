@@ -38,12 +38,7 @@ export class UserService {
 
     const hash = await this.passwordHasher.hash(password);
 
-    const userEntity = new UserEntity(
-      emailLower,
-      hash,
-      name,
-      companyId,
-    );
+    const userEntity = new UserEntity(emailLower, hash, name, companyId);
 
     return await this.saveUser(userEntity);
   }

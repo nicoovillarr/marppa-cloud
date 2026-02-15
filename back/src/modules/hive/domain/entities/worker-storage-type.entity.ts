@@ -1,5 +1,5 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
 
 interface WorkerStorageTypeOptionalProps {
   id?: number;
@@ -7,10 +7,9 @@ interface WorkerStorageTypeOptionalProps {
 }
 
 export class WorkerStorageTypeEntity extends PatchableEntity {
-
   @PrimaryKey()
   public readonly id?: number;
-  
+
   public readonly description?: string;
 
   constructor(
@@ -46,7 +45,7 @@ export class WorkerStorageTypeEntity extends PatchableEntity {
       {
         id: data.id,
         description: data.description,
-      }
+      },
     );
   }
 }

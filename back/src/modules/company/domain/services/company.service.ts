@@ -1,34 +1,40 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { CompanyRepository, COMPANY_REPOSITORY_SYMBOL } from "../repositories/company.repository";
-import { CompanyEntity } from "../entities/company.entity";
-import { CreateCompanyDto } from "../../presentation/dtos/create-company.dto";
-import { UpdateCompanyDto } from "../../presentation/dtos/update-company.dto";
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  CompanyRepository,
+  COMPANY_REPOSITORY_SYMBOL,
+} from '../repositories/company.repository';
+import { CompanyEntity } from '../entities/company.entity';
+import { CreateCompanyDto } from '../../presentation/dtos/create-company.dto';
+import { UpdateCompanyDto } from '../../presentation/dtos/update-company.dto';
 
 @Injectable()
 export class CompanyService {
   constructor(
     @Inject(COMPANY_REPOSITORY_SYMBOL)
-    private readonly companyRepository: CompanyRepository
-  ) { }
+    private readonly companyRepository: CompanyRepository,
+  ) {}
 
   public async create(data: CreateCompanyDto): Promise<CompanyEntity> {
     const { name, alias, description, parentCompanyId } = data;
     const company = new CompanyEntity(name, {
       alias,
       description,
-      parentCompanyId
+      parentCompanyId,
     });
 
     return this.save(company);
   }
 
-  public async update(id: string, data: UpdateCompanyDto): Promise<CompanyEntity> {
+  public async update(
+    id: string,
+    data: UpdateCompanyDto,
+  ): Promise<CompanyEntity> {
     const { name, alias, description, parentCompanyId } = data;
     const company = new CompanyEntity(name, {
       id,
       alias,
       description,
-      parentCompanyId
+      parentCompanyId,
     });
 
     return this.save(company);

@@ -16,7 +16,9 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
       providers: [WorkerDiskPrismaRepository, PrismaService],
     }).compile();
 
-    repository = module.get<WorkerDiskPrismaRepository>(WorkerDiskPrismaRepository);
+    repository = module.get<WorkerDiskPrismaRepository>(
+      WorkerDiskPrismaRepository,
+    );
     prisma = module.get<PrismaService>(PrismaService);
 
     const { id: workerStorageTypeId } = await prisma.workerStorageType.create({
@@ -62,7 +64,7 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
         {
           mountPoint: '/mnt/test',
           isBoot: false,
-        }
+        },
       );
 
       const result = await repository.create(disk);
@@ -94,7 +96,7 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
-      const found = result.find(d => d.id === createdDiskId);
+      const found = result.find((d) => d.id === createdDiskId);
       expect(found).toBeDefined();
     });
 

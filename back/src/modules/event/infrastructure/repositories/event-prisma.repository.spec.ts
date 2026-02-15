@@ -50,16 +50,11 @@ describe('EventPrismaRepository (Integration)', () => {
     let createdEventId: number;
 
     it('should create an event', async () => {
-      const event = new EventEntity(
-        eventTypeKey,
-        userId,
-        companyId,
-        {
-          notes: 'Integration test event',
-          data: { test: true },
-          isVisible: false,
-        }
-      );
+      const event = new EventEntity(eventTypeKey, userId, companyId, {
+        notes: 'Integration test event',
+        data: { test: true },
+        isVisible: false,
+      });
 
       const result = await repository.create(event);
 
@@ -74,10 +69,13 @@ describe('EventPrismaRepository (Integration)', () => {
       const resource = new EventResourceEntity(
         createdEventId,
         'WORKER',
-        workerId
+        workerId,
       );
 
-      const result = await repository.addEventResource(createdEventId, resource);
+      const result = await repository.addEventResource(
+        createdEventId,
+        resource,
+      );
 
       expect(result).toBeDefined();
       expect(result.id).toBeDefined();
@@ -90,10 +88,13 @@ describe('EventPrismaRepository (Integration)', () => {
       const property = new EventPropertyEntity(
         createdEventId,
         'test-key',
-        'test-value'
+        'test-value',
       );
 
-      const result = await repository.addEventProperty(createdEventId, property);
+      const result = await repository.addEventProperty(
+        createdEventId,
+        property,
+      );
 
       expect(result).toBeDefined();
       expect(result.id).toBeDefined();
@@ -125,7 +126,7 @@ describe('EventPrismaRepository (Integration)', () => {
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
-      const found = result.find(e => e.id === createdEventId);
+      const found = result.find((e) => e.id === createdEventId);
       expect(found).toBeDefined();
       expect(found?.type).toBe(eventTypeKey);
     });

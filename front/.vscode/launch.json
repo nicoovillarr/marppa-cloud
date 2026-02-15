@@ -2,10 +2,23 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Next.js: debug server-side",
-      "type": "node-terminal",
+      "name": "Next.js: Node",
+      "type": "node",
       "request": "launch",
-      "command": "pnpm dev"
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:debug"
+      ],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Next.js: Brave",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}",
+      "runtimeExecutable": "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
     }
   ]
 }

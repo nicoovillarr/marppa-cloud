@@ -1,12 +1,11 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
 
 interface WorkerFlavorOptionalProps {
   id?: number;
 }
 
 export class WorkerFlavorEntity extends PatchableEntity {
-
   @PrimaryKey()
   public readonly id?: number;
 
@@ -43,7 +42,7 @@ export class WorkerFlavorEntity extends PatchableEntity {
       data.familyId,
       {
         id: data.id,
-      }
+      },
     );
   }
 }

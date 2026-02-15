@@ -1,17 +1,18 @@
-import { ApiResponse } from "@/types/api-response";
+const isProduction = process.env.NODE_ENV === "production";
+const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
-export const fetcher = async (
+export const fetcher = async <T>(
   action: string,
   method: "POST" | "GET" | "PUT" | "DELETE" = "GET",
   body?: { [key: string]: any } | null
-): Promise<ApiResponse> => {
+): Promise<T> => {
   const headers: HeadersInit = {};
 
   if (!(body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
 
-  let url = action;
+  let url = `${baseUrl}${action}`;
 
   if (method === "GET" && body) {
     url = `${url}?${Object.keys(body)
@@ -21,7 +22,7 @@ export const fetcher = async (
   }
 
   const res = await fetch(url, {
-    credentials: "include",
+    credentials: isProduction ? "include" : "same-origin",
     method,
     headers,
     body:
@@ -37,9 +38,13 @@ export const fetcher = async (
     data = await res.json();
   } catch {
     data = {
-      message: "Error al procesar la respuesta del servidor",
+      message: "There was a problem while processing the server response",
     };
   }
 
-  return { data, success: res.ok };
+  if (!res.ok) {
+    throw new Error(data.message ?? "Unknown error");
+  }
+
+  return data;
 };

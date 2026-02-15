@@ -41,7 +41,7 @@ describe('AuthPrismaRepository (Integration)', () => {
         'Chrome',
         {
           refreshToken: testRefreshToken,
-        }
+        },
       );
 
       const result = await repository.createSession(session);
@@ -49,7 +49,9 @@ describe('AuthPrismaRepository (Integration)', () => {
       expect(result).toBeDefined();
       expect(result.userId).toBe(userId);
       expect(result.ipAddress).toBe('192.168.1.100');
-      expect(result.userAgent).toBe('Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+      expect(result.userAgent).toBe(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      );
       expect(result.platform).toBe('Windows');
       expect(result.device).toBe('Desktop');
       expect(result.browser).toBe('Chrome');
@@ -59,7 +61,9 @@ describe('AuthPrismaRepository (Integration)', () => {
     });
 
     it('should find a session by refresh token', async () => {
-      const result = await repository.findSessionByRefreshToken(createdSessionRefreshToken);
+      const result = await repository.findSessionByRefreshToken(
+        createdSessionRefreshToken,
+      );
 
       expect(result).toBeDefined();
       expect(result?.userId).toBe(userId);
@@ -69,7 +73,8 @@ describe('AuthPrismaRepository (Integration)', () => {
     });
 
     it('should return null for non-existent refresh token', async () => {
-      const result = await repository.findSessionByRefreshToken('non-existent-token');
+      const result =
+        await repository.findSessionByRefreshToken('non-existent-token');
 
       expect(result).toBeNull();
     });
@@ -87,7 +92,9 @@ describe('AuthPrismaRepository (Integration)', () => {
     });
 
     it('should not find expired session by refresh token', async () => {
-      const result = await repository.findSessionByRefreshToken(createdSessionRefreshToken);
+      const result = await repository.findSessionByRefreshToken(
+        createdSessionRefreshToken,
+      );
 
       expect(result).toBeNull();
     });
@@ -102,7 +109,7 @@ describe('AuthPrismaRepository (Integration)', () => {
         'Firefox',
         {
           refreshToken: 'test-refresh-token-cleanup',
-        }
+        },
       );
 
       const result = await repository.createSession(session);

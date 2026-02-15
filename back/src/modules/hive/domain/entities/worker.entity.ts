@@ -1,6 +1,6 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { PatchableEntity } from "@/shared/domain/entities/patchable-base.entity";
-import { ResourceStatus } from "@/shared/domain/enums/resource-status.enum";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 interface WorkerOptionalProps {
   id?: string;
@@ -10,10 +10,9 @@ interface WorkerOptionalProps {
 }
 
 export class WorkerEntity extends PatchableEntity {
-
   @PrimaryKey()
   public readonly id?: string;
-  
+
   public readonly createdAt?: Date;
   public readonly updatedAt?: Date;
   public readonly updatedBy?: string;
@@ -26,7 +25,7 @@ export class WorkerEntity extends PatchableEntity {
     public readonly imageId: number,
     public readonly flavorId: number,
     public readonly ownerId: string,
-    optionals: WorkerOptionalProps = {}
+    optionals: WorkerOptionalProps = {},
   ) {
     super();
 
@@ -66,7 +65,7 @@ export class WorkerEntity extends PatchableEntity {
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
         updatedBy: data.updatedBy,
-      }
+      },
     );
   }
 }

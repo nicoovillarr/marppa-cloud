@@ -1,5 +1,5 @@
-import { WorkerStorageTypeEntity } from "@/hive/domain/entities/worker-storage-type.entity";
-import { WorkerStorageType } from "@prisma/client";
+import { WorkerStorageTypeEntity } from '@/hive/domain/entities/worker-storage-type.entity';
+import { WorkerStorageType } from '@prisma/client';
 
 export class WorkerStorageTypePrismaMapper {
   static toEntity(raw: WorkerStorageType): WorkerStorageTypeEntity {
@@ -11,7 +11,7 @@ export class WorkerStorageTypePrismaMapper {
       {
         id: raw.id,
         description: raw.description ?? undefined,
-      }
-    )
+      },
+    );
   }
 }

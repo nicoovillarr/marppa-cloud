@@ -1,24 +1,23 @@
-import { PrimaryKey } from "@/shared/domain/decorators/primary-key.decorator";
-import { BaseEntity } from "@/shared/domain/entities/base.entity";
-import { EventTypeKey } from "../enums/event-type-key.enum";
+import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
+import { BaseEntity } from '@/shared/domain/entities/base.entity';
+import { EventTypeKey } from '../enums/event-type-key.enum';
 
 interface EventOptionalProps {
-  id?: number,
-  notes?: string,
-  data?: Record<string, unknown> | unknown[],
-  createdAt?: Date,
-  createdBy?: string,
-  retries?: number,
-  processedAt?: Date,
-  failedAt?: Date,
-  isVisible?: boolean,
+  id?: number;
+  notes?: string;
+  data?: Record<string, unknown> | unknown[];
+  createdAt?: Date;
+  createdBy?: string;
+  retries?: number;
+  processedAt?: Date;
+  failedAt?: Date;
+  isVisible?: boolean;
 }
 
 export class EventEntity extends BaseEntity {
-
   @PrimaryKey()
   public readonly id?: number;
-  
+
   public readonly notes?: string;
   public readonly data?: Record<string, unknown> | unknown[];
   public readonly retries?: number;
@@ -30,7 +29,7 @@ export class EventEntity extends BaseEntity {
     public readonly type: EventTypeKey,
     public readonly createdBy: string,
     public readonly companyId: string,
-    optionals: EventOptionalProps = {}
+    optionals: EventOptionalProps = {},
   ) {
     super();
 
@@ -54,6 +53,6 @@ export class EventEntity extends BaseEntity {
       failedAt: this.failedAt,
       companyId: this.companyId,
       createdBy: this.createdBy,
-    }
+    };
   }
 }

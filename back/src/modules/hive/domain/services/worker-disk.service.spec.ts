@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerDiskService } from './worker-disk.service';
-import { WorkerDiskRepository, WORKER_DISK_REPOSITORY_SYMBOL } from '../repositories/worker-disk.repository';
+import {
+  WorkerDiskRepository,
+  WORKER_DISK_REPOSITORY_SYMBOL,
+} from '../repositories/worker-disk.repository';
 import { WorkerDiskEntity } from '../entities/worker-disk.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerDiskDto } from '@/hive/presentation/dtos/create-worker-disk.dto';
@@ -22,7 +25,7 @@ describe('WorkerDiskService', () => {
       mountPoint: '/mnt/data',
       isBoot: false,
       workerId: 'w-000001',
-    }
+    },
   );
 
   const mockWorkerDiskRepository = {
@@ -45,7 +48,9 @@ describe('WorkerDiskService', () => {
     }).compile();
 
     service = module.get<WorkerDiskService>(WorkerDiskService);
-    repository = module.get<WorkerDiskRepository>(WORKER_DISK_REPOSITORY_SYMBOL);
+    repository = module.get<WorkerDiskRepository>(
+      WORKER_DISK_REPOSITORY_SYMBOL,
+    );
   });
 
   afterEach(() => {
@@ -71,7 +76,9 @@ describe('WorkerDiskService', () => {
 
   describe('findByOwnerId', () => {
     it('should return worker disks by owner id', async () => {
-      mockWorkerDiskRepository.findByOwnerId.mockResolvedValue([mockWorkerDisk]);
+      mockWorkerDiskRepository.findByOwnerId.mockResolvedValue([
+        mockWorkerDisk,
+      ]);
 
       const result = await service.findByOwnerId('c-000001');
 
@@ -106,7 +113,9 @@ describe('WorkerDiskService', () => {
 
       const result = await service.create(dto);
 
-      expect(repository.create).toHaveBeenCalledWith(expect.any(WorkerDiskEntity));
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.any(WorkerDiskEntity),
+      );
       expect(result).toEqual(mockWorkerDisk);
     });
 
@@ -150,7 +159,9 @@ describe('WorkerDiskService', () => {
       const result = await service.update(1, dto);
 
       expect(repository.findById).toHaveBeenCalledWith(1);
-      expect(repository.update).toHaveBeenCalledWith(expect.any(WorkerDiskEntity));
+      expect(repository.update).toHaveBeenCalledWith(
+        expect.any(WorkerDiskEntity),
+      );
       expect(result).toEqual(mockWorkerDisk);
     });
 

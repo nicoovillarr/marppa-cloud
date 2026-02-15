@@ -1,20 +1,21 @@
-import { Injectable } from "@nestjs/common";
-import { CompanyEntity } from "../../domain/entities/company.entity";
-import { CompanyService } from "../../domain/services/company.service";
-import { CreateCompanyDto } from "../../presentation/dtos/create-company.dto";
-import { UpdateCompanyDto } from "../../presentation/dtos/update-company.dto";
+import { Injectable } from '@nestjs/common';
+import { CompanyEntity } from '../../domain/entities/company.entity';
+import { CompanyService } from '../../domain/services/company.service';
+import { CreateCompanyDto } from '../../presentation/dtos/create-company.dto';
+import { UpdateCompanyDto } from '../../presentation/dtos/update-company.dto';
 
 @Injectable()
 export class CompanyApiService {
-  constructor(
-    private readonly companyService: CompanyService
-  ) { }
+  constructor(private readonly companyService: CompanyService) {}
 
   public async create(data: CreateCompanyDto): Promise<CompanyEntity> {
     return this.companyService.create(data);
   }
 
-  public async update(id: string, data: UpdateCompanyDto): Promise<CompanyEntity> {
+  public async update(
+    id: string,
+    data: UpdateCompanyDto,
+  ): Promise<CompanyEntity> {
     return this.companyService.update(id, data);
   }
 
