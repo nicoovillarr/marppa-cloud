@@ -169,4 +169,75 @@ describe('WorkerPrismaRepository (Integration)', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('Find with Relations', () => {
+    let createdWorkerId: string;
+
+    beforeAll(async () => {
+      const worker = new WorkerEntity(
+        `${testNamePrefix}-with-relations`,
+        ResourceStatus.INACTIVE,
+        '00:11:22:33:44:66',
+        'u-000001',
+        testWorkerImageId,
+        testWorkerFlavorId,
+        'c-000001',
+      );
+
+      const result = await repository.create(worker);
+      createdWorkerId = result.id!;
+    });
+
+    afterAll(async () => {
+      await repository.delete(createdWorkerId);
+    });
+
+    it('should find worker by id with relations', async () => {
+      const result = await repository.findByIdWithRelations(createdWorkerId);
+
+      expect(result).toBeDefined();
+      expect(result?.id).toBe(createdWorkerId);
+      expect(result?.name).toBe(`${testNamePrefix}-with-relations`);
+
+      // Verify flavor is included
+      expect(result?.flavor).toBeDefined();
+      expect(result?.flavor?.id).toBe(testWorkerFlavorId);
+      expect(result?.flavor?.name).toBeDefined();
+      expect(result?.flavor?.cpuCores).toBeDefined();
+      expect(result?.flavor?.ramMB).toBeDefined();
+      expect(result?.flavor?.diskGB).toBeDefined();
+
+      // Verify node is null (no node assigned)
+      expect(result?.node).toBeUndefined();
+    });
+
+    it('should find workers by owner id with relations', async () => {
+      const result = await repository.findByOwnerIdWithRelations('c-000001');
+
+      expect(result).toBeDefined();
+      expect(result.length).toBeGreaterThan(0);
+
+      const found = result.find((w) => w.id === createdWorkerId);
+      expect(found).toBeDefined();
+
+      // Verify flavor is included
+      expect(found?.flavor).toBeDefined();
+      expect(found?.flavor?.id).toBe(testWorkerFlavorId);
+
+      // Verify node is null or undefined (no node assigned)
+      expect(found?.node).toBeUndefined();
+    });
+
+    it('should return null for non-existent worker id with relations', async () => {
+      const result = await repository.findByIdWithRelations('w-nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return empty array for non-existent owner id with relations', async () => {
+      const result = await repository.findByOwnerIdWithRelations('c-nonexistent');
+
+      expect(result).toEqual([]);
+    });
+  });
 });

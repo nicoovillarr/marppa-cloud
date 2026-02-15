@@ -20,7 +20,7 @@ export class WorkerService {
     private readonly workerRepository: WorkerRepository,
 
     private readonly macAddressService: MacAddressService,
-  ) {}
+  ) { }
 
   async findById(id: string): Promise<WorkerEntity> {
     const worker = await this.workerRepository.findById(id);
@@ -33,6 +33,19 @@ export class WorkerService {
 
   async findByOwnerId(ownerId: string): Promise<WorkerEntity[]> {
     return this.workerRepository.findByOwnerId(ownerId);
+  }
+
+  async findByIdWithRelations(id: string): Promise<WorkerEntity> {
+    const worker = await this.workerRepository.findByIdWithRelations(id);
+    if (!worker) {
+      throw new NotFoundError();
+    }
+
+    return worker;
+  }
+
+  async findByOwnerIdWithRelations(ownerId: string): Promise<WorkerEntity[]> {
+    return this.workerRepository.findByOwnerIdWithRelations(ownerId);
   }
 
   async createWorker(data: CreateWorkerDto): Promise<WorkerEntity> {

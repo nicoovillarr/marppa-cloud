@@ -4,6 +4,7 @@ import { UpdateWorkerDto } from '@/hive/presentation/dtos/update-worker.dto';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { WorkerResponseModel } from '../models/worker.response-model';
+import { WorkerWithRelationsResponseModel } from '../models/worker-with-relations.response-model';
 import { EventService } from '@/event/domain/services/event.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 
@@ -12,18 +13,20 @@ export class WorkerApiService {
   constructor(
     private readonly service: WorkerService,
     private readonly eventService: EventService,
-  ) {}
+  ) { }
 
-  public async findById(id: string): Promise<WorkerResponseModel> {
-    const entity = await this.service.findById(id);
-    return plainToInstance(WorkerResponseModel, entity, {
+  public async findById(id: string): Promise<WorkerWithRelationsResponseModel> {
+    const entity = await this.service.findByIdWithRelations(id);
+    return plainToInstance(WorkerWithRelationsResponseModel, entity, {
       excludeExtraneousValues: true,
     });
   }
 
-  public async findByOwnerId(ownerId: string): Promise<WorkerResponseModel[]> {
-    const entities = await this.service.findByOwnerId(ownerId);
-    return plainToInstance(WorkerResponseModel, entities, {
+  public async findByOwnerId(
+    ownerId: string,
+  ): Promise<WorkerWithRelationsResponseModel[]> {
+    const entities = await this.service.findByOwnerIdWithRelations(ownerId);
+    return plainToInstance(WorkerWithRelationsResponseModel, entities, {
       excludeExtraneousValues: true,
     });
   }

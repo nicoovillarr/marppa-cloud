@@ -74,6 +74,7 @@ describe('AuthService', () => {
   const mockTokenStorageService = {
     setAccessToken: jest.fn(),
     setRefreshToken: jest.fn(),
+    clear: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -174,6 +175,7 @@ describe('AuthService', () => {
       expect(repository.deleteSessionByRefreshToken).toHaveBeenCalledWith(
         'refresh-token-123',
       );
+      expect(tokenStorageService.clear).toHaveBeenCalled();
     });
   });
 

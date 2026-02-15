@@ -11,21 +11,22 @@ import {
 } from '@nestjs/common';
 import { CreateWorkerDto } from '../dtos/create-worker.dto';
 import { UpdateWorkerDto } from '../dtos/update-worker.dto';
+import { WorkerWithRelationsResponseModel } from '@/hive/application/models/worker-with-relations.response-model';
 import { WorkerResponseModel } from '@/hive/application/models/worker.response-model';
 
 @Controller('hive/worker')
 export class WorkerController {
-  constructor(private readonly service: WorkerApiService) {}
+  constructor(private readonly service: WorkerApiService) { }
 
   @Get()
   async findByOwnerId(
     @Query('ownerId') ownerId: string,
-  ): Promise<WorkerResponseModel[]> {
+  ): Promise<WorkerWithRelationsResponseModel[]> {
     return await this.service.findByOwnerId(ownerId);
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<WorkerResponseModel> {
+  async findById(@Param('id') id: string): Promise<WorkerWithRelationsResponseModel> {
     return await this.service.findById(id);
   }
 

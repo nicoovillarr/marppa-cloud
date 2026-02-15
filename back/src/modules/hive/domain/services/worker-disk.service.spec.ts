@@ -8,6 +8,7 @@ import { WorkerDiskEntity } from '../entities/worker-disk.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerDiskDto } from '@/hive/presentation/dtos/create-worker-disk.dto';
 import { UpdateWorkerDiskDto } from '@/hive/presentation/dtos/update-worker-disk.dto';
+import * as sessionContext from '@/auth/infrastructure/als/session.context';
 
 describe('WorkerDiskService', () => {
   let service: WorkerDiskService;
@@ -51,6 +52,11 @@ describe('WorkerDiskService', () => {
     repository = module.get<WorkerDiskRepository>(
       WORKER_DISK_REPOSITORY_SYMBOL,
     );
+
+    jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+      userId: 'u-000001',
+      companyId: 'c-000001',
+    } as any);
   });
 
   afterEach(() => {
