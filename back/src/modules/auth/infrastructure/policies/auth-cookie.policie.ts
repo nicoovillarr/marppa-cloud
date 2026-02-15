@@ -16,6 +16,6 @@ export const AuthCookiePolicy = {
     sameSite: isProduction ? 'none' : 'lax',
     domain: domain,
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: isProduction ? '/auth/tick' : '/api/auth/tick',
+    path: '/api/auth',
   },
 } as const;

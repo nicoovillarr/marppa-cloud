@@ -1,5 +1,4 @@
 const isProduction = process.env.NODE_ENV === "production";
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
 export const fetcher = async <T>(
   action: string,
@@ -12,7 +11,7 @@ export const fetcher = async <T>(
     headers["Content-Type"] = "application/json";
   }
 
-  let url = `${baseUrl}${action}`;
+  let url = `/api${action}`;
 
   if (method === "GET" && body) {
     url = `${url}?${Object.keys(body)
