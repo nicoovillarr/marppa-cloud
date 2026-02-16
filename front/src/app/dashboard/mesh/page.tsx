@@ -2,7 +2,7 @@ import { ResolverResult, withResolver } from "@/core/resolvers/with-resolver";
 import { ResolveResult as BaseResolveResult } from "@/core/resolvers/resolver-base";
 import resolvers from "@/dashboard/mesh/resolvers";
 
-import ClientInitializer from "@/core/components/client-initializer";
+import ClientInitializer from "@/core/presentation/components/client-initializer";
 import NodesList from "@/dashboard/mesh/components/nodes-list";
 
 function Page({

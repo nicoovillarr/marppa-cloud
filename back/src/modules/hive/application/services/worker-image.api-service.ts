@@ -12,11 +12,18 @@ export class WorkerImageApiService {
   constructor(
     private readonly service: WorkerImageService,
     private readonly eventService: EventService,
-  ) {}
+  ) { }
 
   async findById(id: number): Promise<WorkerImageResponseModel> {
     const workerImage = await this.service.findById(id);
     return plainToInstance(WorkerImageResponseModel, workerImage, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  async findAll(): Promise<WorkerImageResponseModel[]> {
+    const workerImages = await this.service.findAll();
+    return plainToInstance(WorkerImageResponseModel, workerImages, {
       excludeExtraneousValues: true,
     });
   }

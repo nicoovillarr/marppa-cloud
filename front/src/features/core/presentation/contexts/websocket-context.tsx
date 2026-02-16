@@ -1,5 +1,6 @@
 "use client";
 
+import useAuth from "@/auth/models/useAuth";
 import React, {
   createContext,
   useEffect,
@@ -7,7 +8,6 @@ import React, {
   useState,
   useCallback,
 } from "react";
-import { useAuth } from "../hooks/use-auth";
 import { toast } from "sonner";
 
 export interface IBroadcastResponse {
@@ -168,8 +168,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       if (!msg) continue;
 
       console.log(
-        `[WebSocket]: Sending queued message of type: ${
-          msg.type
+        `[WebSocket]: Sending queued message of type: ${msg.type
         }, data: ${JSON.stringify(msg.data)}`
       );
       socket.send(JSON.stringify(msg));

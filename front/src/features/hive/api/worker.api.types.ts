@@ -6,6 +6,7 @@ export type CreateWorkerDto = {
     imageId: number;
     flavorId: number;
     ownerId?: string;
+    sshKey?: string;
 }
 
 export type WorkerResponseDto = {
@@ -24,5 +25,5 @@ export type WorkerResponseDto = {
 
 export type WorkerWithRelationsResponseDto = WorkerResponseDto & {
     flavor: WorkerFlavorResponseDto;
-    node?: NodeResponseDto;
+    node: NodeResponseDto | null;
 }

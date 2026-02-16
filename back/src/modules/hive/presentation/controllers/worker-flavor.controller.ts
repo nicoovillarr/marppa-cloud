@@ -14,7 +14,12 @@ import { UpdateWorkerFlavorDto } from '../dtos/update-worker-flavor.dto';
 
 @Controller('hive/flavor')
 export class WorkerFlavorController {
-  constructor(private readonly service: WorkerFlavorApiService) {}
+  constructor(private readonly service: WorkerFlavorApiService) { }
+
+  @Get()
+  async findAll(): Promise<WorkerFlavorResponseModel[]> {
+    return await this.service.findAll();
+  }
 
   @Get(':id')
   async findById(@Param('id') id: string): Promise<WorkerFlavorResponseModel> {

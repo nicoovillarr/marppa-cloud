@@ -6,6 +6,8 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const createCompany = async () => {
+  console.log('Creating company...');
+
   const companyData = {
     id: "c-000001",
     name: "Marppa Cloud Solution",
@@ -19,11 +21,15 @@ const createCompany = async () => {
     },
     create: companyData,
     update: companyData,
-  })
+  });
+
+  console.log("Company created successfully!");
 }
 
 const createUsers = async () => {
-  const app = await NestFactory.createApplicationContext(UserModule);
+  console.log('Creating users...');
+
+  const app = await NestFactory.createApplicationContext(UserModule, { logger: ['error', 'warn'] });
 
   const passwordHasher = app.get<PasswordHasher>(PASSWORD_HASHER_SYMBOL);
 
@@ -49,13 +55,135 @@ const createUsers = async () => {
     update: userData,
   });
 
-  console.log("Users created successfully");
+  console.log("Users created successfully!");
 
   await app.close();
 };
 
+const createWorkerFamilies = async () => {
+  console.log('Creating worker families...');
+
+  const families = [
+    {
+      name: 'zen',
+      description: 'Balanced compute for general workloads',
+      flavors: [
+        { name: 'nano', cpuCores: 0.5, ramMB: 512, diskGB: 10 },
+        { name: 'micro', cpuCores: 1, ramMB: 1024, diskGB: 20 },
+        { name: 'small', cpuCores: 2, ramMB: 2048, diskGB: 40 },
+        { name: 'medium', cpuCores: 4, ramMB: 4096, diskGB: 80 },
+      ],
+    },
+
+    {
+      name: 'spark',
+      description: 'CPU optimized workers for compute-heavy tasks',
+      flavors: [
+        { name: 'small', cpuCores: 2, ramMB: 1024, diskGB: 20 },
+        { name: 'medium', cpuCores: 4, ramMB: 2048, diskGB: 40 },
+        { name: 'large', cpuCores: 8, ramMB: 4096, diskGB: 80 },
+      ],
+    },
+
+    {
+      name: 'vault',
+      description: 'Memory optimized workers for caches and in-memory workloads',
+      flavors: [
+        { name: 'small', cpuCores: 1, ramMB: 4096, diskGB: 20 },
+        { name: 'medium', cpuCores: 2, ramMB: 8192, diskGB: 40 },
+        { name: 'large', cpuCores: 4, ramMB: 16384, diskGB: 80 },
+      ],
+    },
+
+    {
+      name: 'forge',
+      description: 'Disk intensive workers for storage-heavy workloads',
+      flavors: [
+        { name: 'small', cpuCores: 1, ramMB: 2048, diskGB: 100 },
+        { name: 'medium', cpuCores: 2, ramMB: 4096, diskGB: 250 },
+        { name: 'large', cpuCores: 4, ramMB: 8192, diskGB: 500 },
+      ],
+    },
+
+    {
+      name: 'pulse',
+      description: 'Lightweight workers for short-lived or background tasks',
+      flavors: [
+        { name: 'tiny', cpuCores: 0.25, ramMB: 256, diskGB: 5 },
+        { name: 'nano', cpuCores: 0.5, ramMB: 512, diskGB: 10 },
+        { name: 'micro', cpuCores: 1, ramMB: 1024, diskGB: 20 },
+      ],
+    },
+  ];
+
+  for (const family of families) {
+    const upsertedFamily = await prisma.workerFamily.upsert({
+      where: { name: family.name },
+      create: {
+        name: family.name,
+        description: family.description,
+      },
+      update: {
+        description: family.description,
+      },
+    });
+
+    for (const flavor of family.flavors) {
+      await prisma.workerFlavor.upsert({
+        where: {
+          familyId_name: {
+            familyId: upsertedFamily.id,
+            name: flavor.name,
+          },
+        },
+        create: {
+          name: flavor.name,
+          cpuCores: flavor.cpuCores,
+          ramMB: flavor.ramMB,
+          diskGB: flavor.diskGB,
+          familyId: upsertedFamily.id,
+        },
+        update: {
+          cpuCores: flavor.cpuCores,
+          ramMB: flavor.ramMB,
+          diskGB: flavor.diskGB,
+        },
+      });
+    }
+  }
+
+  console.log('Worker families created successfully!');
+};
+
+const createWorkerImages = async () => {
+  console.log('Creating worker images...');
+
+  const images = [
+    {
+      name: 'ubuntu-24.04',
+      description: 'Ubuntu 24.04 LTS',
+      osType: 'linux',
+      osFamily: 'ubuntu',
+      osVersion: '24.04',
+      imageUrl: 'https://releases.ubuntu.com/jammy/ubuntu-22.04.5-live-server-amd64.iso',
+      architecture: 'amd64',
+      virtualizationType: 'iso',
+    },
+  ];
+
+  for (const image of images) {
+    await prisma.workerImage.upsert({
+      where: { name: image.name },
+      create: image,
+      update: image,
+    });
+  }
+
+  console.log('Worker images created successfully!');
+}
+
 const main = async () => {
-  const calls = [createCompany, createUsers];
+  const calls = [createCompany, createUsers, createWorkerFamilies, createWorkerImages];
   for (const call of calls) {
     await call();
   }

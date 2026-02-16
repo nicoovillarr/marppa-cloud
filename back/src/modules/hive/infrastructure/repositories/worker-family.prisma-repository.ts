@@ -4,10 +4,22 @@ import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { WorkerFamilyPrismaMapper } from '../mappers/worker-family.prisma-mapper';
 import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
+import { WorkerFamilyWithFlavorsModel } from '@/hive/domain/models/worker-family-with-flavors.model';
+import { WorkerFamilyWithFlavorsPrismaMapper } from '../mappers/worker-family-with-flavors.prisma-mapper';
 
 @Injectable()
 export class WorkerFamilyPrismaRepository implements WorkerFamilyRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
+
+  async findAll(): Promise<WorkerFamilyWithFlavorsModel[]> {
+    const workerFamilies = await this.prisma.workerFamily.findMany({
+      include: {
+        flavors: true,
+      },
+    });
+
+    return workerFamilies.map(WorkerFamilyWithFlavorsPrismaMapper.toDomain);
+  }
 
   async findById(id: number): Promise<WorkerFamilyEntity | null> {
     const workerFamily = await this.prisma.workerFamily.findUnique({

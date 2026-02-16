@@ -13,7 +13,7 @@ export class WorkerImageService {
   constructor(
     @Inject(WORKER_IMAGE_REPOSITORY_SYMBOL)
     private readonly workerImageRepository: WorkerImageRepository,
-  ) {}
+  ) { }
 
   async findById(id: number): Promise<WorkerImageEntity> {
     const workerImage = await this.workerImageRepository.findById(id);
@@ -22,6 +22,10 @@ export class WorkerImageService {
     }
 
     return workerImage;
+  }
+
+  async findAll(): Promise<WorkerImageEntity[]> {
+    return this.workerImageRepository.findAll();
   }
 
   async create(data: CreateWorkerImageDto): Promise<WorkerImageEntity> {

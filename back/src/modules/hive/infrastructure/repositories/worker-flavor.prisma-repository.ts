@@ -7,7 +7,7 @@ import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class WorkerFlavorPrismaRepository implements WorkerFlavorRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findById(id: number): Promise<WorkerFlavorEntity | null> {
     const workerFlavor = await this.prisma.workerFlavor.findUnique({
@@ -21,6 +21,11 @@ export class WorkerFlavorPrismaRepository implements WorkerFlavorRepository {
     }
 
     return WorkerFlavorPrismaMapper.toEntity(workerFlavor);
+  }
+
+  async findAll(): Promise<WorkerFlavorEntity[]> {
+    const workerFlavors = await this.prisma.workerFlavor.findMany();
+    return workerFlavors.map(WorkerFlavorPrismaMapper.toEntity);
   }
 
   async create(entity: WorkerFlavorEntity): Promise<WorkerFlavorEntity> {

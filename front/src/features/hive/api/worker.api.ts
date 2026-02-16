@@ -8,10 +8,12 @@ const workersApi = {
         return fetcher<WorkerWithRelationsResponseDto[]>(baseUrl, 'GET');
     },
 
-    createWorker: (dto: CreateWorkerDto): Promise<WorkerResponseDto> => {
-        return fetcher<WorkerResponseDto>(baseUrl, 'POST', {
-            ...dto
-        });
+    getWorker: (id: string): Promise<WorkerWithRelationsResponseDto> => {
+        return fetcher<WorkerWithRelationsResponseDto>(`${baseUrl}/${id}`, 'GET');
+    },
+
+    createWorker: (dto: CreateWorkerDto): Promise<WorkerWithRelationsResponseDto> => {
+        return fetcher<WorkerWithRelationsResponseDto>(baseUrl, 'POST', dto);
     },
 };
 

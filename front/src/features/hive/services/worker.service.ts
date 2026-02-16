@@ -7,15 +7,22 @@ export class WorkerService {
         return dtos;
     }
 
+    async getWorker(id: string): Promise<WorkerWithRelationsResponseDto> {
+        const dto = await workersApi.getWorker(id);
+        return dto;
+    }
+
     async createWorker(
         name: string,
         imageId: number,
-        flavorId: number
-    ): Promise<WorkerResponseDto> {
+        flavorId: number,
+        sshKey?: string,
+    ): Promise<WorkerWithRelationsResponseDto> {
         const dto = await workersApi.createWorker({
             name,
             imageId,
-            flavorId
+            flavorId,
+            sshKey
         });
 
         return dto;

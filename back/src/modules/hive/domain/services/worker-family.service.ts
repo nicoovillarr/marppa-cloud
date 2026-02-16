@@ -5,13 +5,18 @@ import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerFamilyDto } from '@/hive/presentation/dtos/create-worker-family.dto';
 import { UpdateWorkerFamilyDto } from '@/hive/presentation/dtos/update-worker-family.dto';
 import { WORKER_FAMILY_REPOSITORY_SYMBOL } from '../repositories/worker-family.repository';
+import { WorkerFamilyWithFlavorsModel } from '../models/worker-family-with-flavors.model';
 
 @Injectable()
 export class WorkerFamilyService {
   constructor(
     @Inject(WORKER_FAMILY_REPOSITORY_SYMBOL)
     private readonly workerFamilyRepository: WorkerFamilyRepository,
-  ) {}
+  ) { }
+
+  async findAll(): Promise<WorkerFamilyWithFlavorsModel[]> {
+    return await this.workerFamilyRepository.findAll();
+  }
 
   async findById(id: number): Promise<WorkerFamilyEntity> {
     const workerFamily = await this.workerFamilyRepository.findById(id);

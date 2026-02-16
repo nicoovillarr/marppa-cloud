@@ -1,6 +1,6 @@
 "use client";
 
-import BreadCrumb from "@/core/components/breadcrumb";
+import BreadCrumb from "@/core/presentation/components/breadcrumb";
 import { useAppStore } from "@/store/app-store";
 import { useShallow } from "zustand/shallow";
 

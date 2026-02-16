@@ -51,14 +51,16 @@ const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
 export default function WorkersList() {
   const { workers, fetchWorkers } = useWorker();
 
-  const tableRef = useRef<TableHandler>(null);
+  const tableRef = useRef<TableHandler<string>>(null);
 
   const [selectedWorkers, setSelectedWorkers] = useState<Set<string>>(
     new Set()
   );
 
   const selectWorkers = useCallback((indexes: Set<string>) => {
-    const source = Array.from(indexes).map((i) => workers[i].id);
+    const source = Array.from(indexes)
+      .map((i) => workers.find(w => w.id === i)?.id)
+      .filter((id) => id !== null);
     const set = new Set(source);
     setSelectedWorkers(set);
   }, [workers]);
@@ -128,6 +130,7 @@ export default function WorkersList() {
             contextMenuGroups={contextMenuGroups}
             onRowClick={(rowData) => onRowClick(rowData.id)}
             onSelectionChange={selectWorkers}
+            getKey={(worker) => worker.id}
           />
           <div className="flex justify-between items-center gap-4 mt-4">
             <p className="text-sm text-gray-600">

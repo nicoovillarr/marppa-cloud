@@ -14,7 +14,12 @@ import { UpdateWorkerImageDto } from '../dtos/update-worker-image.dto';
 
 @Controller('hive/image')
 export class WorkerImageController {
-  constructor(private readonly service: WorkerImageApiService) {}
+  constructor(private readonly service: WorkerImageApiService) { }
+
+  @Get()
+  async findAll(): Promise<WorkerImageResponseModel[]> {
+    return await this.service.findAll();
+  }
 
   @Get(':id')
   async findById(@Param('id') id: string): Promise<WorkerImageResponseModel> {

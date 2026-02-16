@@ -1,7 +1,7 @@
 "use client";
 
-import BreadCrumb from "@/core/components/breadcrumb";
-import Card from "@/core/components/card";
+import BreadCrumb from "@/core/presentation/components/breadcrumb";
+import Card from "@/core/presentation/components/card";
 import { useAppStore } from "@/store/app-store";
 import { ZoneDTO } from "@/types/dto/zone-dto";
 import Link from "next/link";
@@ -328,7 +328,7 @@ export default function HomeDetails() {
       <Overview />
 
       <Billing />
-      
+
       <RecentActivity />
     </main>
   );

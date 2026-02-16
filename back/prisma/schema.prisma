@@ -137,7 +137,7 @@ model Worker {
 
 model WorkerImage {
   id                 Int     @id @default(autoincrement())
-  name               String
+  name               String  @unique
   description        String?
   osType             String
   osVersion          String?

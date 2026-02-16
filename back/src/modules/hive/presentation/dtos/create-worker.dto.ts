@@ -13,4 +13,7 @@ export class CreateWorkerDto {
   @IsString()
   @IsOptional()
   ownerId?: string;
+
+  @IsString()
+  publicSSH: string;
 }

@@ -1,11 +1,11 @@
 "use client";
 
-import BreadCrumb from "@/core/components/breadcrumb";
-import { Button } from "@/core/components/button";
+import BreadCrumb from "@/core/presentation/components/breadcrumb";
+import { Button } from "@/core/presentation/components/button";
 import { useAppStore } from "@/store/app-store";
 import { useShallow } from "zustand/shallow";
 import { HiveService } from "../services/hive-service";
-import Table from "@/core/components/table";
+import Table from "@/core/presentation/components/table";
 import { ColumnMapping } from "@/types/column-mapping";
 import { useState } from "react";
 import { WorkerDTO } from "@/types/dto/worker-dto";

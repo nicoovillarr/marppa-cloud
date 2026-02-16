@@ -57,10 +57,21 @@ export class WorkerApiService {
       ownerId = user.companyId;
     }
 
-    const workersWithRelations = await this.service.findByOwnerId(ownerId);
-    return workersWithRelations.map(data => plainToInstance(WorkerWithRelationsResponseModel, data, {
-      excludeExtraneousValues: true,
-    }));
+    const list = await this.service.findByOwnerId(ownerId);
+    return list.map(data => {
+      const worker = plainToInstance(WorkerResponseModel, data.worker, { excludeExtraneousValues: true });
+      const flavor = plainToInstance(WorkerFlavorResponseModel, data.flavor, { excludeExtraneousValues: true });
+      const node = data.node ? plainToInstance(NodeResponseModel, data.node, { excludeExtraneousValues: true }) : null;
+
+      return mergeDto(
+        WorkerWithRelationsResponseModel,
+        worker,
+        {
+          flavor,
+          node,
+        },
+      );
+    });
   }
 
   public async create(data: CreateWorkerDto): Promise<WorkerResponseModel> {
@@ -71,6 +82,7 @@ export class WorkerApiService {
     });
 
     await this.eventService.addEventResource(eventId!, 'Worker', entity.id!);
+    await this.eventService.addEventProperty(eventId!, 'PublicSSH', data.publicSSH);
 
     return plainToInstance(WorkerResponseModel, entity, {
       excludeExtraneousValues: true,

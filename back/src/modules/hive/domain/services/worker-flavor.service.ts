@@ -11,7 +11,7 @@ export class WorkerFlavorService {
   constructor(
     @Inject(WORKER_FLAVOR_REPOSITORY_SYMBOL)
     private readonly workerFlavorRepository: WorkerFlavorRepository,
-  ) {}
+  ) { }
 
   async findById(id: number): Promise<WorkerFlavorEntity> {
     const workerFlavor = await this.workerFlavorRepository.findById(id);
@@ -20,6 +20,10 @@ export class WorkerFlavorService {
     }
 
     return workerFlavor;
+  }
+
+  async findAll(): Promise<WorkerFlavorEntity[]> {
+    return this.workerFlavorRepository.findAll();
   }
 
   async createWorkerFlavor(

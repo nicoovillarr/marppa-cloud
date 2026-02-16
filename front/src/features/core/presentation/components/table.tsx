@@ -16,31 +16,33 @@ import Link from "next/link";
 
 export type ContextMenuGroupGenerator<T> = (rowData: T) => ContextMenuGroup[];
 
-export interface TableHandler {
-  getSelectedRows: () => Set<number>;
+export interface TableHandler<K> {
+  getSelectedRows: () => Set<K>;
   clearSelectedRows: () => void;
-  selectRow: (index: number, reset?: boolean) => void;
+  selectRow: (index: K, reset?: boolean) => void;
 }
 
-export interface TableProps<T> {
+export interface TableProps<T, K> {
   showHeader?: boolean;
   select?: "none" | "single" | "multiple";
   columns: ColumnMapping<T>;
   data: T[];
   contextMenuGroups?: ContextMenuGroupGenerator<T>;
   rowHref?: (rowData: T, rowIndex: number) => string | undefined;
-  onRowClick?: (rowData: any, rowIndex: number) => void;
-  onSelectionChange?: (selectedRows: Set<string>) => void;
+  onRowClick?: (rowData: T, rowIndex: number) => void;
+  onSelectionChange?: (selectedRows: Set<K>) => void;
+  getKey: (rowData: T) => K;
 }
 
-const RowInner = <T,>(
+const RowInner = <T, K>(
   rowIndex: number,
   rowData: T,
   columnMapping: ColumnMapping<T>,
   rowHref: string,
   parse: (value: any) => string,
   renderFn: (key: string) => string | number | boolean | React.JSX.Element,
-  handleClick: (e: React.MouseEvent, columnKey: string, rowData: T) => void
+  handleClick: (e: React.MouseEvent, columnKey: string, rowData: T) => void,
+  getKey: (rowData: T) => K,
 ) => {
   const copy = (e: React.MouseEvent, value: any) => {
     e.preventDefault();
@@ -55,9 +57,8 @@ const RowInner = <T,>(
 
   return (
     <tr
-      className={`cursor-pointer ${
-        rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
-      } hover:bg-gray-100`}
+      className={`cursor-pointer ${rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
+        } hover:bg-gray-100`}
     >
       {Object.keys(columnMapping).map((key) => {
         const col = columnMapping[key];
@@ -103,13 +104,14 @@ const RowInner = <T,>(
   );
 };
 
-const Row = <T,>({
+const Row = <T, K>({
   columnMapping,
   rowData,
   rowIndex,
   contextMenuGroups,
   onRowClick,
   rowHref: rowHrefFn,
+  getKey,
 }: {
   columnMapping: ColumnMapping<T>;
   rowData: T;
@@ -117,6 +119,7 @@ const Row = <T,>({
   contextMenuGroups?: ContextMenuGroupGenerator<T>;
   onRowClick?: (rowData: T) => void;
   rowHref?: (rowData: T, rowIndex: number) => string | undefined;
+  getKey: (rowData: T) => K;
 }) => {
   const href: string = rowHrefFn ? rowHrefFn(rowData, rowIndex) : undefined;
 
@@ -133,7 +136,7 @@ const Row = <T,>({
       return JSON.stringify(value);
     }
 
-    return value.toString();
+    return value?.toString() ?? "";
   };
 
   const renderFn = (key: string) => {
@@ -180,7 +183,8 @@ const Row = <T,>({
           href,
           parse,
           renderFn,
-          handleClick
+          handleClick,
+          getKey,
         )}
       </ContextMenu>
     );
@@ -193,11 +197,12 @@ const Row = <T,>({
     href,
     parse,
     renderFn,
-    handleClick
+    handleClick,
+    getKey,
   );
 };
 
-function TableInner<T>(
+function TableInner<T, K>(
   {
     showHeader = true,
     select = "none",
@@ -207,10 +212,11 @@ function TableInner<T>(
     rowHref,
     onRowClick,
     onSelectionChange,
-  }: TableProps<T>,
-  ref: React.Ref<TableHandler>
+    getKey,
+  }: TableProps<T, K>,
+  ref: React.Ref<TableHandler<K>>
 ) {
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [selectedRows, setSelectedRows] = useState<Set<K>>(new Set());
   const [actualColumns, setActualColumns] =
     useState<ColumnMapping<T>>(undefined);
   const [totalMinWidth, setTotalMinWidth] = useState<number | null>(null);
@@ -220,10 +226,11 @@ function TableInner<T>(
   const tableRef = useRef<HTMLTableElement>(null);
   const resizeObserver = useRef<ResizeObserver | null>(null);
 
-  const selectRow = (index: number, reset: boolean = false) => {
+  const selectRow = (index: K, reset: boolean = false) => {
     if (select === "none") return;
+
     if (select === "single") {
-      const newSet = new Set<number>();
+      const newSet = new Set<K>();
       if (selectedRows.has(index)) {
         newSet.delete(index);
       } else {
@@ -247,23 +254,24 @@ function TableInner<T>(
   };
 
   const handleRowClick = (rowData: T, index: number) => {
-    if (select !== "none") {
+    if (onRowClick && typeof onRowClick === "function") {
       onRowClick(rowData, index);
     }
 
-    if (onRowClick && typeof onRowClick === "function") {
-      selectRow(index, true);
+    if (select !== "none") {
+      const key = getKey(rowData);
+      selectRow(key);
     }
   };
 
   useImperativeHandle(ref, () => ({
     getSelectedRows: () => selectedRows,
     clearSelectedRows: () => {
-      const set = new Set<number>();
+      const set = new Set<K>();
       setSelectedRows(set);
       onSelectionChange?.(set);
     },
-    selectRow: (index: number, reset: boolean = false) =>
+    selectRow: (index: K, reset: boolean = false) =>
       selectRow(index, reset),
   }));
 
@@ -276,17 +284,20 @@ function TableInner<T>(
           label: "",
           width: "25px",
           minWidth: "25px",
-          onClick: (value: T, index: number) => selectRow(index),
+          onClick: (value: T, index: number) => {
+            const key = getKey(value);
+            selectRow(key);
+          },
           renderFn: (value: T, index: number) => (
             <input
               type="checkbox"
               className="cursor-pointer"
-              checked={selectedRows.has(index)}
+              checked={selectedRows.has(getKey(value))}
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
               }}
-              onChange={() => selectRow(index)}
+              onChange={() => selectRow(getKey(value))}
             />
           ),
         },
@@ -474,6 +485,7 @@ function TableInner<T>(
               rowHref={rowHref}
               contextMenuGroups={contextMenuGroups}
               onRowClick={(rowData) => handleRowClick(rowData, rowIndex)}
+              getKey={getKey}
             />
           ))}
         </tbody>
@@ -482,8 +494,8 @@ function TableInner<T>(
   );
 }
 
-export const Table = forwardRef(TableInner) as <T>(
-  props: TableProps<T> & { ref?: React.Ref<TableHandler> }
+export const Table = forwardRef(TableInner) as <T, K>(
+  props: TableProps<T, K> & { ref?: React.Ref<TableHandler<K>> }
 ) => ReturnType<typeof TableInner>;
 
 export default Table;

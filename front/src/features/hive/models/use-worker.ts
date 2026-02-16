@@ -28,10 +28,45 @@ export const useWorker = () => {
         }
     }, [setWorkers, setIsLoading, setError]);
 
+    const fetchWorker = useCallback(async (id: string) => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const worker = await service.getWorker(id);
+            setWorkers([
+                worker,
+                ...workers,
+            ]);
+
+            return worker;
+        } catch (error) {
+            setError(error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setWorkers, setIsLoading, setError]);
+
+    const createWorker = useCallback(async (name: string, imageId: number, flavorId: number, sshKey?: string) => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const worker = await service.createWorker(name, imageId, flavorId, sshKey);
+            return worker;
+        } catch (error) {
+            setError(error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setWorkers, setIsLoading, setError]);
+
     return {
         isLoading,
         error,
         workers,
+        fetchWorker,
         fetchWorkers,
+        createWorker,
     };
 }

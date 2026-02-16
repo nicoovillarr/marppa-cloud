@@ -2,7 +2,7 @@ import { ResolverResult, withResolver } from "@/core/resolvers/with-resolver";
 import { ResolveResult as BaseResolveResult } from "@/core/resolvers/resolver-base";
 import resolvers from "@/dashboard/nibble/resolvers";
 
-import ClientInitializer from "@/core/components/client-initializer";
+import ClientInitializer from "@/core/presentation/components/client-initializer";
 import BitsList from "@/dashboard/nibble/components/bits-list";
 
 function Page({

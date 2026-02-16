@@ -6,6 +6,7 @@ export const WORKER_FLAVOR_REPOSITORY_SYMBOL = Symbol(
 
 export abstract class WorkerFlavorRepository {
   abstract findById(id: number): Promise<WorkerFlavorEntity | null>;
+  abstract findAll(): Promise<WorkerFlavorEntity[]>;
   abstract create(
     workerFlavor: WorkerFlavorEntity,
   ): Promise<WorkerFlavorEntity>;

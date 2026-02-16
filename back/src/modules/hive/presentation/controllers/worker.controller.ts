@@ -4,15 +4,19 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Put,
   Query,
+  Res,
 } from '@nestjs/common';
 import { CreateWorkerDto } from '../dtos/create-worker.dto';
 import { UpdateWorkerDto } from '../dtos/update-worker.dto';
 import { WorkerWithRelationsResponseModel } from '@/hive/application/models/worker-with-relations.response-model';
 import { WorkerResponseModel } from '@/hive/application/models/worker.response-model';
+import type { Response } from 'express';
 
 @Controller('hive/worker')
 export class WorkerController {
@@ -26,13 +30,19 @@ export class WorkerController {
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<WorkerResponseModel> {
-    return await this.service.findById(id);
+  async findById(@Param('id') id: string): Promise<WorkerWithRelationsResponseModel> {
+    return await this.service.findByIdWithRelations(id);
   }
 
   @Post()
-  async create(@Body() data: CreateWorkerDto): Promise<WorkerResponseModel> {
-    return await this.service.create(data);
+  @HttpCode(HttpStatus.CREATED)
+  async create(
+    @Body() data: CreateWorkerDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<WorkerResponseModel> {
+    const worker = await this.service.create(data);
+    res.location(`/api/hive/worker/${worker.id}`);
+    return worker;
   }
 
   @Put(':id')

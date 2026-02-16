@@ -7,11 +7,18 @@ import { UpdateWorkerFlavorDto } from '@/hive/presentation/dtos/update-worker-fl
 
 @Injectable()
 export class WorkerFlavorApiService {
-  constructor(private readonly service: WorkerFlavorService) {}
+  constructor(private readonly service: WorkerFlavorService) { }
 
   async findById(id: number): Promise<WorkerFlavorResponseModel> {
     const entity = await this.service.findById(id);
     return plainToInstance(WorkerFlavorResponseModel, entity, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  async findAll(): Promise<WorkerFlavorResponseModel[]> {
+    const entities = await this.service.findAll();
+    return plainToInstance(WorkerFlavorResponseModel, entities, {
       excludeExtraneousValues: true,
     });
   }

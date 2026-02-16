@@ -7,7 +7,7 @@ import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class WorkerImagePrismaRepository implements WorkerImageRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findById(id: number): Promise<WorkerImageEntity | null> {
     const workerImage = await this.prisma.workerImage.findUnique({
@@ -21,6 +21,11 @@ export class WorkerImagePrismaRepository implements WorkerImageRepository {
     }
 
     return WorkerImagePrismaMapper.toEntity(workerImage);
+  }
+
+  async findAll(): Promise<WorkerImageEntity[]> {
+    const workerImages = await this.prisma.workerImage.findMany();
+    return workerImages.map(WorkerImagePrismaMapper.toEntity);
   }
 
   async create(entity: WorkerImageEntity): Promise<WorkerImageEntity> {

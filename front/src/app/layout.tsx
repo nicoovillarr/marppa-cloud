@@ -3,11 +3,12 @@ import "@/libs/extensions/array-extension";
 import "@/libs/extensions/string-extension";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import AppBar from "@/core/components/app-bar";
-import Footer from "@/core/components/footer";
+import AppBar from "@/core/presentation/components/app-bar";
+import Footer from "@/core/presentation/components/footer";
 import { TickProvider } from "@/auth/ui/TickProvider";
 
 import { cookies } from "next/headers";
+import { DialogProvider } from "@/core/presentation/contexts/dialog-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,9 +38,11 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased grid min-h-dvh grid-rows-[64px_1fr_auto]`}
       >
         <TickProvider>
-          <AppBar />
-          {children}
-          <Footer />
+          <DialogProvider>
+            <AppBar />
+            {children}
+            <Footer />
+          </DialogProvider>
         </TickProvider>
       </body>
     </html>
