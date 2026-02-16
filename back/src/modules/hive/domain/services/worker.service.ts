@@ -3,6 +3,7 @@ import {
   WorkerRepository,
 } from '../repositories/worker.repository';
 import { WorkerEntity } from '../entities/worker.entity';
+import { WorkerWithRelationsModel } from '../models/worker-with-relations.model';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { UpdateWorkerDto } from '@/hive/presentation/dtos/update-worker.dto';
 import { CreateWorkerDto } from '@/hive/presentation/dtos/create-worker.dto';
@@ -31,11 +32,7 @@ export class WorkerService {
     return worker;
   }
 
-  async findByOwnerId(ownerId: string): Promise<WorkerEntity[]> {
-    return this.workerRepository.findByOwnerId(ownerId);
-  }
-
-  async findByIdWithRelations(id: string): Promise<WorkerEntity> {
+  async findByIdWithRelations(id: string): Promise<WorkerWithRelationsModel> {
     const worker = await this.workerRepository.findByIdWithRelations(id);
     if (!worker) {
       throw new NotFoundError();
@@ -44,8 +41,8 @@ export class WorkerService {
     return worker;
   }
 
-  async findByOwnerIdWithRelations(ownerId: string): Promise<WorkerEntity[]> {
-    return this.workerRepository.findByOwnerIdWithRelations(ownerId);
+  async findByOwnerId(ownerId: string): Promise<WorkerWithRelationsModel[]> {
+    return this.workerRepository.findByOwnerId(ownerId);
   }
 
   async createWorker(data: CreateWorkerDto): Promise<WorkerEntity> {

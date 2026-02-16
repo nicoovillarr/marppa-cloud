@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerService } from './worker.service';
+import { WorkerWithRelationsModel } from '../models/worker-with-relations.model';
 import {
   WorkerRepository,
   WORKER_REPOSITORY_SYMBOL,
@@ -11,6 +12,8 @@ import { UpdateWorkerDto } from '@/hive/presentation/dtos/update-worker.dto';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import * as sessionContext from '@/auth/infrastructure/als/session.context';
 import { MacAddressService } from './mac-address.service';
+import { WorkerFlavorEntity } from '../entities/worker-flavor.entity';
+import { NodeEntity } from '@/mesh/domain/entities/node.entity';
 
 describe('WorkerService', () => {
   let service: WorkerService;
@@ -28,6 +31,31 @@ describe('WorkerService', () => {
       id: 'w-000001',
     },
   );
+
+  const mockFlavor = new WorkerFlavorEntity(
+    'Test Flavor',
+    2,
+    4096,
+    50,
+    1,
+    { id: 1 },
+  );
+
+  const mockNode = new NodeEntity(
+    '10.0.0.1',
+    ResourceStatus.ACTIVE,
+    'z-000001',
+    'u-000001',
+    {
+      id: 'n-000001'
+    }
+  );
+
+  const mockWorkerWithRelations = new WorkerWithRelationsModel(
+    mockWorker,
+    mockFlavor,
+    mockNode
+  )
 
   const mockWorkerRepository = {
     findById: jest.fn(),
@@ -77,14 +105,31 @@ describe('WorkerService', () => {
     });
   });
 
+  describe('findByIdWithRelations', () => {
+    it('should return a worker with relations by id', async () => {
+      mockWorkerRepository.findByIdWithRelations.mockResolvedValue(mockWorkerWithRelations);
+
+      const result = await service.findByIdWithRelations('w-000001');
+
+      expect(repository.findByIdWithRelations).toHaveBeenCalledWith('w-000001');
+      expect(result).toEqual(mockWorkerWithRelations);
+    });
+
+    it('should throw NotFoundError if worker not found', async () => {
+      mockWorkerRepository.findByIdWithRelations.mockResolvedValue(null);
+
+      await expect(service.findByIdWithRelations('w-999999')).rejects.toThrow(NotFoundError);
+    });
+  });
+
   describe('findByOwnerId', () => {
     it('should return workers by owner id', async () => {
-      mockWorkerRepository.findByOwnerId.mockResolvedValue([mockWorker]);
+      mockWorkerRepository.findByOwnerId.mockResolvedValue([mockWorkerWithRelations]);
 
       const result = await service.findByOwnerId('c-000001');
 
       expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000001');
-      expect(result).toEqual([mockWorker]);
+      expect(result).toEqual([mockWorkerWithRelations]);
     });
 
     it('should return empty array if no workers found', async () => {
@@ -187,79 +232,6 @@ describe('WorkerService', () => {
           status: ResourceStatus.DELETING,
         }) as WorkerEntity,
       );
-    });
-  });
-
-  describe('findByIdWithRelations', () => {
-    it('should return a worker with relations by id', async () => {
-      const mockWorkerWithRelations = mockWorker.clone({
-        flavor: {
-          id: 1,
-          name: 'Test Flavor',
-          cpuCores: 2,
-          ramMB: 4096,
-          diskGB: 50,
-          familyId: 1,
-        } as any,
-        node: undefined,
-      });
-
-      mockWorkerRepository.findByIdWithRelations.mockResolvedValue(
-        mockWorkerWithRelations,
-      );
-
-      const result = await service.findByIdWithRelations('w-000001');
-
-      expect(repository.findByIdWithRelations).toHaveBeenCalledWith('w-000001');
-      expect(result).toEqual(mockWorkerWithRelations);
-      expect(result.flavor).toBeDefined();
-    });
-
-    it('should throw NotFoundError if worker not found', async () => {
-      mockWorkerRepository.findByIdWithRelations.mockResolvedValue(null);
-
-      await expect(service.findByIdWithRelations('w-999999')).rejects.toThrow(
-        NotFoundError,
-      );
-    });
-  });
-
-  describe('findByOwnerIdWithRelations', () => {
-    it('should return workers with relations by owner id', async () => {
-      const mockWorkerWithRelations = mockWorker.clone({
-        flavor: {
-          id: 1,
-          name: 'Test Flavor',
-          cpuCores: 2,
-          ramMB: 4096,
-          diskGB: 50,
-          familyId: 1,
-        } as any,
-        node: undefined,
-      });
-
-      mockWorkerRepository.findByOwnerIdWithRelations.mockResolvedValue([
-        mockWorkerWithRelations,
-      ]);
-
-      const result = await service.findByOwnerIdWithRelations('c-000001');
-
-      expect(repository.findByOwnerIdWithRelations).toHaveBeenCalledWith(
-        'c-000001',
-      );
-      expect(result).toEqual([mockWorkerWithRelations]);
-      expect(result[0].flavor).toBeDefined();
-    });
-
-    it('should return empty array if no workers found', async () => {
-      mockWorkerRepository.findByOwnerIdWithRelations.mockResolvedValue([]);
-
-      const result = await service.findByOwnerIdWithRelations('c-999999');
-
-      expect(repository.findByOwnerIdWithRelations).toHaveBeenCalledWith(
-        'c-999999',
-      );
-      expect(result).toEqual([]);
     });
   });
 });

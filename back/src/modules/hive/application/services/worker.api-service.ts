@@ -7,6 +7,10 @@ import { WorkerResponseModel } from '../models/worker.response-model';
 import { WorkerWithRelationsResponseModel } from '../models/worker-with-relations.response-model';
 import { EventService } from '@/event/domain/services/event.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
+import { WorkerWithRelationsModel } from '@/hive/domain/models/worker-with-relations.model';
+import { WorkerFlavorResponseModel } from '../models/worker-flavor.response-model';
+import { NodeResponseModel } from '@/mesh/application/models/node.response-model';
+import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
 
 @Injectable()
 export class WorkerApiService {
@@ -15,20 +19,37 @@ export class WorkerApiService {
     private readonly eventService: EventService,
   ) { }
 
-  public async findById(id: string): Promise<WorkerWithRelationsResponseModel> {
-    const entity = await this.service.findByIdWithRelations(id);
-    return plainToInstance(WorkerWithRelationsResponseModel, entity, {
+  public async findById(id: string): Promise<WorkerResponseModel> {
+    const worker = await this.service.findById(id);
+    return plainToInstance(WorkerResponseModel, worker, {
       excludeExtraneousValues: true,
     });
+  }
+
+  public async findByIdWithRelations(id: string): Promise<WorkerWithRelationsResponseModel> {
+    const data = await this.service.findByIdWithRelations(id);
+
+    const worker = plainToInstance(WorkerResponseModel, data.worker, { excludeExtraneousValues: true });
+    const flavor = plainToInstance(WorkerFlavorResponseModel, data.flavor, { excludeExtraneousValues: true });
+    const node = data.node ? plainToInstance(NodeResponseModel, data.node, { excludeExtraneousValues: true }) : null;
+
+    return mergeDto(
+      WorkerWithRelationsResponseModel,
+      worker,
+      {
+        flavor,
+        node,
+      },
+    );
   }
 
   public async findByOwnerId(
     ownerId: string,
   ): Promise<WorkerWithRelationsResponseModel[]> {
-    const entities = await this.service.findByOwnerIdWithRelations(ownerId);
-    return plainToInstance(WorkerWithRelationsResponseModel, entities, {
+    const workersWithRelations = await this.service.findByOwnerId(ownerId);
+    return workersWithRelations.map(data => plainToInstance(WorkerWithRelationsResponseModel, data, {
       excludeExtraneousValues: true,
-    });
+    }));
   }
 
   public async create(data: CreateWorkerDto): Promise<WorkerResponseModel> {

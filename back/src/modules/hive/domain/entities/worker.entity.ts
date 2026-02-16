@@ -1,16 +1,12 @@
 import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
 import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
-import { WorkerFlavorEntity } from './worker-flavor.entity';
-import { NodeEntity } from '@/mesh/domain/entities/node.entity';
 
 interface WorkerOptionalProps {
   id?: string;
   createdAt?: Date;
   updatedAt?: Date;
   updatedBy?: string;
-  flavor?: WorkerFlavorEntity;
-  node?: NodeEntity;
 }
 
 export class WorkerEntity extends PatchableEntity {
@@ -20,8 +16,6 @@ export class WorkerEntity extends PatchableEntity {
   public readonly createdAt?: Date;
   public readonly updatedAt?: Date;
   public readonly updatedBy?: string;
-  public readonly flavor?: WorkerFlavorEntity;
-  public readonly node?: NodeEntity;
 
   constructor(
     public readonly name: string,
@@ -39,8 +33,6 @@ export class WorkerEntity extends PatchableEntity {
     this.createdAt = optionals.createdAt;
     this.updatedAt = optionals.updatedAt;
     this.updatedBy = optionals.updatedBy;
-    this.flavor = optionals.flavor;
-    this.node = optionals.node;
   }
 
   toObject(): Record<string, any> {
@@ -56,8 +48,6 @@ export class WorkerEntity extends PatchableEntity {
       ownerId: this.ownerId,
       imageId: this.imageId,
       flavorId: this.flavorId,
-      flavor: this.flavor,
-      node: this.node,
     };
   }
 
@@ -75,8 +65,6 @@ export class WorkerEntity extends PatchableEntity {
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
         updatedBy: data.updatedBy,
-        flavor: data.flavor,
-        node: data.node,
       },
     );
   }

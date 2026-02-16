@@ -1,16 +1,18 @@
 import { WorkerEntity } from '@/hive/domain/entities/worker.entity';
+import { WorkerWithRelationsModel } from '@/hive/domain/models/worker-with-relations.model';
 import { WorkerRepository } from '@/hive/domain/repositories/worker.repository';
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { WorkerPrismaMapper } from '../mappers/worker.prisma-mapper';
 import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
+import { WorkerWithRelationsPrismaMapper } from '../mappers/worker-with-relations.prisma-mapper';
 
 @Injectable()
 export class WorkerPrismaRepository implements WorkerRepository {
   constructor(private readonly prisma: PrismaService) { }
 
   async findById(id: string): Promise<WorkerEntity | null> {
-    const worker = await this.prisma.worker.findUnique({
+    const worker: any = await this.prisma.worker.findUnique({
       where: {
         id,
       },
@@ -23,18 +25,8 @@ export class WorkerPrismaRepository implements WorkerRepository {
     return WorkerPrismaMapper.toEntity(worker);
   }
 
-  async findByOwnerId(ownerId: string): Promise<WorkerEntity[]> {
-    const workers = await this.prisma.worker.findMany({
-      where: {
-        ownerId,
-      },
-    });
-
-    return workers.map((worker) => WorkerPrismaMapper.toEntity(worker));
-  }
-
-  async findByIdWithRelations(id: string): Promise<WorkerEntity | null> {
-    const worker = await this.prisma.worker.findUnique({
+  async findByIdWithRelations(id: string): Promise<WorkerWithRelationsModel | null> {
+    const worker: any = await this.prisma.worker.findUnique({
       where: {
         id,
       },
@@ -48,10 +40,10 @@ export class WorkerPrismaRepository implements WorkerRepository {
       return null;
     }
 
-    return WorkerPrismaMapper.toEntityWithRelations(worker);
+    return WorkerWithRelationsPrismaMapper.toDomain(worker);
   }
 
-  async findByOwnerIdWithRelations(ownerId: string): Promise<WorkerEntity[]> {
+  async findByOwnerId(ownerId: string): Promise<WorkerWithRelationsModel[]> {
     const workers = await this.prisma.worker.findMany({
       where: {
         ownerId,
@@ -62,9 +54,7 @@ export class WorkerPrismaRepository implements WorkerRepository {
       },
     });
 
-    return workers.map((worker) =>
-      WorkerPrismaMapper.toEntityWithRelations(worker),
-    );
+    return workers.map(WorkerWithRelationsPrismaMapper.toDomain);
   }
 
   async create(entity: WorkerEntity): Promise<WorkerEntity> {

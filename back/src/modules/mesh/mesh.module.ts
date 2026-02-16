@@ -46,5 +46,6 @@ import { EventModule } from '@/event/event.module';
 
     NetmaskService,
   ],
+  exports: [NodeService],
 })
-export class MeshModule {}
+export class MeshModule { }

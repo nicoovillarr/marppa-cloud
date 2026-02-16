@@ -7,7 +7,7 @@ import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class NodePrismaRepository implements NodeRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   public async findById(
     zoneId: string,
@@ -27,6 +27,26 @@ export class NodePrismaRepository implements NodeRepository {
   public async findByZoneId(zoneId: string): Promise<NodeEntity[]> {
     const models = await this.prisma.node.findMany({
       where: { zoneId },
+    });
+
+    return models.map(NodePrismaMapper.toEntity);
+  }
+
+  public async findByWorkerId(workerId: string): Promise<NodeEntity | null> {
+    const model = await this.prisma.node.findUnique({
+      where: { workerId },
+    });
+
+    if (model == null) {
+      return null;
+    }
+
+    return NodePrismaMapper.toEntity(model);
+  }
+
+  public async findByWorkerIds(workerIds: string[]): Promise<NodeEntity[]> {
+    const models = await this.prisma.node.findMany({
+      where: { workerId: { in: workerIds } },
     });
 
     return models.map(NodePrismaMapper.toEntity);

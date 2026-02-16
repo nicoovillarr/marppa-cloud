@@ -32,10 +32,11 @@ import { WORKER_STORAGE_TYPE_REPOSITORY_SYMBOL } from './domain/repositories/wor
 import { SharedModule } from '@/shared/shared.module';
 import { AuthModule } from '@/auth/auth.module';
 import { EventModule } from '@/event/event.module';
+import { MeshModule } from '@/mesh/mesh.module';
 import { MacAddressService } from './domain/services/mac-address.service';
 
 @Module({
-  imports: [SharedModule, AuthModule, EventModule],
+  imports: [SharedModule, AuthModule, EventModule, MeshModule],
   controllers: [
     WorkerDiskController,
     WorkerFamilyController,
@@ -91,4 +92,4 @@ import { MacAddressService } from './domain/services/mac-address.service';
   ],
   exports: [],
 })
-export class HiveModule {}
+export class HiveModule { }

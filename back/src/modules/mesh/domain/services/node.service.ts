@@ -15,7 +15,7 @@ export class NodeService {
   constructor(
     @Inject(NODE_REPOSITORY_SYMBOL)
     private readonly repository: NodeRepository,
-  ) {}
+  ) { }
 
   public async findById(zoneId: string, id: string): Promise<NodeEntity> {
     const entity = await this.repository.findById(zoneId, id);
@@ -28,6 +28,14 @@ export class NodeService {
 
   public findByZoneId(zoneId: string): Promise<NodeEntity[]> {
     return this.repository.findByZoneId(zoneId);
+  }
+
+  public findByWorkerId(workerId: string): Promise<NodeEntity | null> {
+    return this.repository.findByWorkerId(workerId);
+  }
+
+  public findByWorkerIds(workerIds: string[]): Promise<NodeEntity[]> {
+    return this.repository.findByWorkerIds(workerIds);
   }
 
   public create(

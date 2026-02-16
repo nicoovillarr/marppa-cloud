@@ -129,7 +129,7 @@ describe('WorkerPrismaRepository (Integration)', () => {
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
-      const found = result.find((w) => w.id === createdWorkerId);
+      const found = result.find((w) => w.worker.id === createdWorkerId);
       expect(found).toBeDefined();
     });
 
@@ -196,8 +196,8 @@ describe('WorkerPrismaRepository (Integration)', () => {
       const result = await repository.findByIdWithRelations(createdWorkerId);
 
       expect(result).toBeDefined();
-      expect(result?.id).toBe(createdWorkerId);
-      expect(result?.name).toBe(`${testNamePrefix}-with-relations`);
+      expect(result?.worker.id).toBe(createdWorkerId);
+      expect(result?.worker.name).toBe(`${testNamePrefix}-with-relations`);
 
       // Verify flavor is included
       expect(result?.flavor).toBeDefined();
@@ -208,36 +208,13 @@ describe('WorkerPrismaRepository (Integration)', () => {
       expect(result?.flavor?.diskGB).toBeDefined();
 
       // Verify node is null (no node assigned)
-      expect(result?.node).toBeUndefined();
-    });
-
-    it('should find workers by owner id with relations', async () => {
-      const result = await repository.findByOwnerIdWithRelations('c-000001');
-
-      expect(result).toBeDefined();
-      expect(result.length).toBeGreaterThan(0);
-
-      const found = result.find((w) => w.id === createdWorkerId);
-      expect(found).toBeDefined();
-
-      // Verify flavor is included
-      expect(found?.flavor).toBeDefined();
-      expect(found?.flavor?.id).toBe(testWorkerFlavorId);
-
-      // Verify node is null or undefined (no node assigned)
-      expect(found?.node).toBeUndefined();
+      expect(result?.node).toBeNull();
     });
 
     it('should return null for non-existent worker id with relations', async () => {
       const result = await repository.findByIdWithRelations('w-nonexistent');
 
       expect(result).toBeNull();
-    });
-
-    it('should return empty array for non-existent owner id with relations', async () => {
-      const result = await repository.findByOwnerIdWithRelations('c-nonexistent');
-
-      expect(result).toEqual([]);
     });
   });
 });
