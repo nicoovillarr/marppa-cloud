@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": false,
@@ -22,22 +26,39 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/core/*": ["./src/features/core/*"],
-      "@/auth/*": ["./src/features/auth/*"],
-      "@/home/*": ["src/features/home/*"],
-      "@/dashboard/*": ["src/features/dashboard/*"],
-
-      "@/app/*": ["./src/app/*"],
-      "@/api/*": ["./src/app/api/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/libs/*": ["./src/libs/*"],
-      "@/services/*": ["./src/services/*"],
-      "@/hooks/*": ["./src/hooks/*"],
-      "@/store/*": ["src/stores/*"],
-      "@/types/*": ["./src/types/*"],
-      "@/contexts/*": ["./src/contexts/*"]
+      "@/core/*": [
+        "./src/features/core/*"
+      ],
+      "@/auth/*": [
+        "./src/features/auth/*"
+      ],
+      "@/home/*": [
+        "src/features/home/*"
+      ],
+      "@/dashboard/*": [
+        "src/features/dashboard/*"
+      ],
+      "@/hive/*": [
+        "src/features/hive/*"
+      ],
+      "@/libs/*": [
+        "./src/libs/*"
+      ],
+      "@/store/*": [
+        "src/stores/*"
+      ],
+      "@/types/*": [
+        "./src/types/*"
+      ],
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "next-env.d.ts", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

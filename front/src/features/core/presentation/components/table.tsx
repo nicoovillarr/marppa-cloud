@@ -30,7 +30,7 @@ export interface TableProps<T> {
   contextMenuGroups?: ContextMenuGroupGenerator<T>;
   rowHref?: (rowData: T, rowIndex: number) => string | undefined;
   onRowClick?: (rowData: any, rowIndex: number) => void;
-  onSelectionChange?: (selectedRows: Set<number>) => void;
+  onSelectionChange?: (selectedRows: Set<string>) => void;
 }
 
 const RowInner = <T,>(

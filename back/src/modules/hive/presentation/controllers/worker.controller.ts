@@ -20,13 +20,13 @@ export class WorkerController {
 
   @Get()
   async findByOwnerId(
-    @Query('ownerId') ownerId: string,
+    @Query('ownerId') ownerId?: string,
   ): Promise<WorkerWithRelationsResponseModel[]> {
     return await this.service.findByOwnerId(ownerId);
   }
 
   @Get(':id')
-  async findById(@Param('id') id: string): Promise<WorkerWithRelationsResponseModel> {
+  async findById(@Param('id') id: string): Promise<WorkerResponseModel> {
     return await this.service.findById(id);
   }
 

@@ -11,6 +11,8 @@ import { WorkerWithRelationsModel } from '@/hive/domain/models/worker-with-relat
 import { WorkerFlavorResponseModel } from '../models/worker-flavor.response-model';
 import { NodeResponseModel } from '@/mesh/application/models/node.response-model';
 import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
+import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 
 @Injectable()
 export class WorkerApiService {
@@ -44,8 +46,17 @@ export class WorkerApiService {
   }
 
   public async findByOwnerId(
-    ownerId: string,
+    ownerId?: string,
   ): Promise<WorkerWithRelationsResponseModel[]> {
+    if (!ownerId) {
+      const user = getCurrentUser();
+      if (!user) {
+        throw new UnauthorizedError();
+      }
+
+      ownerId = user.companyId;
+    }
+
     const workersWithRelations = await this.service.findByOwnerId(ownerId);
     return workersWithRelations.map(data => plainToInstance(WorkerWithRelationsResponseModel, data, {
       excludeExtraneousValues: true,
