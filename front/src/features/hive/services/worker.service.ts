@@ -1,5 +1,5 @@
 import workersApi from "../api/worker.api";
-import { WorkerResponseDto, WorkerWithRelationsResponseDto } from "../api/worker.api.types";
+import { CreateWorkerDto, WorkerResponseDto, WorkerWithRelationsResponseDto } from "../api/worker.api.types";
 
 export class WorkerService {
     async listWorkers(): Promise<WorkerWithRelationsResponseDto[]> {
@@ -25,6 +25,11 @@ export class WorkerService {
             sshKey
         });
 
+        return dto;
+    }
+
+    async updateWorker(id: string, name: string): Promise<WorkerWithRelationsResponseDto> {
+        const dto = await workersApi.updateWorker(id, { name });
         return dto;
     }
 }

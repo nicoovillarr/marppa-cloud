@@ -1,9 +1,7 @@
 "use client";
 
-import Table, {
-  TableHandler,
-} from "@/core/presentation/components/table";
-import { useCallback, useEffect, useRef, useState } from "react";
+import Table from "@/core/presentation/components/table";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import Button from "@/core/presentation/components/button";
 import { LuListPlus, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
@@ -50,8 +48,6 @@ const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
 
 export default function WorkersList() {
   const { workers, fetchWorkers } = useWorker();
-
-  const tableRef = useRef<TableHandler<string>>(null);
 
   const [selectedWorkers, setSelectedWorkers] = useState<Set<string>>(
     new Set()
@@ -117,13 +113,12 @@ export default function WorkersList() {
           className="ml-2"
           text="Create New"
           icon={<LuListPlus />}
-          href="/dashboard/hive/create"
+          href="/dashboard/hive/workers/create"
         />
       </header>
       {workers && workers.length > 0 ? (
         <>
           <Table
-            ref={tableRef}
             select="multiple"
             columns={COLUMNS}
             data={workers}

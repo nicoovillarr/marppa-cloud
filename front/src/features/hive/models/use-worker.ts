@@ -61,6 +61,21 @@ export const useWorker = () => {
         }
     }, [setWorkers, setIsLoading, setError]);
 
+    const updateWorker = useCallback(async (id: string, name: string) => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const worker = await service.updateWorker(id, name);
+            setWorkers(workers.map((w) => w.id === id ? worker : w));
+            return worker;
+        } catch (error) {
+            setError(error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [workers, setWorkers, setIsLoading, setError])
+
     return {
         isLoading,
         error,
@@ -68,5 +83,6 @@ export const useWorker = () => {
         fetchWorker,
         fetchWorkers,
         createWorker,
+        updateWorker,
     };
 }

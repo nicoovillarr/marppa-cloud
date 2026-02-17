@@ -15,6 +15,10 @@ const workersApi = {
     createWorker: (dto: CreateWorkerDto): Promise<WorkerWithRelationsResponseDto> => {
         return fetcher<WorkerWithRelationsResponseDto>(baseUrl, 'POST', dto);
     },
+
+    updateWorker: (id: string, data: Partial<CreateWorkerDto>): Promise<WorkerWithRelationsResponseDto> => {
+        return fetcher<WorkerWithRelationsResponseDto>(`${baseUrl}/${id}`, 'PUT', data);
+    },
 };
 
 export default workersApi;
