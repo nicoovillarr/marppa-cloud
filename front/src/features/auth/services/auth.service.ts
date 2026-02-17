@@ -1,7 +1,7 @@
 import { AuthResponseDto, LoginDto, RegisterDto } from "../api/auth.api.types";
-import authApi from "../api/auth.api";
+import { authApi } from "../api/auth.api";
 
-const authService = {
+export const authService = {
     async tick(): Promise<AuthResponseDto> {
         return await authApi.tick();
     },
@@ -21,5 +21,3 @@ const authService = {
         await authApi.logout();
     },
 };
-
-export default authService;

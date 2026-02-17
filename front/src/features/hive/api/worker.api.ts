@@ -1,4 +1,4 @@
-import { fetcher } from "@/libs/fetcher";
+import { fetcher } from "@/core/api/fetcher";
 import { CreateWorkerDto, WorkerResponseDto, WorkerWithRelationsResponseDto } from "./worker.api.types";
 
 const baseUrl = '/hive/workers';

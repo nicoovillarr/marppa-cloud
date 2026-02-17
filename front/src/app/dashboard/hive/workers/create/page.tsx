@@ -1,4 +1,4 @@
-import CreateWorkerForm from "@/hive/ui/CreateWorkerForm";
+import { CreateWorkerForm } from "@/hive/ui/CreateWorkerForm";
 
 export default function Page() {
   return (

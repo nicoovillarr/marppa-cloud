@@ -1,4 +1,4 @@
-import WorkersList from "@/hive/ui/WorkersList";
+import { WorkersList } from "@/hive/ui/WorkersList";
 
 export default function Page() {
   return (

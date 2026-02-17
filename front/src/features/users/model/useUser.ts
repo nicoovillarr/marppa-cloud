@@ -2,7 +2,7 @@ import { useUserStore } from "./user.store";
 import userApi from "../api/user.api";
 import { useCallback } from "react";
 
-const useUser = () => {
+export const useUser = () => {
     const {
         user,
         isLoading,
@@ -41,5 +41,3 @@ const useUser = () => {
         clear,
     };
 }
-
-export default useUser;

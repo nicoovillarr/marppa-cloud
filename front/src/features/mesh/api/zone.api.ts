@@ -1,4 +1,4 @@
-import { fetcher } from "@/libs/fetcher";
+import { fetcher } from "@/core/api/fetcher";
 import { CreateZoneDto, ZoneWithNodes, ZoneWithNodesAndFibers } from "./zone.api.types";
 
 const baseUrl = '/mesh/zones';

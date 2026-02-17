@@ -1,5 +1,6 @@
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { TransponderMode } from "../models/transponder-mode.enum";
+import { NodeResponseDto } from "src/features/mesh/api/node.api.types";
 
 export type CreateTransponderDto = {
     path: string;
@@ -22,10 +23,15 @@ export type TransponderResponseModel = {
     allowCookies: boolean;
     gzipEnabled: boolean;
     priority: number;
+    enabled: boolean;
     createdAt: Date;
     createdBy: string;
     updatedAt: Date;
     updatedBy: string;
     portalId: string;
     nodeId: string;
+}
+
+export type TransponderWithNodeResponseModel = TransponderResponseModel & {
+    node?: NodeResponseDto;
 }

@@ -1,60 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Table from "@/core/presentation/components/table";
-import { ColumnMapping } from "@/libs/types/column-mapping";
-import { TransponderDTO } from "@/libs/types/dto/transponder-dto";
-import FormLabel from "@/core/presentation/components/inputs/form/form-label";
+import { useEffect, useMemo, useState } from "react";
+import { ColumnMapping, Table } from "@/core/ui/Table";
+import { FormLabel } from "@/core/ui/inputs/form/FormLabel";
 import { LuPlus } from "react-icons/lu";
-import { useDialog } from "@/core/presentation/hooks/use-dialog";
-import { PortalWithTranspondersResponseDto } from "../api/portal.api.types";
+import { PortalWithTranspondersWithNodesResponseDto } from "../api/portal.api.types";
 import { TransponderForm } from "./TransponderForm";
-
-interface PortalTranspondersListProps {
-  portal: PortalWithTranspondersResponseDto;
-}
-
-const COLUMNS: ColumnMapping<TransponderDTO> = {
-  id: {
-    label: "#",
-    minWidth: "150px",
-  },
-  path: {
-    label: "Path",
-    width: "100%",
-    minWidth: "100px",
-  },
-  mode: {
-    label: "Mode",
-    minWidth: "150px",
-  },
-  priority: {
-    label: "Priority",
-    minWidth: "50px",
-  },
-  enabled: {
-    label: "Enabled",
-    minWidth: "50px",
-    renderFn: (value: TransponderDTO) => (value.enabled ? "Yes" : "No"),
-  },
-  ip: {
-    label: "IP",
-    minWidth: "200px",
-    renderFn: (value: TransponderDTO) =>
-      value.node?.ipAddress || value.nodeId || "N/A",
-  },
-};
+import { useDialog } from "@/core/ui/DialogProvider";
+import { TransponderWithNodeResponseModel } from "../api/transponder.api.type";
+import { usePortal } from "../models/use-portal";
 
 export function PortalTranspondersList({
-  portal,
-}: PortalTranspondersListProps) {
+  portalId,
+}: {
+  portalId: string;
+}) {
   const { showDialog } = useDialog();
 
-  const [selectedTransponders, setSelectedTransponders] = useState<Set<string>>(
+  const {
+    fetchPortalById,
+  } = usePortal();
+
+  const [portal, setPortal] = useState<PortalWithTranspondersWithNodesResponseDto | null>(null);
+
+  const [_, setSelectedTransponders] = useState<Set<string>>(
     new Set()
   );
 
-  const onRowClick = (rowData: TransponderDTO) => {
+  const onRowClick = (rowData: TransponderWithNodeResponseModel) => {
     showDialog({
       title: `Transponder #${rowData.id}`,
       content: <TransponderForm portalId={portal.id} zoneId={portal.zoneId} transponder={rowData} />,
@@ -72,6 +45,42 @@ export function PortalTranspondersList({
     });
   };
 
+  const COLUMNS = useMemo(() => ({
+    id: {
+      label: "#",
+      minWidth: "150px",
+    },
+    path: {
+      label: "Path",
+      width: "100%",
+      minWidth: "100px",
+    },
+    mode: {
+      label: "Mode",
+      minWidth: "150px",
+    },
+    enabled: {
+      label: "Enabled",
+      minWidth: "150px",
+      renderFn: (value: TransponderWithNodeResponseModel) =>
+        value.enabled ? "Yes" : "No",
+    },
+    priority: {
+      label: "Priority",
+      minWidth: "50px",
+    },
+    ip: {
+      label: "IP",
+      minWidth: "200px",
+      renderFn: (value: TransponderWithNodeResponseModel) =>
+        value.node?.ipAddress || value.nodeId || "N/A",
+    },
+  }), []);
+
+  useEffect(() => {
+    fetchPortalById(portalId).then((p) => setPortal(p));
+  }, [portalId]);
+
   return (
     <>
       <header className="flex justify-between items-center gap-x-4">
@@ -88,9 +97,9 @@ export function PortalTranspondersList({
       <Table
         columns={COLUMNS}
         select="single"
-        data={portal.transponders || []}
+        data={portal?.transponders ?? []}
         onRowClick={onRowClick}
-        getKey={(portal: PortalWithTranspondersResponseDto) => portal.id}
+        getKey={(portal: TransponderWithNodeResponseModel) => portal.id}
       />
     </>
   );

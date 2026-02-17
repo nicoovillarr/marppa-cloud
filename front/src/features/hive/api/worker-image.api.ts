@@ -1,4 +1,4 @@
-import { fetcher } from "@/libs/fetcher"
+import { fetcher } from "@/core/api/fetcher"
 import { WorkerImageResponseDto } from "./worker-image.api.types"
 
 const baseUrl = '/hive/images';

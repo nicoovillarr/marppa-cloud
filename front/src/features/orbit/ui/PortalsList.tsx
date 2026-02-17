@@ -1,19 +1,16 @@
 "use client";
 
-import Button from "@/core/presentation/components/button";
-import Table, {
-  TableHandler,
-} from "@/core/presentation/components/table";
-import { ColumnMapping } from "@/libs/types/column-mapping";
+import { Button } from "@/core/ui/Button";
+import { ColumnMapping, Table, TableHandler } from "@/core/ui/Table";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LuListPlus } from "react-icons/lu";
 import { toast } from "sonner";
 import { PortalDetails } from "./PortalDetails";
-import { useDialog } from "@/core/presentation/hooks/use-dialog";
 import ReactTimeAgo from "react-timeago";
 import { usePortal } from "../models/use-portal";
 import { PortalWithTranspondersResponseDto } from "../api/portal.api.types";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
+import { useDialog } from "@/core/ui/DialogProvider";
 
 const COLUMNS: ColumnMapping<PortalWithTranspondersResponseDto> = {
   id: {

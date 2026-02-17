@@ -1,5 +1,5 @@
-import HomeDetails from "@/dashboard/components/home-details";
+import { DashboardDetails } from "@/dashboard/ui/DashboardDetails";
 
 export default function Page() {
-  return <HomeDetails />;
+  return <DashboardDetails />;
 }

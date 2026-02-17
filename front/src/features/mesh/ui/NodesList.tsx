@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ColumnMapping } from "@/libs/types/column-mapping";
-import FormLabel from "@/core/presentation/components/inputs/form/form-label";
-import Table from "@/core/presentation/components/table";
+import { FormLabel } from "@/core/ui/inputs/form/FormLabel";
+import { ColumnMapping, Table } from "@/core/ui/Table";
 import { redirect } from "next/navigation";
-import { closeCurrentDialog } from "@/libs/dialog-ref";
 import { NodeWithFibers } from "../api/node.api.types";
 import { useZone } from "../models/use-zone";
-import { ZoneWithNodes, ZoneWithNodesAndFibers } from "../api/zone.api.types";
-import { TableSkeleton } from "@/core/presentation/components/AsyncTable";
+import { ZoneWithNodesAndFibers } from "../api/zone.api.types";
+import { TableSkeleton } from "@/core/ui/AsyncTable";
+import { closeCurrentDialog } from "@/core/ui/DialogProvider";
 
 const getPointsToInfo = (node: NodeWithFibers) => {
   let pointsTo = "N/A";

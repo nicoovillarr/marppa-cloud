@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { useTransponderStore } from "./transponder.store";
-import { transponderApi } from "../api/transponder.api";
 import { TransponderResponseModel, CreateTransponderDto } from "../api/transponder.api.type";
 import { TransponderService } from "../services/transponder.service";
 

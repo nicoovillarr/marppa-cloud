@@ -1,7 +1,7 @@
-import { fetcher } from "@/libs/fetcher";
+import { fetcher } from "@/core/api/fetcher";
 import { AuthResponseDto, LoginDto, RegisterDto } from "./auth.api.types";
 
-const authApi = {
+export const authApi = {
     tick: async () => {
         const response = await fetcher<AuthResponseDto>("/auth/tick", "GET");
         return response;
@@ -40,5 +40,3 @@ const authApi = {
         return response;
     },
 };
-
-export default authApi;

@@ -4,10 +4,14 @@ import { PortalPrismaMapper } from '../mappers/portal.prisma-mapper';
 import { PortalEntity } from '../../domain/entities/portal.entity';
 import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 import { PortalRepository } from '../../domain/repositories/portal.repository';
+import { PortalWithTranspondersWithNodeModel } from '@/orbit/domain/models/portal-with-transponders-with-node.model';
+import { TransponderPrismaMapper } from '../mappers/transponder.prisma-mapper';
+import { NodePrismaMapper } from '@/mesh/infrastructure/mappers/node.prisma-mapper';
+import { TransponderWithNodeModel } from '@/orbit/domain/models/transponder-with-node.model';
 
 @Injectable()
 export class PortalPrismaRepository implements PortalRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findById(portalId: string): Promise<PortalEntity | null> {
     const portal = await this.prisma.portal.findUnique({
@@ -19,6 +23,33 @@ export class PortalPrismaRepository implements PortalRepository {
     }
 
     return PortalPrismaMapper.toEntity(portal);
+  }
+
+  async findByIdWithTranspondersWithNode(id: string): Promise<PortalWithTranspondersWithNodeModel | null> {
+    const portal = await this.prisma.portal.findUnique({
+      where: { id },
+      include: {
+        transponders: {
+          include: {
+            node: true,
+          },
+        },
+      },
+    });
+
+    if (portal == null) {
+      return null;
+    }
+
+    return new PortalWithTranspondersWithNodeModel(
+      PortalPrismaMapper.toEntity(portal),
+      portal.transponders.map((transponder) =>
+        new TransponderWithNodeModel(
+          TransponderPrismaMapper.toEntity(transponder),
+          transponder.node ? NodePrismaMapper.toEntity(transponder.node) : undefined,
+        ),
+      ),
+    );
   }
 
   async findByOwnerId(ownerId: string): Promise<PortalEntity[]> {

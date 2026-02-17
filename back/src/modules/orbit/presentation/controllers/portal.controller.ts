@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { PortalApiService } from '../../application/services/portal.api-service';
 import { CreatePortalDto } from '../dtos/create-portal.dto';
@@ -21,7 +22,7 @@ export class PortalController {
   }
 
   @Get()
-  public findByOwnerId(@Param('ownerId') ownerId?: string) {
+  public findByOwnerId(@Query('ownerId') ownerId?: string) {
     return this.apiService.findByOwnerId(ownerId);
   }
 
@@ -32,7 +33,7 @@ export class PortalController {
 
   @Get(':id')
   public findOne(@Param('id') id: string) {
-    return this.apiService.findById(id);
+    return this.apiService.findByIdWithTranspondersWithNode(id);
   }
 
   @Put(':id')

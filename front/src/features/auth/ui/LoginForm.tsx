@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import useAuth from "../models/useAuth";
+import { useAuth } from "../models/useAuth";
 import { redirect } from "next/navigation";
 
 interface FormValues {
@@ -9,7 +9,7 @@ interface FormValues {
   password: string;
 }
 
-export default function LoginForm() {
+export function LoginForm() {
   const { login } = useAuth();
 
   const methods = useForm<FormValues>({

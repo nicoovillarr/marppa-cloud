@@ -1,4 +1,4 @@
-import { ZonesList } from "src/features/mesh/ui/ZonesList";
+import { ZonesList } from "@/mesh/ui/ZonesList";
 
 export default function Page() {
     return (

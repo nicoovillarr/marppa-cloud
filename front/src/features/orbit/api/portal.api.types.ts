@@ -1,6 +1,6 @@
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { PortalType } from "../models/portal-type.enum";
-import { TransponderResponseModel } from "./transponder.api.type";
+import { TransponderResponseModel, TransponderWithNodeResponseModel } from "./transponder.api.type";
 
 export type CreatePortalDto = {
     name: string;
@@ -47,4 +47,8 @@ export type PortalResponseDto = {
 
 export type PortalWithTranspondersResponseDto = PortalResponseDto & {
     transponders: TransponderResponseModel[];
+}
+
+export type PortalWithTranspondersWithNodesResponseDto = PortalResponseDto & {
+    transponders: TransponderWithNodeResponseModel[];
 }

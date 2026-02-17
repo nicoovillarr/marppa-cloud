@@ -1,4 +1,4 @@
-import { PortalsList } from "src/features/orbit/ui/PortalsList";
+import { PortalsList } from "@/orbit/ui/PortalsList";
 
 export default function Page() {
   return (

@@ -1,14 +1,9 @@
 "use client";
 
-import Button from "@/core/presentation/components/button";
-import Table from "@/core/presentation/components/table";
-import { useAppStore } from "@/libs/stores/app-store";
-import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/core/ui/Button";
+import { Table } from "@/core/ui/Table";
+import { useEffect } from "react";
 import { LuListPlus } from "react-icons/lu";
-import { useShallow } from "zustand/shallow";
-import { ZoneDTO } from "@/libs/types/dto/zone-dto";
-import { toast } from "sonner";
-import { redirect } from "next/navigation";
 import { useZone } from "../models/use-zone";
 import { ZoneWithNodes } from "../api/zone.api.types";
 
@@ -25,7 +20,7 @@ const COLUMNS = {
   status: {
     label: "Status",
     width: "150px",
-    renderFn: (value: ZoneDTO) => (
+    renderFn: (value: ZoneWithNodes) => (
       <span className={`status-${value.status.toLowerCase()}`}>
         {value.status}
       </span>
@@ -42,12 +37,12 @@ const COLUMNS = {
   usedIPs: {
     label: "Used IPs",
     width: "125px",
-    renderFn: (value: ZoneDTO) => value.nodes?.length || "0",
+    renderFn: (value: ZoneWithNodes) => value.nodes?.length || "0",
   },
   createdAt: {
     label: "Created At",
     width: "200px",
-    renderFn: (value: ZoneDTO) =>
+    renderFn: (value: ZoneWithNodes) =>
       new Date(value.createdAt).toLocaleDateString(),
   },
 };

@@ -3,12 +3,12 @@ import "@/libs/extensions/array-extension";
 import "@/libs/extensions/string-extension";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import AppBar from "@/core/presentation/components/app-bar";
-import Footer from "@/core/presentation/components/footer";
+import { AppBar } from "@/core/ui/AppBar";
+import { Footer } from "@/core/ui/Footer";
 import { TickProvider } from "@/auth/ui/TickProvider";
+import { DialogProvider } from "@/core/ui/DialogProvider";
 
 import { cookies } from "next/headers";
-import { DialogProvider } from "@/core/presentation/contexts/dialog-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

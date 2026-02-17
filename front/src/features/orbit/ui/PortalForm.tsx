@@ -1,10 +1,10 @@
 "use client";
 
-import FormInput from "@/core/presentation/components/inputs/form/form-input";
-import FormSelect from "@/core/presentation/components/inputs/form/form-select";
+import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { useEffect, useRef, useState } from "react";
+import { FormSelect } from "@/core/ui/inputs/form/FormSelect";
 import { useForm, FormProvider } from "react-hook-form";
-import Button, { ButtonRef } from "@/core/presentation/components/button";
+import { Button, ButtonRef } from "@/core/ui/Button";
 import { LuSave } from "react-icons/lu";
 import { IoReloadSharp } from "react-icons/io5";
 import { useZone } from "src/features/mesh/models/use-zone";
@@ -153,7 +153,7 @@ export function PortalForm({
               }))}
               clearText="None"
             />
-            {portal.zoneId && <PortalTranspondersList portal={portal} />}
+            {portal.zoneId && <PortalTranspondersList portalId={portal.id} />}
           </>
         )}
 

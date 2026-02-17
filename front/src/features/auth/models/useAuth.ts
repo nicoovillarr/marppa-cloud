@@ -1,8 +1,8 @@
 import { useCallback } from "react";
-import authService from "../services/auth.service";
+import { authService } from "../services/auth.service";
 import { useAuthStore } from "./auth.store";
 
-const useAuth = () => {
+export const useAuth = () => {
     const {
         refreshToken,
         accessToken,
@@ -97,5 +97,3 @@ const useAuth = () => {
         clear,
     };
 }
-
-export default useAuth;

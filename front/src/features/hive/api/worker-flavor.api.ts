@@ -1,4 +1,4 @@
-import { fetcher } from "@/libs/fetcher";
+import { fetcher } from "@/core/api/fetcher";
 import { WorkerFlavorResponseDto } from "./worker-flavor.api.types";
 
 const baseUrl = '/hive/flavors';

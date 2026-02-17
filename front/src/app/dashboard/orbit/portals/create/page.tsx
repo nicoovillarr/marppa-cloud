@@ -1,4 +1,4 @@
-import { CreatePortal } from "src/features/orbit/ui/createPortal";
+import { CreatePortal } from "@/orbit/ui/CreatePortal";
 
 export default function Page() {
   return (

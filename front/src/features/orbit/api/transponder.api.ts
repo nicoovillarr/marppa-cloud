@@ -1,4 +1,4 @@
-import { fetcher } from "@/libs/fetcher";
+import { fetcher } from "@/core/api/fetcher";
 import { CreateTransponderDto, TransponderResponseModel } from "./transponder.api.type";
 import { TransponderMode } from "../models/transponder-mode.enum";
 

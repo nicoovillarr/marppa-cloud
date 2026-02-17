@@ -1,4 +1,4 @@
-import { fetcher } from "@/libs/fetcher";
+import { fetcher } from "@/core/api/fetcher";
 import { User } from "../model/user.types";
 
 const userApi = {

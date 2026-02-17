@@ -1,10 +1,10 @@
 "use client";
 
-import { Button, ButtonRef } from "@/core/presentation/components/button";
+import { Button, ButtonRef } from "@/core/ui/Button";
 import { useRef } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { redirect } from "next/navigation";
-import FormInput from "@/core/presentation/components/inputs/form/form-input";
+import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { toast } from "sonner";
 import { useZone } from "../models/use-zone";
 import { ZoneWithNodes } from "../api/zone.api.types";

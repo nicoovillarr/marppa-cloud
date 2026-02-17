@@ -1,21 +1,21 @@
 "use client";
 
-import Button from "@/core/presentation/components/button";
-import FormInput from "@/core/presentation/components/inputs/form/form-input";
-import { TransponderDTO } from "@/libs/types/dto/transponder-dto";
+import { Button } from "@/core/ui/Button";
+import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { LuSave } from "react-icons/lu";
-import FormSelect from "@/core/presentation/components/inputs/form/form-select";
-import FormCheckbox from "@/core/presentation/components/inputs/form/form-checkbox";
+import { FormSelect } from "@/core/ui/inputs/form/FormSelect";
+import { FormCheckbox } from "@/core/ui/inputs/form/FormCheckbox";
 import { useTransponder } from "../models/use-transponder";
 import { useNode } from "src/features/mesh/models/use-node";
 import { TransponderMode } from "../models/transponder-mode.enum";
+import { TransponderWithNodeResponseModel } from "../api/transponder.api.type";
 
 interface TransponderFormProps {
   portalId: string;
   zoneId: string;
-  transponder?: TransponderDTO;
+  transponder?: TransponderWithNodeResponseModel;
 }
 
 export function TransponderForm({

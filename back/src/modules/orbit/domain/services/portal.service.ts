@@ -11,6 +11,7 @@ import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { UpdatePortalDto } from '../../presentation/dtos/update-portal.dto';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { PortalType } from '../enum/portal-type.enum';
+import { PortalWithTranspondersWithNodeModel } from '../models/portal-with-transponders-with-node.model';
 
 @Injectable()
 export class PortalService {
@@ -25,6 +26,10 @@ export class PortalService {
 
   public async findById(id: string): Promise<PortalEntity | null> {
     return this.portalRepository.findById(id);
+  }
+
+  public async findByIdWithTranspondersWithNode(id: string): Promise<PortalWithTranspondersWithNodeModel | null> {
+    return this.portalRepository.findByIdWithTranspondersWithNode(id);
   }
 
   public async findByOwnerId(ownerId: string): Promise<PortalEntity[]> {

@@ -1,11 +1,11 @@
 "use client";
 
-import FormInput from "@/core/presentation/components/inputs/form/form-input";
-import { useEffect, useMemo, useState } from "react";
+import { FormInput } from "@/core/ui/inputs/form/FormInput";
+import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import Button from "@/core/presentation/components/button";
+import { Button } from "@/core/ui/Button";
 import { useParams } from "next/navigation";
-import { TableSkeleton } from "@/core/presentation/components/AsyncTable";
+import { TableSkeleton } from "@/core/ui/AsyncTable";
 import { useZone } from "../models/use-zone";
 import { toast } from "sonner";
 import { NodesList } from "./NodesList";

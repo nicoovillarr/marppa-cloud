@@ -9,6 +9,11 @@ import { CreatePortalDto } from '../../presentation/dtos/create-portal.dto';
 import { UpdatePortalDto } from '../../presentation/dtos/update-portal.dto';
 import { EventService } from '@/event/domain/services/event.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
+import { PortalWithTranspondersWithNodeResponseModel } from '../models/portal-with-transponders-with-node.response-model';
+import { TransponderResponseModel } from '../models/transponder.response-model';
+import { NodeResponseModel } from '@/mesh/application/models/node.response-model';
+import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
+import { TransponderWithNodeResponseModel } from '../models/transponder-with-node.response-model';
 
 @Injectable()
 export class PortalApiService {
@@ -30,6 +35,39 @@ export class PortalApiService {
     return plainToInstance(PortalResponseModel, entity, {
       excludeExtraneousValues: true,
     });
+  }
+
+  public async findByIdWithTranspondersWithNode(id: string): Promise<PortalWithTranspondersWithNodeResponseModel> {
+    const model = await this.service.findByIdWithTranspondersWithNode(id);
+    if (model == null) {
+      throw new NotFoundError();
+    }
+
+    const portal = plainToInstance(PortalResponseModel, model.portal, {
+      excludeExtraneousValues: true,
+    });
+
+    const transponders = model.transponders.map((data) => {
+      const transponder = plainToInstance(TransponderResponseModel, data.transponder, {
+        excludeExtraneousValues: true,
+      });
+
+      const node = plainToInstance(NodeResponseModel, data.node, {
+        excludeExtraneousValues: true,
+      });
+
+      return mergeDto(
+        TransponderWithNodeResponseModel,
+        transponder,
+        { node }
+      );
+    });
+
+    return mergeDto(
+      PortalWithTranspondersWithNodeResponseModel,
+      portal,
+      { transponders }
+    );
   }
 
   public async findByOwnerId(ownerId?: string): Promise<PortalResponseModel[]> {

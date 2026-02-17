@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import useAuth from "../models/useAuth";
-import useUser from "src/features/users/model/useUser";
+import { useAuth } from "../models/useAuth";
+import { useUser } from "src/features/users/model/useUser";
 
 const INTERVAL_MS = 10 * 60 * 1000;
 

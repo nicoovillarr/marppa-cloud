@@ -1,4 +1,4 @@
-import { ZoneCreateForm } from "src/features/mesh/ui/ZoneCreateForm";
+import { ZoneCreateForm } from "@/mesh/ui/ZoneCreateForm";
 
 export default function Page() {
   return (

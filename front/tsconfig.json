@@ -41,6 +41,12 @@
       "@/hive/*": [
         "src/features/hive/*"
       ],
+      "@/orbit/*": [
+        "src/features/orbit/*"
+      ],
+      "@/mesh/*": [
+        "src/features/mesh/*"
+      ],
       "@/libs/*": [
         "./src/libs/*"
       ],

@@ -1,27 +1,22 @@
 "use client";
 
 
-import Button, { ButtonRef } from "@/core/presentation/components/button";
-import FormInput from "@/core/presentation/components/inputs/form/form-input";
-import { useAppStore } from "@/libs/stores/app-store";
+import { Button, ButtonRef } from "@/core/ui/Button";
+import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { useEffect, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import { useShallow } from "zustand/shallow";
-import { WorkerDTO } from "@/libs/types/dto/worker-dto";
+import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
 import { LuClipboardCopy, LuTrash2 } from "react-icons/lu";
-import FormSelect from "@/core/presentation/components/inputs/form/form-select";
+import { FormSelect } from "@/core/ui/inputs/form/FormSelect";
 import { toast } from "sonner";
-import { useWebSocket } from "@/core/presentation/hooks/use-webSocket";
-import { closeCurrentDialog } from "@/libs/dialog-ref";
 import { useWorker } from "../models/use-worker";
-import { WorkerResponseDto, WorkerWithRelationsResponseDto } from "../api/worker.api.types";
 import { useZone } from "src/features/mesh/models/use-zone";
 
 interface WorkerDetailsProps {
   workerId: string;
 }
 
-export default function WorkerDetails({ workerId }: WorkerDetailsProps) {
+export function WorkerDetails({ workerId }: WorkerDetailsProps) {
   const [worker, setWorker] = useState<WorkerWithRelationsResponseDto>();
 
   const buttonRef = useRef<ButtonRef | null>(null);

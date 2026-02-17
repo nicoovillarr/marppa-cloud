@@ -1,4 +1,4 @@
-import { fetcher } from "@/libs/fetcher";
+import { fetcher } from "@/core/api/fetcher";
 import { NodeWithFibers } from "./node.api.types";
 
 const baseUrl = '/mesh/nodes';

@@ -1,14 +1,13 @@
 "use client";
 
-import Table from "@/core/presentation/components/table";
+import { ColumnMapping, Table } from "@/core/ui/Table";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import Button from "@/core/presentation/components/button";
+import { Button } from "@/core/ui/Button";
 import { LuListPlus, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
 import { useWorker } from "../models/use-worker";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
-import { ColumnMapping } from "@/libs/types/column-mapping";
 
 const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
   id: {
@@ -46,7 +45,7 @@ const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
   },
 };
 
-export default function WorkersList() {
+export function WorkersList() {
   const { workers, fetchWorkers } = useWorker();
 
   const [selectedWorkers, setSelectedWorkers] = useState<Set<string>>(

@@ -1,27 +1,24 @@
 "use client";
 
-
-import { Button, ButtonRef } from "@/core/presentation/components/button";
-import { useEffect, useRef, useState } from "react";
+import { Button, ButtonRef } from "@/core/ui/Button";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import FormInput from "@/core/presentation/components/inputs/form/form-input";
+import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { toast } from "sonner";
-import { ColumnMapping } from "@/libs/types/column-mapping";
-import { WorkerMmiDTO } from "@/libs/types/dto/worker-mmi-dto";
-import FormTable from "@/core/presentation/components/inputs/form/form-table-select";
-import FormRadioCards from "@/core/presentation/components/inputs/form/form-radio-cards";
-import { useDialog } from "@/core/presentation/hooks/use-dialog";
-import CodeBlock from "@/core/presentation/components/code-block";
+import { FormTable } from "@/core/ui/inputs/form/FormTableSelect";
+import { FormRadioCards } from "@/core/ui/inputs/form/FormRadioCards";
+import { CodeBlock } from "@/core/ui/CodeBlock";
 import { redirect } from "next/navigation";
-import Code from "@/core/presentation/components/code";
+import { InlineCode } from "@/core/ui/InlineCode";
 import * as forge from "node-forge";
 import { useWorker } from "../models/use-worker";
-import { useWorkerFlavor } from "../models/use-worker-flavor";
 import { useWorkerImage } from "../models/use-worker-image";
 import { WorkerFlavorResponseDto } from "../api/worker-flavor.api.types";
 import { useWorkerFamily } from "../models/use-worker-family";
+import { useDialog } from "@/core/ui/DialogProvider";
+import { ColumnMapping } from "@/core/ui/Table";
 
-export default function CreateWorkerForm() {
+export function CreateWorkerForm() {
   const [flavors, setFlavors] = useState<WorkerFlavorResponseDto[]>([]);
 
   const { showDialog } = useDialog();
@@ -46,7 +43,33 @@ export default function CreateWorkerForm() {
     fetchImages,
   } = useWorkerImage();
 
-  const [columns, setColumns] = useState<ColumnMapping<WorkerMmiDTO>>();
+  const columns = useMemo<ColumnMapping<WorkerFlavorResponseDto>>(() => ({
+    id: {
+      label: "#",
+      width: "100%",
+      minWidth: "200px",
+      renderFn: (flavor: WorkerFlavorResponseDto) => {
+        const family = families.find(f => f.id === flavor.familyId);
+        if (!family) {
+          return "N/A";
+        }
+
+        return `${family?.name}.${flavor.name}`;
+      },
+    },
+    cpuCores: {
+      label: "vCPU Cores",
+      minWidth: "150px",
+    },
+    ramMB: {
+      label: "RAM (MB)",
+      minWidth: "150px",
+    },
+    diskGB: {
+      label: "Disk (GB)",
+      minWidth: "150px",
+    },
+  }), [families]);
 
   const buttonRef = useRef<ButtonRef>(null);
 
@@ -60,39 +83,6 @@ export default function CreateWorkerForm() {
   });
 
   const { handleSubmit, setError, setValue, control } = methods;
-
-  useEffect(() => {
-    const columns: ColumnMapping<WorkerFlavorResponseDto> = {
-      id: {
-        label: "#",
-        width: "100%",
-        minWidth: "200px",
-        renderFn: (flavor: WorkerFlavorResponseDto) => {
-          const family = families.find(f => f.id === flavor.familyId);
-          if (!family) {
-            return "N/A";
-          }
-
-          return `${family?.name}.${flavor.name}`;
-        },
-      },
-      cpuCores: {
-        label: "vCPU Cores",
-        minWidth: "150px",
-      },
-      ramMB: {
-        label: "RAM (MB)",
-        minWidth: "150px",
-      },
-      diskGB: {
-        label: "Disk (GB)",
-        minWidth: "150px",
-      },
-    };
-
-    setColumns(columns);
-    buttonRef.current?.setIsLoading(false);
-  }, [families]);
 
   const onSubmit = async (data: any) => {
     console.log("Form submitted with data:", data);
@@ -168,7 +158,7 @@ export default function CreateWorkerForm() {
         content: (
           <div className="space-y-4">
             <p>
-              <Code code={newWorker.name} /> has been created successfully.
+              <InlineCode code={newWorker.name} /> has been created successfully.
               Please save the SSH credentials:
             </p>
             <CodeBlock code={privatePem} fileName={`${workerName}_id_rsa`} />

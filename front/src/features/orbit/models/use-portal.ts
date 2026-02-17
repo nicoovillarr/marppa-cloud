@@ -1,7 +1,9 @@
 import { useCallback } from "react";
-import { portalApi } from "../api/portal.api";
 import { usePortalStore } from "./portal.store"
 import { CreatePortalDto, PortalWithTranspondersResponseDto } from "../api/portal.api.types";
+import { PortalService } from "../services/portal.service";
+
+const service = new PortalService();
 
 export const usePortal = () => {
     const {
@@ -31,7 +33,7 @@ export const usePortal = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const portalTypes = await portalApi.fetchPortalTypes();
+            const portalTypes = await service.fetchPortalTypes();
             setPortalTypes(portalTypes);
 
             return portalTypes;
@@ -46,7 +48,7 @@ export const usePortal = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const portals = await portalApi.fetchAll();
+            const portals = await service.fetchAll();
             setPortals(portals);
 
             return portals;
@@ -61,9 +63,7 @@ export const usePortal = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const portal = await portalApi.fetchById(id);
-            addPortal(portal);
-
+            const portal = await service.fetchById(id);
             return portal;
         } catch (error: any) {
             setError(error.message);
@@ -76,7 +76,7 @@ export const usePortal = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const portal = await portalApi.create(data);
+            const portal = await service.create(data);
             addPortal(portal);
 
             return portal;
@@ -91,9 +91,7 @@ export const usePortal = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const portal = await portalApi.update(id, data);
-            addPortal(portal);
-
+            const portal = await service.update(id, data);
             return portal;
         } catch (error: any) {
             setError(error.message);
@@ -106,7 +104,7 @@ export const usePortal = () => {
         setIsLoading(true);
         setError(null);
         try {
-            await portalApi.delete(id);
+            await service.delete(id);
             setPortals(portals.filter((portal) => portal.id !== id));
         } catch (error: any) {
             setError(error.message);

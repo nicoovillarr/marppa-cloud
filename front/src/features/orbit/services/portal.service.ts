@@ -1,24 +1,24 @@
 import { portalApi } from "../api/portal.api";
-import { CreatePortalDto, PortalResponseDto } from "../api/portal.api.types";
+import { CreatePortalDto, PortalWithTranspondersResponseDto, PortalWithTranspondersWithNodesResponseDto } from "../api/portal.api.types";
 
 export class PortalService {
     async fetchPortalTypes(): Promise<string[]> {
         return await portalApi.fetchPortalTypes();
     };
 
-    async fetchAll(): Promise<PortalResponseDto[]> {
+    async fetchAll(): Promise<PortalWithTranspondersResponseDto[]> {
         return await portalApi.fetchAll();
     };
 
-    async fetchById(id: string): Promise<PortalResponseDto> {
+    async fetchById(id: string): Promise<PortalWithTranspondersWithNodesResponseDto> {
         return await portalApi.fetchById(id);
     };
 
-    async create(data: CreatePortalDto): Promise<PortalResponseDto> {
+    async create(data: CreatePortalDto): Promise<PortalWithTranspondersResponseDto> {
         return await portalApi.create(data);
     };
 
-    async update(id: string, data: Partial<CreatePortalDto>): Promise<PortalResponseDto> {
+    async update(id: string, data: Partial<CreatePortalDto>): Promise<PortalWithTranspondersResponseDto> {
         return await portalApi.update(id, data);
     };
 

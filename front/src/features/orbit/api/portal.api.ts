@@ -1,5 +1,5 @@
-import { fetcher } from "@/libs/fetcher";
-import { CreatePortalDto, PortalWithTranspondersResponseDto } from "./portal.api.types";
+import { fetcher } from "@/core/api/fetcher";
+import { CreatePortalDto, PortalWithTranspondersResponseDto, PortalWithTranspondersWithNodesResponseDto } from "./portal.api.types";
 import { PortalType } from "../models/portal-type.enum";
 
 const baseUrl = '/orbit/portals';
@@ -13,7 +13,7 @@ export const portalApi = {
         return fetcher(baseUrl);
     },
 
-    fetchById(id: string): Promise<PortalWithTranspondersResponseDto> {
+    fetchById(id: string): Promise<PortalWithTranspondersWithNodesResponseDto> {
         return fetcher(`${baseUrl}/${id}`);
     },
 
