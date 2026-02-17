@@ -7,11 +7,10 @@ import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { LuSave } from "react-icons/lu";
 import FormSelect from "@/core/presentation/components/inputs/form/form-select";
-import { TransponderMode } from "@prisma/client";
-import { NodeDTO } from "@/libs/types/dto/node-dto";
-import { MeshService } from "@/dashboard/mesh/presentation/services/meshService";
 import FormCheckbox from "@/core/presentation/components/inputs/form/form-checkbox";
-import OrbitService from "../services/orbitService";
+import { useTransponder } from "../models/use-transponder";
+import { useNode } from "src/features/mesh/models/use-node";
+import { TransponderMode } from "../models/transponder-mode.enum";
 
 interface TransponderFormProps {
   portalId: string;
@@ -24,48 +23,33 @@ export function TransponderForm({
   zoneId,
   transponder,
 }: TransponderFormProps) {
-  const methods = useForm();
-  const { control, handleSubmit, setError, reset } = methods;
+  const {
+    createTransponder,
+    updateTransponder,
+  } = useTransponder();
 
-  const [availableNodes, setAvailableNodes] = useState<NodeDTO[]>(undefined);
-  const [enabledText, setEnabledText] = useState<string>("");
+  const {
+    nodes,
+    fetchNodes,
+  } = useNode();
+
+  const methods = useForm();
+  const { control, handleSubmit, reset } = methods;
+
+  const [isEnabled, setIsEnabled] = useState<boolean>(false);
 
   const onSubmit = async (data: any) => {
-    const validationErrors = await OrbitService.instance.validateTransponder({
-      ...transponder,
-      ...data,
-      zoneId,
-    });
-
-    if (Object.keys(validationErrors).length > 0) {
-      for (const field in validationErrors) {
-        setError(field as any, {
-          type: "manual",
-          message: validationErrors[field],
-        });
-      }
-      return;
-    }
-
     if (transponder) {
-      await OrbitService.instance.updateTransponder(
+      await updateTransponder(
         portalId,
         transponder.id,
         data
       );
     } else {
-      await OrbitService.instance.createTransponder(portalId, {
+      await createTransponder(portalId, {
         ...data,
         zoneId,
       });
-    }
-  };
-
-  const onTransponderEnabledChanged = (value: boolean) => {
-    if (value) {
-      setEnabledText("Yes");
-    } else {
-      setEnabledText("No");
     }
   };
 
@@ -74,15 +58,10 @@ export function TransponderForm({
       reset({ ...transponder });
     }
 
-    onTransponderEnabledChanged(transponder?.enabled ?? false);
+    setIsEnabled(transponder?.enabled ?? false);
   }, [transponder]);
 
   useEffect(() => {
-    const fetchNodes = async () => {
-      const zone = await MeshService.instance.getZoneById(zoneId);
-      setAvailableNodes(zone.nodes || []);
-    };
-
     fetchNodes();
   }, [zoneId]);
 
@@ -120,8 +99,8 @@ export function TransponderForm({
             control={control}
             controlName="nodeId"
             placeholder="Link to a Node"
-            isLoading={availableNodes == null}
-            options={availableNodes?.map((node) => ({
+            isLoading={nodes == null}
+            options={nodes?.map((node) => ({
               value: node.id,
               displayText: node.ipAddress,
             }))}
@@ -153,8 +132,8 @@ export function TransponderForm({
             label="Enabled"
             control={control}
             controlName="enabled"
-            onChangedValue={onTransponderEnabledChanged}
-            text={enabledText}
+            onChangedValue={setIsEnabled}
+            text={isEnabled ? "Yes" : "No"}
           />
         </div>
 

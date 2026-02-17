@@ -3,9 +3,9 @@ import { FiberApiService } from '../../application/services/fiber.api-service';
 import { FiberResponseModel } from '../../application/models/fiber.response-model';
 import { CreateFiberDto } from '../dtos/create-fiber.dto';
 
-@Controller(':zoneId/nodes/:nodeId/fibers')
+@Controller('mesh/zones/:zoneId/nodes/:nodeId/fibers')
 export class FiberController {
-  constructor(private readonly apiService: FiberApiService) {}
+  constructor(private readonly apiService: FiberApiService) { }
 
   @Get()
   public async findAll(

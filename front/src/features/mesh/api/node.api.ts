@@ -1,7 +1,7 @@
 import { fetcher } from "@/libs/fetcher";
 import { NodeWithFibers } from "./node.api.types";
 
-const baseUrl = '/mesh/node';
+const baseUrl = '/mesh/nodes';
 
 export const nodeApi = {
     getAll: (): Promise<NodeWithFibers[]> => {

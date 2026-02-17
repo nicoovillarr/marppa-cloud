@@ -10,13 +10,18 @@ import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { UpdatePortalDto } from '../../presentation/dtos/update-portal.dto';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { PortalType } from '../enum/portal-type.enum';
 
 @Injectable()
 export class PortalService {
   constructor(
     @Inject(PORTAL_REPOSITORY)
     private readonly portalRepository: PortalRepository,
-  ) {}
+  ) { }
+
+  public getPortalTypes(): string[] {
+    return Object.keys(PortalType)
+  }
 
   public async findById(id: string): Promise<PortalEntity | null> {
     return this.portalRepository.findById(id);

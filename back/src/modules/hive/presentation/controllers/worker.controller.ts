@@ -18,7 +18,7 @@ import { WorkerWithRelationsResponseModel } from '@/hive/application/models/work
 import { WorkerResponseModel } from '@/hive/application/models/worker.response-model';
 import type { Response } from 'express';
 
-@Controller('hive/worker')
+@Controller('hive/workers')
 export class WorkerController {
   constructor(private readonly service: WorkerApiService) { }
 

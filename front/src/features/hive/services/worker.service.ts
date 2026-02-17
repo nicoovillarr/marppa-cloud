@@ -16,13 +16,13 @@ export class WorkerService {
         name: string,
         imageId: number,
         flavorId: number,
-        sshKey?: string,
+        publicSSH?: string,
     ): Promise<WorkerWithRelationsResponseDto> {
         const dto = await workersApi.createWorker({
             name,
             imageId,
             flavorId,
-            sshKey
+            publicSSH
         });
 
         return dto;

@@ -12,9 +12,9 @@ import {
 import { CreateWorkerDiskDto } from '../dtos/create-worker-disk.dto';
 import { UpdateWorkerDiskDto } from '../dtos/update-worker-disk.dto';
 
-@Controller('hive/disk')
+@Controller('hive/disks')
 export class WorkerDiskController {
-  constructor(private readonly service: WorkerDiskApiService) {}
+  constructor(private readonly service: WorkerDiskApiService) { }
 
   @Get(':id')
   async findById(@Param('id') id: string): Promise<WorkerDiskResponseModel> {

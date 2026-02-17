@@ -13,7 +13,7 @@ export class TransponderApiService {
   constructor(
     private readonly service: TransponderService,
     private readonly eventService: EventService,
-  ) {}
+  ) { }
 
   public async findById(
     portalId: string,

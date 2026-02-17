@@ -11,9 +11,9 @@ import { TransponderApiService } from '../../application/services/transponder.ap
 import { CreateTransponderDto } from '../dtos/create-transponder.dto';
 import { UpdateTransponderDto } from '../dtos/update-transponder.dto';
 
-@Controller('portals/:portalId/transponders')
+@Controller('orbit/portals/portals/:portalId/transponders')
 export class TransponderController {
-  constructor(private readonly apiService: TransponderApiService) {}
+  constructor(private readonly apiService: TransponderApiService) { }
 
   @Get()
   public findByPortalId(@Param('portalId') portalId: string) {

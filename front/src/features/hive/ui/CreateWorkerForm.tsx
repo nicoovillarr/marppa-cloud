@@ -163,7 +163,7 @@ export default function CreateWorkerForm() {
         title: "Worker Created",
         onClose: async () => {
           await fetchWorker(newWorker.id);
-          redirect(`/dashboard/hive`);
+          redirect(`/dashboard/hive/workers`);
         },
         content: (
           <div className="space-y-4">

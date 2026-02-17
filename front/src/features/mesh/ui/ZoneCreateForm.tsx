@@ -65,7 +65,7 @@ export function ZoneCreateForm() {
 
     if (newNode) {
       await buttonRef.current?.setIsLoading(false);
-      redirect(`/dashboard/mesh`);
+      redirect(`/dashboard/mesh/zones`);
     } else {
       toast.error("Failed to create node");
       buttonRef.current?.setError("Failed to create node");

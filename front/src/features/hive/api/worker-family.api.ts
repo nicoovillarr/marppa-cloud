@@ -1,7 +1,7 @@
 import { fetcher } from "@/libs/fetcher";
 import { WorkerFamilyWithRelationsResponseDto } from "./worker-family.api.types";
 
-const baseUrl = '/hive/family';
+const baseUrl = '/hive/families';
 
 export const workerFamilyApi = {
     findAll(): Promise<WorkerFamilyWithRelationsResponseDto[]> {

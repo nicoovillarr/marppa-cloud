@@ -12,7 +12,7 @@ import {
 import { CreateWorkerImageDto } from '../dtos/create-worker-image.dto';
 import { UpdateWorkerImageDto } from '../dtos/update-worker-image.dto';
 
-@Controller('hive/image')
+@Controller('hive/images')
 export class WorkerImageController {
   constructor(private readonly service: WorkerImageApiService) { }
 

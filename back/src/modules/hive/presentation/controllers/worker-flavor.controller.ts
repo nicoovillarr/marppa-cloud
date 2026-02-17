@@ -12,7 +12,7 @@ import {
 import { CreateWorkerFlavorDto } from '../dtos/create-worker-flavor.dto';
 import { UpdateWorkerFlavorDto } from '../dtos/update-worker-flavor.dto';
 
-@Controller('hive/flavor')
+@Controller('hive/flavors')
 export class WorkerFlavorController {
   constructor(private readonly service: WorkerFlavorApiService) { }
 

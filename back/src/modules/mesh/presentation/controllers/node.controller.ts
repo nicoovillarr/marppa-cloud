@@ -3,9 +3,9 @@ import { NodeApiService } from '../../application/services/node.api-service';
 import { NodeResponseModel } from '../../application/models/node.response-model';
 import { CreateNodeDto } from '../dtos/create-node.dto';
 
-@Controller(':zoneId/nodes')
+@Controller('mesh/zones/:zoneId/nodes')
 export class NodeController {
-  constructor(private readonly apiService: NodeApiService) {}
+  constructor(private readonly apiService: NodeApiService) { }
 
   @Get()
   public async findByZoneId(

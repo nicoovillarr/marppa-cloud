@@ -15,7 +15,11 @@ export class PortalApiService {
   constructor(
     private readonly service: PortalService,
     private readonly eventService: EventService,
-  ) {}
+  ) { }
+
+  public getPortalTypes(): string[] {
+    return this.service.getPortalTypes();
+  }
 
   public async findById(id: string): Promise<PortalResponseModel> {
     const entity = await this.service.findById(id);

@@ -79,7 +79,7 @@ const Overview = () => {
           </ul>
 
           <Link
-            href="/dashboard/hive"
+            href="/dashboard/hive/workers"
             className="flex text-sm items-center gap-2 mt-4 border border-gray-200 rounded justify-center p-2 text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
           >
             View Hive
@@ -110,7 +110,7 @@ const Overview = () => {
           </ul>
 
           <Link
-            href="/dashboard/mesh"
+            href="/dashboard/mesh/zones"
             className="flex text-sm items-center gap-2 mt-4 border border-gray-200 rounded justify-center p-2 text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
           >
             View Mesh
@@ -118,7 +118,7 @@ const Overview = () => {
         </Card>
         <Card className="md:col-span-2 lg:col-span-1">
           <header className="flex items-center gap-2 mb-4">
-            <h3 className="font-medium w-full line-clamp-1">Bits</h3>
+            <h3 className="font-medium w-full line-clamp-1">Orbit</h3>
             <LuContainer className="h-4 w-4 shrink-0" />
           </header>
 
@@ -147,10 +147,10 @@ const Overview = () => {
           </ul>
 
           <Link
-            href="/dashboard/nibble"
+            href="/dashboard/orbit/portals"
             className="flex text-sm items-center gap-2 mt-4 border border-gray-200 rounded justify-center p-2 text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
           >
-            View Nibble
+            View Orbit
           </Link>
         </Card>
       </div>

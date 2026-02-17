@@ -6,7 +6,7 @@ export type CreateWorkerDto = {
     imageId: number;
     flavorId: number;
     ownerId?: string;
-    sshKey?: string;
+    publicSSH?: string;
 }
 
 export type WorkerResponseDto = {

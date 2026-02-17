@@ -12,9 +12,9 @@ import { CreateWorkerStorageTypeDto } from '../dtos/create-worker-storage-type.d
 import { UpdateWorkerStorageTypeDto } from '../dtos/update-worker-storage-type.dto';
 import { WorkerStorageTypeResponseModel } from '@/hive/application/models/worker-storage-type.response-model';
 
-@Controller('hive/storage-type')
+@Controller('hive/storage-types')
 export class WorkerStorageTypeController {
-  constructor(private readonly service: WorkerStorageTypeApiService) {}
+  constructor(private readonly service: WorkerStorageTypeApiService) { }
 
   @Get(':id')
   async findById(

@@ -47,12 +47,12 @@ export const useWorker = () => {
         }
     }, [setWorkers, setIsLoading, setError]);
 
-    const createWorker = useCallback(async (name: string, imageId: number, flavorId: number, sshKey?: string) => {
+    const createWorker = useCallback(async (name: string, imageId: number, flavorId: number, publicSSH?: string) => {
         setIsLoading(true);
         setError(null);
 
         try {
-            const worker = await service.createWorker(name, imageId, flavorId, sshKey);
+            const worker = await service.createWorker(name, imageId, flavorId, publicSSH);
             return worker;
         } catch (error) {
             setError(error);

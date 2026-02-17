@@ -13,7 +13,7 @@ import { CreateWorkerFamilyDto } from '../dtos/create-worker-family.dto';
 import { UpdateWorkerFamilyDto } from '../dtos/update-worker-family.dto';
 import { WorkerFamilyWithFlavorsResponseModel } from '@/hive/application/models/worker-family-with-flavors.response-model';
 
-@Controller('hive/family')
+@Controller('hive/families')
 export class WorkerFamilyController {
   constructor(private readonly service: WorkerFamilyApiService) { }
 

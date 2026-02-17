@@ -11,6 +11,10 @@ import { TransponderMode } from '../../domain/enum/transponder-mode.enum';
 export class CreateTransponderDto {
   @IsString()
   @IsNotEmpty()
+  portalId: string;
+
+  @IsString()
+  @IsNotEmpty()
   path: string;
 
   @IsNumber()

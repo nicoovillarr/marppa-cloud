@@ -11,9 +11,14 @@ import { PortalApiService } from '../../application/services/portal.api-service'
 import { CreatePortalDto } from '../dtos/create-portal.dto';
 import { UpdatePortalDto } from '../dtos/update-portal.dto';
 
-@Controller('portals')
+@Controller('orbit/portals')
 export class PortalController {
-  constructor(private readonly apiService: PortalApiService) {}
+  constructor(private readonly apiService: PortalApiService) { }
+
+  @Get('types')
+  public getPortalTypes() {
+    return this.apiService.getPortalTypes();
+  }
 
   @Get()
   public findByOwnerId(@Param('ownerId') ownerId?: string) {

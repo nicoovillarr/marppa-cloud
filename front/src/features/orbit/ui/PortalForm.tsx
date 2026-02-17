@@ -2,39 +2,42 @@
 
 import FormInput from "@/core/presentation/components/inputs/form/form-input";
 import FormSelect from "@/core/presentation/components/inputs/form/form-select";
-import { PortalDTO } from "@/libs/types/dto/portal-dto";
 import { useEffect, useRef, useState } from "react";
 import { useForm, FormProvider } from "react-hook-form";
-import OrbitService from "../services/orbitService";
 import Button, { ButtonRef } from "@/core/presentation/components/button";
 import { LuSave } from "react-icons/lu";
 import { IoReloadSharp } from "react-icons/io5";
-import { PortalTranspondersList } from "./portalTranspondersList";
-import { ZoneDTO } from "@/libs/types/dto/zone-dto";
-import { MeshService } from "@/dashboard/mesh/presentation/services/meshService";
+import { useZone } from "src/features/mesh/models/use-zone";
+import { PortalTranspondersList } from "./PortalTranspondersList";
+import { redirect } from "next/navigation";
+import { CreatePortalDto, PortalWithTranspondersResponseDto } from "../api/portal.api.types";
 
 interface PortalFormProps {
   className?: string;
-  portal?: PortalDTO;
+  portal?: PortalWithTranspondersResponseDto;
   portalTypes: string[];
-  onSubmit: (data: PortalDTO) => Promise<void>;
+  onSubmit: (data: CreatePortalDto) => Promise<void>;
 }
 
-export default function PortalForm({
+export function PortalForm({
   className = "space-y-4",
   portal,
   portalTypes,
   onSubmit,
 }: PortalFormProps) {
-  const [zones, setZones] = useState<ZoneDTO[]>(undefined);
+  const {
+    zones,
+    fetchZones,
+  } = useZone();
+
   const [disableApiKey, setDisableApiKey] = useState(true);
 
   const buttonRef = useRef<ButtonRef>(null);
   const methods = useForm();
 
-  const { control, handleSubmit, setError, reset } = methods;
+  const { control, handleSubmit, reset } = methods;
 
-  const internalSubmit = async (data: PortalDTO) => {
+  const internalSubmit = async (data: CreatePortalDto) => {
     const form = {
       id: portal?.id,
       name: data.name,
@@ -45,26 +48,7 @@ export default function PortalForm({
     };
 
     buttonRef.current?.setIsLoading(true);
-    buttonRef.current?.setProgress(0);
-
-    const validationErrors = await OrbitService.instance.validatePortal(
-      form,
-      !disableApiKey
-    );
-
-    buttonRef.current?.setProgress(70);
-
-    if (Object.keys(validationErrors).length > 0) {
-      for (const [field, message] of Object.entries(validationErrors)) {
-        setError(field, {
-          type: "manual",
-          message: message,
-        });
-      }
-
-      buttonRef.current?.setError(true);
-      return;
-    }
+    buttonRef.current?.setProgress(50);
 
     await onSubmit(form);
 
@@ -72,6 +56,8 @@ export default function PortalForm({
 
     buttonRef.current?.setProgress(100);
     buttonRef.current?.setIsLoading(false);
+
+    redirect('/dashboard/orbit/portals');
   };
 
   const resetApiKey = () => {
@@ -93,13 +79,6 @@ export default function PortalForm({
   }, [portal]);
 
   useEffect(() => {
-    const fetchZones = async () => {
-      const zones = await MeshService.instance.getZones();
-      setZones(zones || []);
-
-      console.log(zones);
-    };
-
     fetchZones();
   }, []);
 

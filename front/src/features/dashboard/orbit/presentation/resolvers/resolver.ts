@@ -1,4 +1,4 @@
-import "@/dashboard/orbit/orbitFactory";
+import "src/features/orbit/orbitFactory";
 
 import { Resolver } from "@/core/presentation/resolvers/with-resolver";
 import { PortalDTO } from "@/libs/types/dto/portal-dto";

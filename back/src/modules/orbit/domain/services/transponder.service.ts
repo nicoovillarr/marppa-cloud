@@ -16,7 +16,7 @@ export class TransponderService {
   constructor(
     @Inject(TRANSPONDER_REPOSITORY)
     private readonly repository: TransponderRepository,
-  ) {}
+  ) { }
 
   public findById(
     portalId: string,

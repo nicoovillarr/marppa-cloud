@@ -7,7 +7,7 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class TransponderPrismaRepository implements TransponderRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   public async findById(
     portalId: string,

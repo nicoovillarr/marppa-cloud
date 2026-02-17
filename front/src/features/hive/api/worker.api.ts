@@ -1,7 +1,7 @@
 import { fetcher } from "@/libs/fetcher";
 import { CreateWorkerDto, WorkerResponseDto, WorkerWithRelationsResponseDto } from "./worker.api.types";
 
-const baseUrl = '/hive/worker';
+const baseUrl = '/hive/workers';
 
 const workersApi = {
     listWorkers: (): Promise<WorkerWithRelationsResponseDto[]> => {
