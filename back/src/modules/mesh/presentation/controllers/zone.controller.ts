@@ -12,15 +12,17 @@ import { ZoneApiService } from '../../application/services/zone.api-service';
 import { ZoneResponseModel } from '../../application/models/zone.response-model';
 import { CreateZoneDto } from '../dtos/create-zone.dto';
 import { UpdateZoneDto } from '../dtos/update-zone.dto';
+import { ZoneWithNodesAndFibersResponseModel } from '@/mesh/application/models/zone-with-nodes-and-fibers.response-model';
+import { ZoneWithNodesResponseModel } from '@/mesh/application/models/zone-with-nodes.response.model';
 
-@Controller('zones')
+@Controller('mesh/zones')
 export class ZoneController {
-  constructor(private readonly apiService: ZoneApiService) {}
+  constructor(private readonly apiService: ZoneApiService) { }
 
   @Get()
   public async findByOwnerId(
     @Query('ownerId') ownerId?: string,
-  ): Promise<ZoneResponseModel[]> {
+  ): Promise<ZoneWithNodesResponseModel[]> {
     return this.apiService.findByOwnerId(ownerId);
   }
 
@@ -30,7 +32,7 @@ export class ZoneController {
   }
 
   @Get(':id')
-  public async findById(@Param('id') id: string): Promise<ZoneResponseModel> {
+  public async findById(@Param('id') id: string): Promise<ZoneWithNodesAndFibersResponseModel> {
     return this.apiService.findById(id);
   }
 

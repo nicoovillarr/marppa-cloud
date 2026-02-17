@@ -11,13 +11,14 @@ import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import { UpdateZoneDto } from '../../presentation/dtos/update-zone.dto';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { ZoneWithNodesModel } from '../models/zone-with-nodes.model';
+import { ZoneWithNodesAndFibersModel } from '../models/zone-with-nodes-and-fibers.model';
 
 @Injectable()
 export class ZoneService {
   constructor(
     @Inject(ZONE_REPOSITORY_SYMBOL)
     private readonly repository: ZoneRepository,
-  ) {}
+  ) { }
 
   public async findById(id: string): Promise<ZoneEntity> {
     const entity = await this.repository.findById(id);
@@ -28,8 +29,8 @@ export class ZoneService {
     return entity;
   }
 
-  public async findWithNodesById(id: string): Promise<ZoneWithNodesModel> {
-    const entity = await this.repository.findWithNodesById(id);
+  public async findByIdWithNodes(id: string): Promise<ZoneWithNodesModel> {
+    const entity = await this.repository.findByIdWithNodes(id);
     if (entity == null) {
       throw new NotFoundError();
     }
@@ -37,7 +38,16 @@ export class ZoneService {
     return entity;
   }
 
-  public findByOwnerId(ownerId?: string): Promise<ZoneEntity[]> {
+  public async findByIdFull(id: string): Promise<ZoneWithNodesAndFibersModel> {
+    const entity = await this.repository.findByIdFull(id);
+    if (entity == null) {
+      throw new NotFoundError();
+    }
+
+    return entity;
+  }
+
+  public findByOwnerId(ownerId?: string): Promise<ZoneWithNodesAndFibersModel[]> {
     if (ownerId == null) {
       const user = getCurrentUser();
       if (!user) {

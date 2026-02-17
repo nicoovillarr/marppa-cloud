@@ -1,4 +1,5 @@
 import { ResourceStatus } from "@/core/models/resource-status.enum";
+import { FiberResponseDto } from "./fiber.api.types";
 
 export type CreateNodeDto = {
     workerId?: string;
@@ -16,4 +17,8 @@ export type NodeResponseDto = {
     zoneId: string;
     workerId: string | null;
     atomId: string | null;
+}
+
+export type NodeWithFibers = NodeResponseDto & {
+    fibers: FiberResponseDto[];
 }

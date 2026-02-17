@@ -13,7 +13,7 @@ export class NodePrismaMapper {
         id: raw.id,
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
-        updatedBy: raw.updatedBy,
+        updatedBy: raw.updatedBy ?? undefined,
         workerId: raw.workerId ?? undefined,
         atomId: raw.atomId ?? undefined,
       },

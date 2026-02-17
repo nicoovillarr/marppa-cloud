@@ -13,7 +13,7 @@ export class NodeApiService {
     private readonly zoneService: ZoneService,
     private readonly nodeService: NodeService,
     private readonly netmaskService: NetmaskService,
-  ) {}
+  ) { }
 
   public async findById(
     zoneId: string,
@@ -36,7 +36,7 @@ export class NodeApiService {
     zoneId: string,
     data: CreateNodeDto,
   ): Promise<NodeResponseModel> {
-    const zonePayload = await this.zoneService.findWithNodesById(zoneId);
+    const zonePayload = await this.zoneService.findByIdWithNodes(zoneId);
     if (zonePayload == null) {
       throw new NotFoundError();
     }
@@ -47,6 +47,7 @@ export class NodeApiService {
       zone.gateway,
       nodes.map((n) => n.ipAddress),
     );
+
     const entity = await this.nodeService.create(zoneId, data, ipAddress);
 
     return plainToInstance(NodeResponseModel, entity, {

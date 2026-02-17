@@ -16,7 +16,7 @@ export class ZonePrismaMapper {
         description: model.description ?? undefined,
         createdAt: model.createdAt,
         updatedAt: model.updatedAt,
-        updatedBy: model.updatedBy,
+        updatedBy: model.updatedBy ?? undefined,
       },
     );
   }

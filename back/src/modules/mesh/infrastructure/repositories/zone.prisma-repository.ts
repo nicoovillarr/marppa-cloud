@@ -6,10 +6,13 @@ import { ZoneWithNodesModel } from '../../domain/models/zone-with-nodes.model';
 import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { NodePrismaMapper } from '../mappers/node.prisma-mapper';
+import { ZoneWithNodesAndFibersModel } from '@/mesh/domain/models/zone-with-nodes-and-fibers.model';
+import { NodeWithFibersModel } from '@/mesh/domain/models/node-with-fibers.model';
+import { FiberPrismaMapper } from '../mappers/fiber.prisma-mapper';
 
 @Injectable()
 export class ZonePrismaRepository implements ZoneRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async findById(id: string): Promise<ZoneEntity | null> {
     const model = await this.prisma.zone.findUnique({
@@ -23,7 +26,7 @@ export class ZonePrismaRepository implements ZoneRepository {
     return ZonePrismaMapper.toEntity(model);
   }
 
-  async findWithNodesById(id: string): Promise<ZoneWithNodesModel | null> {
+  async findByIdWithNodes(id: string): Promise<ZoneWithNodesModel | null> {
     const model = await this.prisma.zone.findUnique({
       where: { id },
       include: {
@@ -35,18 +38,56 @@ export class ZonePrismaRepository implements ZoneRepository {
       return null;
     }
 
-    return new ZoneWithNodesModel({
-      zone: ZonePrismaMapper.toEntity(model),
-      nodes: model.nodes.map(NodePrismaMapper.toEntity),
-    });
+    return new ZoneWithNodesModel(
+      ZonePrismaMapper.toEntity(model),
+      model.nodes.map(NodePrismaMapper.toEntity),
+    );
   }
 
-  async findByOwnerId(ownerId: string): Promise<ZoneEntity[]> {
-    const models = await this.prisma.zone.findMany({
-      where: { ownerId },
+  async findByIdFull(id: string): Promise<ZoneWithNodesAndFibersModel | null> {
+    const model = await this.prisma.zone.findUnique({
+      where: { id },
+      include: {
+        nodes: {
+          include: {
+            fibers: true,
+          },
+        },
+      },
     });
 
-    return models.map(ZonePrismaMapper.toEntity);
+    if (model == null) {
+      return null;
+    }
+
+    return new ZoneWithNodesAndFibersModel(
+      ZonePrismaMapper.toEntity(model),
+      model.nodes.map(node => new NodeWithFibersModel(
+        NodePrismaMapper.toEntity(node),
+        node.fibers.map(FiberPrismaMapper.toEntity)
+      )),
+    );
+  }
+
+  async findByOwnerId(ownerId: string): Promise<ZoneWithNodesAndFibersModel[]> {
+    const models = await this.prisma.zone.findMany({
+      where: { ownerId },
+      include: {
+        nodes: {
+          include: {
+            fibers: true,
+          },
+        },
+      },
+    });
+
+    return models.map(model => new ZoneWithNodesAndFibersModel(
+      ZonePrismaMapper.toEntity(model),
+      model.nodes.map(node => new NodeWithFibersModel(
+        NodePrismaMapper.toEntity(node),
+        node.fibers.map(FiberPrismaMapper.toEntity)
+      )),
+    ));
   }
 
   async findLastZone(): Promise<ZoneWithNodesModel | null> {
@@ -61,10 +102,10 @@ export class ZonePrismaRepository implements ZoneRepository {
       return null;
     }
 
-    return new ZoneWithNodesModel({
-      zone: ZonePrismaMapper.toEntity(model),
-      nodes: model.nodes.map(NodePrismaMapper.toEntity),
-    });
+    return new ZoneWithNodesModel(
+      ZonePrismaMapper.toEntity(model),
+      model.nodes.map(NodePrismaMapper.toEntity),
+    );
   }
 
   async create(entity: ZoneEntity): Promise<ZoneEntity> {

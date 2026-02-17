@@ -243,7 +243,7 @@ model Zone {
   createdBy String
 
   updatedAt DateTime @updatedAt
-  updatedBy String
+  updatedBy String?
 
   ownerId String
   owner   Company @relation(fields: [ownerId], references: [id])
@@ -261,7 +261,7 @@ model Node {
   createdBy String
 
   updatedAt DateTime @updatedAt
-  updatedBy String
+  updatedBy String?
 
   zoneId String
   zone   Zone   @relation(fields: [zoneId], references: [id])
