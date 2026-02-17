@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Next.js: Node",
+      "name": "Next.js: Dev Server",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "npm",
@@ -10,7 +10,10 @@
         "run",
         "dev:debug"
       ],
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "cwd": "${workspaceFolder}",
+      "autoAttachChildProcesses": true
     },
     {
       "name": "Next.js: Brave",
@@ -19,6 +22,15 @@
       "url": "http://localhost:3000",
       "webRoot": "${workspaceFolder}",
       "runtimeExecutable": "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Next.js Full Debug",
+      "configurations": [
+        "Next.js: Dev Server",
+        "Next.js: Brave"
+      ]
     }
   ]
 }
