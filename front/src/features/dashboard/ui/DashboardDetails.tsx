@@ -1,9 +1,10 @@
 "use client";
 
-import { BreadCrumb } from "@/core/ui/Breadcrumb";
 import { Card } from "@/core/ui/Card";
 import { WorkerResponseDto } from "@/hive/api/worker.api.types";
 import { useWorker } from "@/hive/models/use-worker";
+import { useZone } from "@/mesh/models/use-zone";
+import { usePortal } from "@/orbit/models/use-portal";
 import Link from "next/link";
 import { useEffect } from "react";
 import {
@@ -14,12 +15,9 @@ import {
   LuNetwork,
   LuServer,
 } from "react-icons/lu";
-import { ZoneResponseDto, ZoneWithNodes } from "src/features/mesh/api/zone.api.types";
-import { useZone } from "src/features/mesh/models/use-zone";
-import { PortalResponseDto, PortalWithTranspondersResponseDto } from "src/features/orbit/api/portal.api.types";
-import { usePortal } from "src/features/orbit/models/use-portal";
+import { ZoneWithNodes } from "src/features/mesh/api/zone.api.types";
+import { PortalWithTranspondersResponseDto } from "src/features/orbit/api/portal.api.types";
 import { useUser } from "src/features/users/model/useUser";
-import { useShallow } from "zustand/shallow";
 
 const Overview = ({
   workers,
@@ -317,9 +315,7 @@ export function DashboardDetails() {
   }, []);
 
   return (
-    <main className="flex flex-col gap-8 w-full max-w-[1440px] mx-auto p-4 md:p-8">
-      <BreadCrumb />
-
+    <main className="flex flex-col gap-8 w-full mx-auto">
       <header className="w-full flex flex-col">
         <h1 className="font-bold text-2xl">
           Welcome back, {user?.name || "User"}

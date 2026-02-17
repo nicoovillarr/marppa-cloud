@@ -21,10 +21,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <main className="flex flex-col gap-8 w-full max-w-[1440px] mx-auto p-4 md:p-8">
       <BreadCrumb />
 
-      {title && subtitle && (
+      {(title || subtitle) && (
         <header className="w-full flex flex-col">
-          <h1 className="font-bold text-2xl">{title}</h1>
-          <p className="text-sm text-gray-500">{subtitle}</p>
+          {title && <h1 className="font-bold text-2xl">{title}</h1>}
+          {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
         </header>
       )}
 

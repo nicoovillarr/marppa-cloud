@@ -1,14 +1,12 @@
 import { create } from "zustand";
 
 export interface BreadcrumbNode {
+  id: string;
   label: string;
-  href?: string;
+  href?: string | boolean;
 }
 
 interface DashboardLayoutStore {
-  isInitialized: boolean;
-  setIsInitialized: (isInitialized: boolean) => void;
-
   breadcrumbNodes: BreadcrumbNode[];
   setBreadcrumbNodes: (nodes: BreadcrumbNode[]) => void;
 
@@ -22,15 +20,13 @@ interface DashboardLayoutStore {
 }
 
 const defaultState = {
-  isInitialized: false,
-  breadcrumbNodes: null,
+  breadcrumbNodes: [],
   title: null,
   subtitle: null,
 };
 
 export const useDashboardLayoutStore = create<DashboardLayoutStore>()((set) => ({
   ...defaultState,
-  setIsInitialized: (isInitialized: boolean) => set({ isInitialized }),
 
   setBreadcrumbNodes: (nodes: BreadcrumbNode[]) =>
     set({ breadcrumbNodes: nodes }),
