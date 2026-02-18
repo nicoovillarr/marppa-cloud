@@ -1,14 +1,20 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import Redis from 'ioredis';
 import { VALKEY_CLIENT_SYMBOL } from '@/shared/infrastructure/providers/valkey.provider';
 import { CacheStorage } from '@/shared/domain/services/cache.service';
 
 @Injectable()
-export class ValkeyCacheService implements CacheStorage {
+export class ValkeyCacheService implements CacheStorage, OnModuleDestroy {
   constructor(
     @Inject(VALKEY_CLIENT_SYMBOL)
     private readonly redis: Redis,
   ) { }
+
+  async onModuleDestroy() {
+    if (this.redis) {
+      await this.redis.quit();
+    }
+  }
 
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     if (value === undefined) {

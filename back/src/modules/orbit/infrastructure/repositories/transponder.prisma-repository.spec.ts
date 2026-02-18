@@ -4,7 +4,7 @@ import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { TransponderEntity } from '../../domain/entities/transponder.entity';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import { PortalType } from '../../domain/enum/portal-type.enum';
-import { TransponderMode } from '@prisma/client';
+import { TransponderMode } from '@/orbit/domain/enum/transponder-mode.enum';
 
 describe('TransponderPrismaRepository (Integration)', () => {
   let repository: TransponderPrismaRepository;

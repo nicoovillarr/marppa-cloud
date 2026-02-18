@@ -3,12 +3,14 @@ import { CACHE_STORAGE_SYMBOL } from '@/shared/domain/services/cache.service';
 import { ValkeyCacheService } from '@/shared/infrastructure/services/valkey-cache.service';
 import { InMemoryCacheService } from '@/shared/infrastructure/services/in-memory-cache.service';
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { ValkeyProvider } from './infrastructure/providers/valkey.provider';
 
 @Module({
   imports: [],
   controllers: [],
   providers: [
     PrismaService,
+    ValkeyProvider,
 
     {
       provide: CACHE_STORAGE_SYMBOL,

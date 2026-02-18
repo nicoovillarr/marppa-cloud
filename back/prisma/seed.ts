@@ -1,9 +1,42 @@
 import { PASSWORD_HASHER_SYMBOL, PasswordHasher } from "@/user/domain/services/password-hasher.service";
 import { UserModule } from "@/user/user.module";
 import { NestFactory } from "@nestjs/core";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
+import * as fs from "fs";
+import * as path from "path";
 
-const prisma = new PrismaClient();
+import * as dotenv from 'dotenv';
+import { ConnectionOptions } from "tls";
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+dotenv.config({ path: envFile });
+
+const dbCARoute = process.env.DB_CA_ROUTE;
+let ssl: ConnectionOptions | undefined;
+
+if (dbCARoute) {
+  const caPath = path.resolve(process.cwd(), dbCARoute);
+
+  if (!fs.existsSync(caPath)) {
+    throw new Error(`CA file not found at ${caPath}`);
+  }
+
+  ssl = {
+    ca: fs.readFileSync(caPath).toString(),
+  };
+}
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl,
+});
+
+const adapter = new PrismaPg(pool);
+
+const prisma = new PrismaClient({
+  adapter,
+});
 
 const createCompany = async () => {
   console.log('Creating company...');
@@ -190,11 +223,11 @@ const main = async () => {
 };
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
   .catch(async (e) => {
     console.error(e);
+  })
+  .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
     process.exit(1);
   });

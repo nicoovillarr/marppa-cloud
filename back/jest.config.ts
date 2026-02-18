@@ -1,3 +1,5 @@
+console.log(`Running tests in ${process.env.NODE_ENV} mode`);
+
 export default {
     preset: 'ts-jest',
     testEnvironment: 'node',

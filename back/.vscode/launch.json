@@ -2,12 +2,17 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "node",
-      "env": { "NODE_ENV": "development" },
-      "request": "launch",
       "name": "Debug Nest Framework",
+      "type": "node",
+      "env": {
+        "NODE_ENV": "${input:env}"
+      },
+      "request": "launch",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "start:debug"],
+      "runtimeArgs": [
+        "run",
+        "start:debug"
+      ],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "stopOnEntry": false,
@@ -16,6 +21,9 @@
     {
       "name": "Jest: debug current test file",
       "type": "node",
+      "env": {
+        "NODE_ENV": "${input:env}"
+      },
       "request": "launch",
       "program": "${workspaceFolder}/node_modules/jest/bin/jest.js",
       "args": [
@@ -25,6 +33,23 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "env",
+      "type": "pickString",
+      "description": "Select the environment:",
+      "options": [
+        {
+          "label": "dev",
+          "value": "development"
+        },
+        {
+          "label": "prod",
+          "value": "production"
+        }
+      ]
     }
   ]
 }

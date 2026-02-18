@@ -10,9 +10,21 @@ import { EventModule } from '@/event/event.module';
 import { HiveModule } from '@/hive/hive.module';
 import { MeshModule } from '@/mesh/mesh.module';
 import { OrbitModule } from '@/orbit/orbit.module';
+import { ConfigModule } from '@nestjs/config';
+
+const env = process.env.NODE_ENV;
+const envFilePath =
+  env === 'development'
+    ? '.env'
+    : `.env.${env}`;
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath,
+    }),
+
     SharedModule,
     AuthModule,
     UserModule,
