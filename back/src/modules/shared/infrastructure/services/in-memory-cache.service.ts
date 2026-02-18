@@ -1,36 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { CacheStorage } from '@/shared/domain/services/cache.service';
 
-type Entry = { value: string; expires: number };
+type CacheEntry = { value: string; expires: number };
 
 @Injectable()
 export class InMemoryCacheService implements CacheStorage {
-  private store = new Map<string, Entry>();
-  private readonly defaultTtl = 3600; // 1h por defecto
+  private store = new Map<string, CacheEntry>();
 
-  set<T>(key: string, value: T, ttlSeconds: number = this.defaultTtl): void {
-    // Si el usuario pasa `undefined`, lo interpretamos como delete
+  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     if (value === undefined) {
       this.store.delete(key);
       return;
     }
 
-    const expires = Date.now() + ttlSeconds * 1000;
+    const expires =
+      ttlSeconds !== undefined
+        ? Date.now() + ttlSeconds * 1000
+        : Number.POSITIVE_INFINITY;
 
-    // Serializamos con try/catch por seguridad
-    try {
-      const serialized = JSON.stringify(value);
-      this.store.set(key, { value: serialized, expires });
-    } catch {
-      // Opcional: loggear o rethrow según política
-      // Para no romper la app, podemos ignorar el set cuando no se puede serializar.
-      // throw new Error(`Cache serialization failed for key ${key}: ${err}`);
-      // Aquí opto por no lanzar para no interrumpir el flujo.
-      /* noop */
-    }
+    const serialized = JSON.stringify(value);
+    this.store.set(key, { value: serialized, expires });
   }
 
-  get<T>(key: string): T | undefined {
+  async get<T>(key: string): Promise<T | undefined> {
     const entry = this.store.get(key);
     if (!entry) return undefined;
 
@@ -39,18 +31,10 @@ export class InMemoryCacheService implements CacheStorage {
       return undefined;
     }
 
-    try {
-      // Parse puede devolver null (si se guardó null)
-      const parsed = JSON.parse(entry.value) as T;
-      return parsed;
-    } catch {
-      // Si parse falla, eliminamos la entrada corrupta y devolvemos undefined
-      this.store.delete(key);
-      return undefined;
-    }
+    return JSON.parse(entry.value) as T;
   }
 
-  delete(key: string): void {
+  async delete(key: string): Promise<void> {
     this.store.delete(key);
   }
 }

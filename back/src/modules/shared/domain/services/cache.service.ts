@@ -2,17 +2,20 @@ export const CACHE_STORAGE_SYMBOL = 'CACHE_STORAGE_SYMBOL';
 
 export interface CacheStorage {
   /**
-   * Guarda un valor serializable en cache.
-   * - Si value === undefined => borra la clave.
-   * - Si value === null => guarda explícitamente `null`.
+   * Save a serializable value in cache.
+   * - If value === undefined => delete the key.
+   * - If value === null => explicitly save `null`.
    */
-  set<T>(key: string, value: T, ttlSeconds?: number): void;
+  set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
 
   /**
-   * Retorna el valor <T> guardado o `undefined` si no existe o expiró.
-   * Nota: si guardaste `null`, el método devolverá `null` (que es compatible con T).
+   * Return the saved value <T> or `undefined` if it does not exist or has expired.
+   * Note: if you saved `null`, the method will return `null` (which is compatible with T).
    */
-  get<T>(key: string): T | undefined;
+  get<T>(key: string): Promise<T | undefined>;
 
-  delete(key: string): void;
+  /**
+   * Delete a key from cache.
+   */
+  delete(key: string): Promise<void>;
 }

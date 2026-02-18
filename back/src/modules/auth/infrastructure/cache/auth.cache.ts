@@ -10,7 +10,7 @@ export class AuthCache {
   constructor(
     @Inject(CACHE_STORAGE_SYMBOL)
     private readonly cache: CacheStorage,
-  ) {}
+  ) { }
 
   setIsUserAdmin(userId: number, isAdmin: boolean): void {
     this.cache.set(
@@ -20,8 +20,8 @@ export class AuthCache {
     );
   }
 
-  isUserAdmin(userId: number): boolean | undefined {
-    const data = this.cache.get(`${this.prefix}:user:${userId}:admin`);
+  async isUserAdmin(userId: number): Promise<boolean | undefined> {
+    const data = await this.cache.get(`${this.prefix}:user:${userId}:admin`);
     if (data === 'true') return true;
     if (data === 'false') return false;
     return undefined;

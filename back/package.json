@@ -35,6 +35,7 @@
     "netmask": "^2.0.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "ioredis": "5.9.3",
     "ua-parser-js": "2.0.8"
   },
   "devDependencies": {
