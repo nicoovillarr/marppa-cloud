@@ -38,7 +38,7 @@ describe('ZoneService', () => {
 
   const mockZoneRepository = {
     findById: jest.fn(),
-    findWithNodesById: jest.fn(),
+    findByIdWithNodes: jest.fn(),
     findByOwnerId: jest.fn(),
     findLastZone: jest.fn(),
     create: jest.fn(),
@@ -89,22 +89,22 @@ describe('ZoneService', () => {
     });
   });
 
-  describe('findWithNodesById', () => {
+  describe('findByIdWithNodes', () => {
     it('should return a zone with nodes by id', async () => {
-      mockZoneRepository.findWithNodesById.mockResolvedValue(
+      mockZoneRepository.findByIdWithNodes.mockResolvedValue(
         mockZoneWithNodesModel,
       );
 
-      const result = await service.findWithNodesById('z-000001');
+      const result = await service.findByIdWithNodes('z-000001');
 
-      expect(repository.findWithNodesById).toHaveBeenCalledWith('z-000001');
+      expect(repository.findByIdWithNodes).toHaveBeenCalledWith('z-000001');
       expect(result).toEqual(mockZoneWithNodesModel);
     });
 
     it('should throw NotFoundError if zone not found', async () => {
-      mockZoneRepository.findWithNodesById.mockResolvedValue(null);
+      mockZoneRepository.findByIdWithNodes.mockResolvedValue(null);
 
-      await expect(service.findWithNodesById('z-999999')).rejects.toThrow(
+      await expect(service.findByIdWithNodes('z-999999')).rejects.toThrow(
         NotFoundError,
       );
     });

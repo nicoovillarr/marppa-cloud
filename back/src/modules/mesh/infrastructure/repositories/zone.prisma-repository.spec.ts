@@ -66,7 +66,7 @@ describe('ZonePrismaRepository (Integration)', () => {
     });
 
     it('should find a zone with nodes by id', async () => {
-      const result = await repository.findWithNodesById(createdZoneId);
+      const result = await repository.findByIdWithNodes(createdZoneId);
 
       expect(result).toBeDefined();
       expect(result?.zone.id).toBe(createdZoneId);
@@ -78,7 +78,7 @@ describe('ZonePrismaRepository (Integration)', () => {
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
-      expect(result.some((z) => z.id === createdZoneId)).toBe(true);
+      expect(result.some((z) => z.zone.id === createdZoneId)).toBe(true);
     });
 
     it('should update a zone', async () => {
