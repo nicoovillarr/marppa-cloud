@@ -3,8 +3,24 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './modules/shared/infrastructure/http/all-exceptions.filter';
 import cookieParser from 'cookie-parser';
+import * as fs from 'fs';
+import * as path from 'path';
+
+function generateDbCert() {
+  const { DB_CA, DB_CA_ROUTE = './certs/db.pem' } = process.env;
+
+  if (!DB_CA) {
+    return;
+  }
+
+  const caPath = path.resolve(process.cwd(), DB_CA_ROUTE);
+
+  fs.writeFileSync(caPath, DB_CA.replace(/\\n/g, '\n'));
+}
 
 async function bootstrap() {
+  generateDbCert();
+
   const app = await NestFactory.create(AppModule);
   app.useGlobalFilters(new AllExceptionsFilter());
   app.use(cookieParser());
