@@ -13,7 +13,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest --detectOpenHandles --runInBand",
+    "test": "jest --detectOpenHandles --runInBand --forceExit",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -21,7 +21,9 @@
     "test:prod": "NODE_ENV=production jest --detectOpenHandles --runInBand",
     "prisma:migrate:prod": "NODE_ENV=production prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "prisma:seed:prod": "NODE_ENV=production npx tsx prisma/seed.ts"
+    "prisma:seed:prod": "NODE_ENV=production npx tsx prisma/seed.ts",
+    "prisma:studio": "npx prisma studio",
+    "prisma:studio:prod": "NODE_ENV=production npx prisma studio"
   },
   "dependencies": {
     "@nestjs/common": "11.1.14",

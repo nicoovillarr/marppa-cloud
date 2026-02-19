@@ -14,7 +14,7 @@ import { ConfigModule } from '@nestjs/config';
 
 const env = process.env.NODE_ENV;
 const envFilePath =
-  env === 'development'
+  env == null || env === 'development'
     ? '.env'
     : `.env.${env}`;
 

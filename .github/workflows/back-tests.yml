@@ -2,15 +2,11 @@ name: Back Tests
 
 on:
   push:
-    branches:
-      - master
-    paths:
-      - "back/**"
+    branches: [master]
+    paths: ["back/**"]
   pull_request:
-    branches:
-      - master
-    paths:
-      - "back/**"
+    branches: [master]
+    paths: ["back/**"]
 
 jobs:
   test:
@@ -21,23 +17,43 @@ jobs:
         working-directory: back
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Use Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 24.12.0
-          cache: "npm"
+          node-version: 20
+          cache: npm
           cache-dependency-path: back/package-lock.json
 
-      - name: Debug pwd
+      - name: Decode DB_CA
         run: |
-          pwd
-          ls -la
+          echo "${{ secrets.DB_CA }}" | base64 --decode > db-ca.pem
+          echo "DB_CA_ROUTE=$(pwd)/db-ca.pem" >> $GITHUB_ENV
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Build .env file
+        run: |
+          cat > .env <<'EOF'
+          # Server configuration
+          COOKIES_DOMAIN="${{ vars.COOKIES_DOMAIN }}"
+          CORS_URL="${{ vars.CORS_URL }}"
+          PORT=${{ vars.PORT }}
 
-      - name: Run tests
-        run: npm run test
+          # Security
+          JWT_SECRET="${{ secrets.JWT_SECRET }}"
+
+          # Database
+          DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          DB_CA_ROUTE="${{ env.DB_CA_ROUTE }}"
+
+          # Redis
+          VALKEY_HOST="${{ vars.VALKEY_HOST }}"
+          VALKEY_PORT="${{ vars.VALKEY_PORT }}"
+          VALKEY_USERNAME="${{ secrets.VALKEY_USERNAME }}"
+          VALKEY_PASSWORD="${{ secrets.VALKEY_PASSWORD }}"
+          EOF
+
+          chmod 600 .env
+
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run test

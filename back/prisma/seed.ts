@@ -9,8 +9,14 @@ import * as path from "path";
 
 import * as dotenv from 'dotenv';
 import { ConnectionOptions } from "tls";
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
-dotenv.config({ path: envFile });
+
+const env = process.env.NODE_ENV;
+const envFilePath =
+  env == null || env === 'development'
+    ? '.env'
+    : `.env.${env}`;
+
+dotenv.config({ path: envFilePath });
 
 const dbCARoute = process.env.DB_CA_ROUTE;
 let ssl: ConnectionOptions | undefined;
@@ -225,9 +231,10 @@ const main = async () => {
 main()
   .catch(async (e) => {
     console.error(e);
+    process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
     await pool.end();
-    process.exit(1);
+    process.exit(0);
   });
