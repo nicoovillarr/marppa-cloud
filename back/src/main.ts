@@ -9,11 +9,14 @@ import * as path from 'path';
 function generateDbCert() {
   const { DB_CA, DB_CA_ROUTE = './certs/db.pem' } = process.env;
 
-  if (!DB_CA) {
-    return;
-  }
+  if (!DB_CA) return;
 
   const caPath = path.resolve(process.cwd(), DB_CA_ROUTE);
+  const dir = path.dirname(caPath);
+
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 
   fs.writeFileSync(caPath, DB_CA.replace(/\\n/g, '\n'));
 }
@@ -34,6 +37,7 @@ async function bootstrap() {
       credentials: true,
     });
   }
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
