@@ -28,7 +28,6 @@ export class AuthController {
   }
 
   @Get('tick')
-  @UseGuards(LoggedInGuard)
   async tick(@Req() req: Request) {
     return await this.authApiService.tick(req);
   }

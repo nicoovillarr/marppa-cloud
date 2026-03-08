@@ -21,6 +21,7 @@ export class CookiesTokenStorageService implements TokenStorageService {
   }
 
   clear(): void {
-    throw new Error('Method not implemented.');
+    this.res.clearCookie('access_token');
+    this.res.clearCookie('refresh_token');
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useAuth } from "../models/useAuth";
 import { useUser } from "src/features/users/model/useUser";
 
@@ -11,40 +11,49 @@ export function TickProvider({
 }: {
     children: React.ReactNode;
 }) {
-    const { isLoggedIn, tick, clear: clearAuth } = useAuth();
-    const { me, clear: clearUser } = useUser();
+    const {
+        isLoggedIn,
+        tick,
+        clear: clearAuth,
+    } = useAuth();
 
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const {
+        me,
+        clear: clearUser,
+    } = useUser();
+
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const initializedRef = useRef(false);
+
+    const clear = useCallback(() => {
+        clearUser();
+        clearAuth();
+    }, [clearAuth, clearUser]);
 
     useEffect(() => {
         const bootstrap = async () => {
             try {
                 await tick();
-
-                initializedRef.current = true;
-                await me();
             } catch (e) {
-                clearUser();
-                clearAuth();
+                clear();
+            } finally {
+                initializedRef.current = true;
             }
         };
 
         bootstrap();
-    }, [tick, me, clearUser, clearAuth]);
+    }, [tick, clear]);
 
     useEffect(() => {
+        if (!initializedRef.current) return;
+
         if (isLoggedIn) {
-            if (!initializedRef.current) {
-                initializedRef.current = true;
-                me();
-            }
+            me();
 
             if (!intervalRef.current) {
                 intervalRef.current = setInterval(() => {
                     tick().catch(() => {
-                        clearUser();
-                        clearAuth();
+                        clear();
                     });
                 }, INTERVAL_MS);
             }
@@ -53,8 +62,6 @@ export function TickProvider({
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
             }
-
-            initializedRef.current = false;
         }
 
         return () => {
@@ -63,7 +70,7 @@ export function TickProvider({
                 intervalRef.current = null;
             }
         };
-    }, [isLoggedIn, tick, clearUser, me]);
+    }, [isLoggedIn, tick, me, clear]);
 
     return <>{children}</>;
 }

@@ -4,71 +4,82 @@ import { useAuthStore } from "./auth.store";
 
 export const useAuth = () => {
     const {
-        refreshToken,
-        accessToken,
         isLoading,
-        error,
-        setAuth,
         setIsLoading,
+        error,
         setError,
+        isLoggedIn,
+        setIsLoggedIn,
     } = useAuthStore();
 
-    const isLoggedIn = !!refreshToken && !!accessToken;
-
-    const tick = useCallback(async (): Promise<void> => {
-        setIsLoading(false);
+    const tick = useCallback(async (): Promise<boolean> => {
+        setIsLoading(true);
         setError(null);
 
+        let result = false;
+
         try {
-            const data = await authService.tick();
-            setAuth(data);
+            result = await authService.tick();
         } catch (e) {
             setError(e.message ?? "Unknown error");
             throw e;
         } finally {
             setIsLoading(false);
+            setIsLoggedIn(result);
         }
+
+        return result;
     }, []);
 
-    const login = useCallback(async (email: string, password: string): Promise<void> => {
+    const login = useCallback(async (email: string, password: string): Promise<boolean> => {
         setIsLoading(true);
         setError(null);
+        setIsLoggedIn(false);
+
+        let result = false;
 
         try {
-            const data = await authService.login({ email, password });
-            setAuth(data);
+            result = await authService.login({ email, password });
         } catch (e) {
             setError(e.message ?? "Unknown error");
             throw e;
         } finally {
             setIsLoading(false);
+            setIsLoggedIn(result);
         }
+
+        return result;
     }, []);
 
-    const register = useCallback(async (email: string, password: string, firstName: string, lastName?: string): Promise<void> => {
+    const register = useCallback(async (email: string, password: string, firstName: string, lastName?: string): Promise<boolean> => {
         setIsLoading(true);
         setError(null);
+        setIsLoggedIn(false);
+
+        let result = false;
 
         try {
-            const data = await authService.register({
+            result = await authService.register({
                 email,
                 password,
                 firstName,
                 lastName,
             });
-            setAuth(data);
         } catch (e) {
             setError(e.message ?? "Unknown error");
             throw e;
         } finally {
             setIsLoading(false);
+            setIsLoggedIn(result);
         }
+
+        return result;
     }, []);
 
     const clear = useCallback(() => {
-        setAuth(null);
         setError(null);
         setIsLoading(false);
+        setIsLoggedIn(false);
     }, []);
 
     const logout = useCallback(async () => {
@@ -85,11 +96,9 @@ export const useAuth = () => {
     }, [clear]);
 
     return {
-        refreshToken,
-        accessToken,
-        isLoggedIn,
         isLoading,
         error,
+        isLoggedIn,
         tick,
         login,
         register,

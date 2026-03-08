@@ -9,8 +9,3 @@ export type RegisterDto = {
     firstName: string;
     lastName?: string;
 }
-
-export type AuthResponseDto = {
-    accessToken: string;
-    refreshToken: string;
-}

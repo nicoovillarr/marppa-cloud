@@ -7,15 +7,19 @@ import { useAuth } from "@/auth/models/useAuth";
 const LoggedInLinks = [{ href: "/dashboard", label: "Dashboard" }];
 
 export function AppBar() {
-  const { accessToken, logout } = useAuth();
+  const {
+    isLoading,
+    isLoggedIn,
+    logout,
+  } = useAuth();
 
   const onLogout = async () => {
     try {
       await logout();
-      redirect("/login");
     } catch (error) {
       console.error("Logout error:", error);
-      alert(error.message || "Logout failed");
+    } finally {
+      redirect("/");
     }
   };
 
@@ -25,7 +29,7 @@ export function AppBar() {
         My App
       </Link>
       <nav className="flex items-center space-x-4">
-        {accessToken ? (
+        {isLoggedIn ? (
           <>
             {LoggedInLinks.map((link) => (
               <Link

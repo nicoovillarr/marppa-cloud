@@ -10,6 +10,7 @@ import { CreateUserDto } from '@/auth/presentation/dtos/create-user.dto';
 import { JwtEntity } from '@/auth/domain/entities/jwt.entity';
 import { Utils } from 'src/libs/utils';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 
 @Injectable()
 export class AuthApiService {
@@ -22,16 +23,13 @@ export class AuthApiService {
   async register(
     data: CreateUserDto,
     req: Request,
-  ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-  }> {
+  ): Promise<void> {
     const user = await this.userService.createUser(data);
     if (!user.id) {
       throw new Error('Could not create user');
     }
 
-    const { accessToken, refreshToken } =
+    const { refreshToken } =
       await this.authService.generateAndSaveUserTokens(user);
 
     const requestData = Utils.parseRequestData(req);
@@ -41,20 +39,12 @@ export class AuthApiService {
       refreshToken,
       requestData,
     );
-
-    return {
-      accessToken,
-      refreshToken,
-    };
   }
 
   async login(
     data: LoginUserDto,
     req: Request,
-  ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-  }> {
+  ): Promise<void> {
     const { email, password } = data;
     const user = await this.userService.findUserByEmail(email);
 
@@ -71,7 +61,7 @@ export class AuthApiService {
       throw new Error('Invalid credentials');
     }
 
-    const { accessToken, refreshToken } =
+    const { refreshToken } =
       await this.authService.generateAndSaveUserTokens(user);
 
     const requestData = Utils.parseRequestData(req);
@@ -81,15 +71,10 @@ export class AuthApiService {
       refreshToken,
       requestData,
     );
-
-    return {
-      accessToken,
-      refreshToken,
-    };
   }
 
   async logout(req: Request) {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken = req.cookies.refresh_token;
     if (!refreshToken) {
       throw new Error('No refresh token found');
     }
@@ -97,26 +82,23 @@ export class AuthApiService {
     await this.authService.invalidateSession(refreshToken);
   }
 
-  async tick(req: Request): Promise<{
-    accessToken: string;
-    refreshToken: string;
-  }> {
+  async tick(req: Request): Promise<boolean> {
     const oldRefreshToken = req.cookies.refresh_token;
     if (!oldRefreshToken) {
-      throw new Error('No refresh token found');
+      return false;
     }
 
     const userId = await this.validateRefreshToken(oldRefreshToken);
     if (!userId) {
-      throw new NotFoundError();
+      return false;
     }
 
     const user = await this.userService.findUserById(userId);
     if (!user) {
-      throw new NotFoundError();
+      return false;
     }
 
-    const { accessToken, refreshToken: newRefreshToken } =
+    const { refreshToken: newRefreshToken } =
       await this.authService.generateAndSaveUserTokens(user);
 
     const requestData = Utils.parseRequestData(req);
@@ -127,10 +109,7 @@ export class AuthApiService {
       requestData,
     );
 
-    return {
-      accessToken,
-      refreshToken: newRefreshToken,
-    };
+    return true;
   }
 
   async validateRefreshToken(refreshToken: string): Promise<string | null> {

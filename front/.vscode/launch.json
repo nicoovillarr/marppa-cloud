@@ -2,34 +2,73 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Next.js: Dev Server",
-      "type": "node",
-      "request": "launch",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev:debug"
-      ],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "cwd": "${workspaceFolder}",
-      "autoAttachChildProcesses": true
-    },
-    {
-      "name": "Next.js: Brave",
+      "name": "Next.js: Launch",
       "type": "chrome",
       "request": "launch",
       "url": "http://localhost:3000",
       "webRoot": "${workspaceFolder}",
-      "runtimeExecutable": "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
+      "runtimeExecutable": "${input:browser}",
+      "preLaunchTask": "next:dev:debug"
     }
   ],
-  "compounds": [
+  "inputs": [
     {
-      "name": "Next.js Full Debug",
-      "configurations": [
-        "Next.js: Dev Server",
-        "Next.js: Brave"
+      "id": "browser",
+      "type": "pickString",
+      "description": "Browser",
+      "default": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+      "options": [
+        // Windows
+        {
+          "label": "Windows: Brave",
+          "value": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe"
+        },
+        {
+          "label": "Windows: Chrome",
+          "value": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+        },
+        {
+          "label": "Windows: Edge",
+          "value": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+        },
+        {
+          "label": "Windows: Firefox",
+          "value": "C:\\Program Files\\Mozilla Firefox\\firefox.exe"
+        },
+        // macOS
+        {
+          "label": "macOS: Brave",
+          "value": "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
+        },
+        {
+          "label": "macOS: Chrome",
+          "value": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        },
+        {
+          "label": "macOS: Edge",
+          "value": "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
+        },
+        {
+          "label": "macOS: Firefox",
+          "value": "/Applications/Firefox.app/Contents/MacOS/firefox"
+        },
+        // Linux
+        {
+          "label": "Linux: Brave",
+          "value": "/usr/bin/brave-browser"
+        },
+        {
+          "label": "Linux: Chrome",
+          "value": "/usr/bin/google-chrome"
+        },
+        {
+          "label": "Linux: Edge",
+          "value": "/usr/bin/microsoft-edge"
+        },
+        {
+          "label": "Linux: Firefox",
+          "value": "/usr/bin/firefox"
+        },
       ]
     }
   ]

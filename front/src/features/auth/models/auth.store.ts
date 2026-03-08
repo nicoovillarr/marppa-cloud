@@ -1,36 +1,23 @@
 import { create } from "zustand";
 
 interface IAuthState {
-    refreshToken: string | null;
-    accessToken: string | null;
     isLoading: boolean;
-    error: string | null;
-
     setIsLoading: (isLoading: boolean) => void;
+
+    error: string | null;
     setError: (error: string | null) => void;
-    setAuth: ({ refreshToken, accessToken }: { refreshToken: string; accessToken: string } | null) => void;
+
+    isLoggedIn: boolean;
+    setIsLoggedIn: (isLoggedIn: boolean) => void;
 }
 
 export const useAuthStore = create<IAuthState>((set) => ({
-    refreshToken: null,
-    accessToken: null,
     isLoading: false,
+    setIsLoading: (isLoading) => set({ isLoading }),
+
     error: null,
+    setError: (error: string | null) => set({ error }),
 
-    setIsLoading: (isLoading) => {
-        set({ isLoading });
-    },
-
-    setError: (error: string | null) => {
-        set({ error });
-    },
-
-    setAuth: (data: { refreshToken: string; accessToken: string } | null) => {
-        if (!!data) {
-            const { refreshToken, accessToken } = data;
-            set({ refreshToken, accessToken });
-        } else {
-            set({ refreshToken: null, accessToken: null });
-        }
-    },
+    isLoggedIn: false,
+    setIsLoggedIn: (isLoggedIn: boolean) => set({ isLoggedIn }),
 }))
