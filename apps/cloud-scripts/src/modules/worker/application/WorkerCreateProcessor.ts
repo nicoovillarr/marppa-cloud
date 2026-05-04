@@ -15,13 +15,12 @@ type WorkerWithImageAndFlavor = Prisma.WorkerGetPayload<{
 export class WorkerCreateProcessor implements IEventProcessor {
   readonly eventType = EventType.WORKER_CREATE;
 
-  private hiveService: HiveService = new HiveService();
-
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly wsServer: WebSocketServer,
     private readonly logger: ILogger,
+    private readonly hiveService: HiveService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

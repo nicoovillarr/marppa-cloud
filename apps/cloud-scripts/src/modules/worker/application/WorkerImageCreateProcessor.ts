@@ -10,12 +10,11 @@ import { HiveService } from '../infrastructure/HiveService';
 export class WorkerImageCreateProcessor implements IEventProcessor {
   readonly eventType = EventType.WORKER_IMAGE_CREATE;
 
-  private hiveService: HiveService = new HiveService();
-
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
+    private readonly hiveService: HiveService,
   ) {}
 
   async handle(event: EventPayload): Promise<void> {

@@ -11,7 +11,12 @@
     "prisma:generate": "prisma generate",
     "start": "node dist/index.js"
   },
-  "keywords": ["marppa", "cloud", "scripts", "node"],
+  "keywords": [
+    "marppa",
+    "cloud",
+    "scripts",
+    "node"
+  ],
   "author": "Marppa SAS",
   "license": "ISC",
   "dependencies": {
@@ -19,6 +24,7 @@
     "@marppa-cloud/db": "*",
     "@marppa-cloud/shared": "*",
     "@prisma/client": "7.4.0",
+    "awilix": "^13.0.3",
     "bullmq": "^5.0.0",
     "dotenv": "^16.5.0",
     "fastify": "^4.0.0",

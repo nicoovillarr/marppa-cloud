@@ -9,12 +9,11 @@ import { MeshService } from '../infrastructure/MeshService';
 export class ZoneDeleteProcessor implements IEventProcessor {
   readonly eventType = EventType.ZONE_DELETE;
 
-  private meshService: MeshService = new MeshService();
-
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
+    private readonly meshService: MeshService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

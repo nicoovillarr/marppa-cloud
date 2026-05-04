@@ -11,13 +11,12 @@ import { HiveService } from '../infrastructure/HiveService';
 export class WorkerDeleteProcessor implements IEventProcessor {
   readonly eventType = EventType.WORKER_DELETE;
 
-  private hiveService: HiveService = new HiveService();
-
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly wsServer: WebSocketServer,
     private readonly logger: ILogger,
+    private readonly hiveService: HiveService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

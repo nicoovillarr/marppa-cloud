@@ -10,12 +10,11 @@ import { MeshService } from '../infrastructure/MeshService';
 export class NodeUpdateFiberProcessor implements IEventProcessor {
   readonly eventType = EventType.NODE_UPDATE_FIBER;
 
-  private meshService: MeshService = new MeshService();
-
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
+    private readonly meshService: MeshService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

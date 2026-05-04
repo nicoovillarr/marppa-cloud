@@ -11,14 +11,13 @@ import { MeshService } from '../../mesh/infrastructure/MeshService';
 export class WorkerStartProcessor implements IEventProcessor {
   readonly eventType = EventType.WORKER_START;
 
-  private hiveService: HiveService = new HiveService();
-  private meshService: MeshService = new MeshService();
-
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly wsServer: WebSocketServer,
     private readonly logger: ILogger,
+    private readonly hiveService: HiveService,
+    private readonly meshService: MeshService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

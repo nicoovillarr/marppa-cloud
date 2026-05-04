@@ -6,11 +6,11 @@ import { OrbitService } from '../../../orbit/infrastructure/OrbitService';
 export class IPChecker {
   private timer: NodeJS.Timeout | null = null;
   private lastIP: string | null = null;
-  private readonly orbitService = new OrbitService();
 
   constructor(
     private readonly prisma: PrismaClient,
     private readonly logger: ILogger,
+    private readonly orbitService: OrbitService,
     private readonly intervalMs: number = 10 * 60 * 1000,
   ) {}
 

@@ -12,12 +12,12 @@ export class WebSocketServer {
 
   constructor(
     private readonly logger: ILogger,
-    private readonly port: number = 8080,
+    private readonly wsPort: number = 8080,
     private readonly jwtSecret: string = '',
   ) {}
 
   init(): void {
-    this.wss = new WsServer({ port: this.port });
+    this.wss = new WsServer({ port: this.wsPort });
 
     this.wss.on('connection', (socket: WebSocket & { userId?: string }) => {
       socket.on('message', async (message: Buffer) => {
@@ -92,7 +92,26 @@ export class WebSocketServer {
       this.logger.log('[WebSocketServer] Client connected');
     });
 
-    this.logger.info(`[WebSocketServer] Listening on port ${this.port}`);
+    this.logger.info(`[WebSocketServer] Listening on port ${this.wsPort}`);
+  }
+
+  async close(): Promise<void> {
+    if (!this.wss) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      this.wss!.close((err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve();
+      });
+    });
+
+    this.wss = null;
   }
 
   private sendMessage(channel: string, type: string, data: unknown): void {

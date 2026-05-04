@@ -9,11 +9,11 @@ export class BullMQEventQueue implements IQueue {
   private readonly queue: Queue;
 
   constructor(
-    redisUrl: Redis,
+    redis: Redis,
     private readonly logger: ILogger,
   ) {
     this.queue = new Queue(QUEUE_NAME, {
-      connection: redisUrl as never,
+      connection: redis as never,
       defaultJobOptions: {
         attempts: 5,
         backoff: { type: 'exponential', delay: 5000 },

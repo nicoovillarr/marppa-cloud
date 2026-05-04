@@ -9,14 +9,13 @@ import { HiveService } from '../../worker/infrastructure/HiveService';
 
 export class SystemResetProcessor implements IEventProcessor {
   readonly eventType = EventType.SYSTEM_RESET;
-  
-  private readonly hiveService = new HiveService();
-  private readonly meshService = new MeshService();
-  private readonly orbitService = new OrbitService();
 
   constructor(
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
+    private readonly hiveService: HiveService,
+    private readonly meshService: MeshService,
+    private readonly orbitService: OrbitService,
   ) {}
 
   async handle(event: EventPayload): Promise<void> {

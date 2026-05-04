@@ -9,13 +9,12 @@ import { MeshService } from '../infrastructure/MeshService';
 
 export class NodeDeleteFiberProcessor implements IEventProcessor {
   readonly eventType = EventType.NODE_DELETE_FIBER;
-  
-  private readonly meshService: MeshService = new MeshService();
 
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
+    private readonly meshService: MeshService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

@@ -10,12 +10,11 @@ import { OrbitService } from '../infrastructure/OrbitService';
 export class TransponderCreateProcessor implements IEventProcessor {
   readonly eventType = EventType.TRANSPONDER_CREATE;
 
-  private orbitService: OrbitService = new OrbitService();
-
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
+    private readonly orbitService: OrbitService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

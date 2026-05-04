@@ -11,14 +11,13 @@ import { HiveService } from '../../worker/infrastructure/HiveService';
 export class NodeAssignWorkerProcessor implements IEventProcessor {
   readonly eventType = EventType.NODE_ASSIGN_WORKER;
 
-  private meshService: MeshService = new MeshService();
-  private hiveService: HiveService = new HiveService();
-
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly wsServer: WebSocketServer,
     private readonly logger: ILogger,
+    private readonly meshService: MeshService,
+    private readonly hiveService: HiveService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {
