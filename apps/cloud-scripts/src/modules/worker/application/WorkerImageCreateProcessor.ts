@@ -7,6 +7,9 @@ import type { EventPayload } from '../../event/domain/EventPayload';
 import { AbortError } from '../../event/domain/EventPayload';
 import { HiveService } from '../infrastructure/HiveService';
 
+import { EventProcessor } from '../../../decorators/EventProcessor';
+
+@EventProcessor
 export class WorkerImageCreateProcessor implements IEventProcessor {
   readonly eventType = EventType.WORKER_IMAGE_CREATE;
 

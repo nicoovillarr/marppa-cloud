@@ -6,6 +6,9 @@ import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '../../event/domain/EventPayload';
 import type { WebSocketServer } from '../../shared/infrastructure/websocket/WebSocketServer';
 
+import { EventProcessor } from '../../../decorators/EventProcessor';
+
+@EventProcessor
 export class WorkerUpdateProcessor implements IEventProcessor {
   readonly eventType = EventType.WORKER_UPDATE;
 

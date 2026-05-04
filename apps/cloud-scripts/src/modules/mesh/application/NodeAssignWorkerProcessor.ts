@@ -8,6 +8,9 @@ import type { WebSocketServer } from '../../shared/infrastructure/websocket/WebS
 import { MeshService } from '../infrastructure/MeshService';
 import { HiveService } from '../../worker/infrastructure/HiveService';
 
+import { EventProcessor } from '../../../decorators/EventProcessor';
+
+@EventProcessor
 export class NodeAssignWorkerProcessor implements IEventProcessor {
   readonly eventType = EventType.NODE_ASSIGN_WORKER;
 

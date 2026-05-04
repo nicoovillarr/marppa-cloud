@@ -6,6 +6,9 @@ import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '../../event/domain/EventPayload';
 import { MeshService } from '../infrastructure/MeshService';
 
+import { EventProcessor } from '../../../decorators/EventProcessor';
+
+@EventProcessor
 export class ZoneDeleteProcessor implements IEventProcessor {
   readonly eventType = EventType.ZONE_DELETE;
 

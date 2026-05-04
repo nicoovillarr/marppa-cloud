@@ -8,6 +8,9 @@ import type { WebSocketServer } from '../../shared/infrastructure/websocket/WebS
 import { HiveService } from '../infrastructure/HiveService';
 import { MeshService } from '../../mesh/infrastructure/MeshService';
 
+import { EventProcessor } from '../../../decorators/EventProcessor';
+
+@EventProcessor
 export class WorkerTerminateProcessor implements IEventProcessor {
   readonly eventType = EventType.WORKER_TERMINATE;
 

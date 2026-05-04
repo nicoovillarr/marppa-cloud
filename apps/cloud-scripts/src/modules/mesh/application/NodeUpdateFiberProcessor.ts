@@ -7,6 +7,9 @@ import type { EventPayload } from '../../event/domain/EventPayload';
 import { AbortError } from '../../event/domain/EventPayload';
 import { MeshService } from '../infrastructure/MeshService';
 
+import { EventProcessor } from '../../../decorators/EventProcessor';
+
+@EventProcessor
 export class NodeUpdateFiberProcessor implements IEventProcessor {
   readonly eventType = EventType.NODE_UPDATE_FIBER;
 

@@ -7,6 +7,9 @@ import type { EventPayload } from '../../event/domain/EventPayload';
 import { AbortError } from '../../event/domain/EventPayload';
 import { OrbitService } from '../infrastructure/OrbitService';
 
+import { EventProcessor } from '../../../decorators/EventProcessor';
+
+@EventProcessor
 export class TransponderDeleteProcessor implements IEventProcessor {
   readonly eventType = EventType.TRANSPONDER_DELETE;
 

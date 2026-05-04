@@ -12,6 +12,9 @@ type WorkerWithImageAndFlavor = Prisma.WorkerGetPayload<{
   include: { image: true; flavor: true };
 }>;
 
+import { EventProcessor } from '../../../decorators/EventProcessor';
+
+@EventProcessor
 export class WorkerCreateProcessor implements IEventProcessor {
   readonly eventType = EventType.WORKER_CREATE;
 

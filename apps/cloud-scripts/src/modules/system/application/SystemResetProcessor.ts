@@ -7,6 +7,9 @@ import { MeshService } from '../../mesh/infrastructure/MeshService';
 import { OrbitService } from '../../orbit/infrastructure/OrbitService';
 import { HiveService } from '../../worker/infrastructure/HiveService';
 
+import { EventProcessor } from '../../../decorators/EventProcessor';
+
+@EventProcessor
 export class SystemResetProcessor implements IEventProcessor {
   readonly eventType = EventType.SYSTEM_RESET;
 

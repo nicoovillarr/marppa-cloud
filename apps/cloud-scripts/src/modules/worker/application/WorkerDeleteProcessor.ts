@@ -8,6 +8,9 @@ import { AbortError } from '../../event/domain/EventPayload';
 import type { WebSocketServer } from '../../shared/infrastructure/websocket/WebSocketServer';
 import { HiveService } from '../infrastructure/HiveService';
 
+import { EventProcessor } from '../../../decorators/EventProcessor';
+
+@EventProcessor
 export class WorkerDeleteProcessor implements IEventProcessor {
   readonly eventType = EventType.WORKER_DELETE;
 
