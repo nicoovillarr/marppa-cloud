@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\back\\\\src\" -Recurse)",
+      "Bash(Select-Object FullName)",
+      "Bash(Find-Item -Path \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\back\\\\src\\\\modules\" -Type Directory -Name \"presentation\")",
+      "Bash(npm ls *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(grep -E \"\\\\.\\(env|config|json|ts\\)$\")",
+      "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\back\\\\prisma\\\\schema.prisma\" -Force)",
+      "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\\\\prisma\" -Recurse -Force)",
+      "PowerShell(Move-Item *)"
+    ]
+  }
+}

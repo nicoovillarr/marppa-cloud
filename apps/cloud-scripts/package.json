@@ -1,0 +1,35 @@
+{
+  "name": "marppa-cloud-scripts",
+  "version": "2.0.0",
+  "description": "Infrastructure event worker. Manages DNS, network, virtual machines, containers and more.",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node --transpile-only src/index.ts",
+    "dev:watch": "nodemon --exec ts-node --transpile-only src/index.ts",
+    "build": "tsup src/index.ts --format cjs --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "start": "node dist/index.js"
+  },
+  "keywords": ["marppa", "cloud", "scripts", "node"],
+  "author": "Marppa SAS",
+  "license": "ISC",
+  "dependencies": {
+    "@marppa-cloud/api-types": "*",
+    "@marppa-cloud/db": "*",
+    "@marppa-cloud/shared": "*",
+    "@prisma/client": "7.4.0",
+    "bullmq": "^5.0.0",
+    "dotenv": "^16.5.0",
+    "fastify": "^4.0.0",
+    "ioredis": "^5.0.0",
+    "jose": "^5.0.0",
+    "ws": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.0.0",
+    "nodemon": "^3.1.10",
+    "prisma": "7.4.0",
+    "tsup": "^8.0.0"
+  }
+}
