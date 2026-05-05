@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@marppa-cloud/db';
 import type { IEventRepository } from '../domain/IEventRepository';
 import type { EventPayload } from '../domain/EventPayload';
-import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
+import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
 
 export class PrismaEventRepository implements IEventRepository {
   constructor(

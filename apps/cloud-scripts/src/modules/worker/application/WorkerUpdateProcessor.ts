@@ -1,12 +1,12 @@
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import type { PrismaClient } from '@marppa-cloud/db';
-import type { IEventProcessor } from '../../event/domain/IEventProcessor';
-import type { IEventRepository } from '../../event/domain/IEventRepository';
-import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
-import type { EventPayload } from '../../event/domain/EventPayload';
-import type { WebSocketServer } from '../../shared/infrastructure/websocket/WebSocketServer';
+import type { IEventProcessor } from '@/event/domain/IEventProcessor';
+import type { IEventRepository } from '@/event/domain/IEventRepository';
+import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import type { EventPayload } from '@/event/domain/EventPayload';
+import type { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
 
-import { EventProcessor } from '../../../decorators/EventProcessor';
+import { EventProcessor } from '@/decorators/EventProcessor';
 
 @EventProcessor
 export class WorkerUpdateProcessor implements IEventProcessor {

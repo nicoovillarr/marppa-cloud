@@ -16,7 +16,20 @@
     "declarationMap": true,
     "sourceMap": true,
     "allowJs": true,
-    "checkJs": false
+    "checkJs": false,
+    "paths": {
+      "@/app/*": ["./src/app/*"],
+      "@/decorators/*": ["./src/decorators/*"],
+      "@/libs/*": ["./src/libs/*"],
+
+      // Modules
+      "@/event/*": ["./src/modules/event/*"],
+      "@/mesh/*": ["./src/modules/mesh/*"],
+      "@/orbit/*": ["./src/modules/orbit/*"],
+      "@/shared/*": ["./src/modules/shared/*"],
+      "@/system/*": ["./src/modules/system/*"],
+      "@/worker/*": ["./src/modules/worker/*"],
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

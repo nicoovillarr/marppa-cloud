@@ -1,21 +1,17 @@
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
-import { Command } from '../../../libs/Command';
-import { sleep } from '../../../libs/sleep';
-import type { IHiveService, WorkerImageSource, WorkerInstanceSource } from './IHiveService';
+import { Command } from '@/libs/Command';
+import { sleep } from '@/libs/sleep';
+import type {
+  IHiveService,
+  WorkerImageSource,
+  WorkerInstanceSource,
+} from './IHiveService';
+import { Utils } from '@/libs/Utils';
 
 const IMAGE_DIR = '/var/lib/libvirt/images';
 const CLOUD_INIT_DIR_BASE = '/var/lib/libvirt/cloud-init';
-
-function escapeXml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
 
 const SAFE_VM_NAME = /^[a-zA-Z0-9_-]+$/;
 
@@ -32,7 +28,9 @@ export class HiveService implements IHiveService {
     );
   }
 
-  async ensureWorkerImageExists(workerImage: WorkerImageSource): Promise<boolean> {
+  async ensureWorkerImageExists(
+    workerImage: WorkerImageSource,
+  ): Promise<boolean> {
     try {
       const name = this.workerImagePath(workerImage);
       const url = workerImage.imageUrl;
@@ -357,20 +355,28 @@ ethernets:
     await fsPromises.rm(path.join(IMAGE_DIR, `${vmName}.img`), { force: true });
   }
 
-  async editWorkerZone(vmName: string, bridgeName?: string | null, mac?: string | null): Promise<void> {
+  async editWorkerZone(
+    vmName: string,
+    bridgeName?: string | null,
+    mac?: string | null,
+  ): Promise<void> {
     console.log(
       `Editing worker zone for ${vmName}, bridge: ${bridgeName}, mac: ${mac}`,
     );
 
-    const xmlRaw = await Command.runCommand('sudo', ['virsh', 'dumpxml', vmName]);
+    const xmlRaw = await Command.runCommand('sudo', [
+      'virsh',
+      'dumpxml',
+      vmName,
+    ]);
 
     let newXml = xmlRaw.replace(/<interface[\s\S]*?<\/interface>/g, '');
 
     if (bridgeName && mac) {
       const interfaceXml = `
   <interface type='bridge'>
-    <mac address='${escapeXml(mac)}'/>
-    <source bridge='${escapeXml(bridgeName)}'/>
+    <mac address='${Utils.escapeXml(mac)}'/>
+    <source bridge='${Utils.escapeXml(bridgeName)}'/>
     <model type='virtio'/>
     <driver name='vhost' queues='2'/>
   </interface>`;
@@ -413,12 +419,19 @@ ethernets:
     ]);
   }
 
-  async editWorkerDiskSpace(vmName: string, newDiskSizeGb: number): Promise<void> {
+  async editWorkerDiskSpace(
+    vmName: string,
+    newDiskSizeGb: number,
+  ): Promise<void> {
     const diskPath = path.join(IMAGE_DIR, `${vmName}.img`);
 
-    const info = await Command.runCommand('qemu-img', ['info', '--output=json', diskPath]);
+    const info = await Command.runCommand('qemu-img', [
+      'info',
+      '--output=json',
+      diskPath,
+    ]);
     const currentBytes = JSON.parse(info)['virtual-size'];
-    const currentGb = currentBytes / (1024 ** 3);
+    const currentGb = currentBytes / 1024 ** 3;
 
     if (newDiskSizeGb <= currentGb) {
       throw new Error(
@@ -426,11 +439,19 @@ ethernets:
       );
     }
 
-    await Command.runCommand('qemu-img', ['resize', diskPath, `${newDiskSizeGb}G`]);
+    await Command.runCommand('qemu-img', [
+      'resize',
+      diskPath,
+      `${newDiskSizeGb}G`,
+    ]);
   }
 
   async isBridgeInUse(bridgeName: string): Promise<boolean> {
-    const vmListRaw = await Command.runCommand('virsh', ['list', '--all', '--name']);
+    const vmListRaw = await Command.runCommand('virsh', [
+      'list',
+      '--all',
+      '--name',
+    ]);
     const vmNames = vmListRaw.split('\n').filter(Boolean);
 
     for (const name of vmNames) {
@@ -444,11 +465,18 @@ ethernets:
   }
 
   async isWorkerRunning(vmName: string): Promise<boolean> {
-    const status = await Command.runCommand('sudo', ['virsh', 'domstate', vmName]);
+    const status = await Command.runCommand('sudo', [
+      'virsh',
+      'domstate',
+      vmName,
+    ]);
     return status.trim() === 'running';
   }
 
-  async getWorkerVnet(vmName: string, bridgeName?: string | null): Promise<string | null> {
+  async getWorkerVnet(
+    vmName: string,
+    bridgeName?: string | null,
+  ): Promise<string | null> {
     const vnetInfo = await Command.runCommand(
       'sudo',
       ['virsh', 'domiflist', vmName],
@@ -473,7 +501,11 @@ ethernets:
   async getDefinedWorkers(): Promise<string[]> {
     console.log('Fetching defined worker VMs...');
 
-    const response = await Command.runCommand('sudo', ['virsh', 'list', '--all']);
+    const response = await Command.runCommand('sudo', [
+      'virsh',
+      'list',
+      '--all',
+    ]);
     const lines = response.split('\n').filter(Boolean);
 
     const vmNameRegex = /(w-\S+)/;
@@ -600,7 +632,11 @@ ethernets:
       diagnostics.vmRunning = await this.isWorkerRunning(vmName);
 
       try {
-        const iflist = await Command.runCommand('sudo', ['virsh', 'domiflist', vmName]);
+        const iflist = await Command.runCommand('sudo', [
+          'virsh',
+          'domiflist',
+          vmName,
+        ]);
         diagnostics.vmInterfaces = iflist.split('\n').filter(Boolean);
         diagnostics.vmHasInterface =
           iflist.includes('bridge') && iflist.includes(bridgeName);
@@ -614,7 +650,11 @@ ethernets:
 
         if (vnet) {
           try {
-            const vnetStatus = await Command.runCommand('ip', ['link', 'show', vnet]);
+            const vnetStatus = await Command.runCommand('ip', [
+              'link',
+              'show',
+              vnet,
+            ]);
             diagnostics.vnetConnectedToBridge = vnetStatus.includes(
               `master ${bridgeName}`,
             );

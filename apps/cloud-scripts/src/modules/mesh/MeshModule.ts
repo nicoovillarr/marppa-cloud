@@ -1,4 +1,4 @@
-import { Module } from '../../decorators/Module';
+import { Module } from '@/decorators/Module';
 import { ZoneCreateProcessor } from './application/ZoneCreateProcessor';
 import { ZoneDeleteProcessor } from './application/ZoneDeleteProcessor';
 import { NodeAssignWorkerProcessor } from './application/NodeAssignWorkerProcessor';

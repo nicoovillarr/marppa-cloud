@@ -1,7 +1,7 @@
 import { Worker, type Job } from 'bullmq';
 import type Redis from 'ioredis';
 import type { IEventRepository } from '../domain/IEventRepository';
-import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
+import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
 import type { ProcessorRegistry } from './ProcessorRegistry';
 import { AbortError } from '../domain/EventPayload';
 

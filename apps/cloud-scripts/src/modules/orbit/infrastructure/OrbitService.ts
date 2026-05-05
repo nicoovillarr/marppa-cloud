@@ -1,8 +1,8 @@
 import fs from 'fs';
 const fsPromises = fs.promises;
-import { Command } from '../../../libs/Command';
+import { Command } from '@/libs/Command';
 import { PrismaClient, ResourceStatus } from '@marppa-cloud/db';
-import { getPrismaClient } from '../../shared/infrastructure/prisma/prismaClient';
+import { getPrismaClient } from '@/shared/infrastructure/prisma/prismaClient';
 import type { IOrbitService } from './IOrbitService';
 
 const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';

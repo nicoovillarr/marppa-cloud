@@ -1,4 +1,4 @@
-import { Module } from '../../decorators/Module';
+import { Module } from '@/decorators/Module';
 import { PortalCreateProcessor } from './application/PortalCreateProcessor';
 import { PortalUpdateProcessor } from './application/PortalUpdateProcessor';
 import { PortalDeleteProcessor } from './application/PortalDeleteProcessor';

@@ -1,13 +1,13 @@
 import type Redis from 'ioredis';
 import type { PrismaClient } from '@marppa-cloud/db';
-import type { BullMQEventQueue } from '../modules/event/infrastructure/BullMQEventQueue';
-import type { EventWorker } from '../modules/event/application/EventWorker';
-import type { HttpServer } from '../modules/shared/infrastructure/http/HttpServer';
-import type { DeleteProcessor } from '../modules/shared/infrastructure/background/DeleteProcessor';
-import type { IPChecker } from '../modules/shared/infrastructure/background/IPChecker';
-import type { LeaseReader } from '../modules/shared/infrastructure/background/LeaseReader';
-import type { ILogger } from '../modules/shared/infrastructure/logger/ILogger';
-import type { WebSocketServer } from '../modules/shared/infrastructure/websocket/WebSocketServer';
+import type { BullMQEventQueue } from '@/event/infrastructure/BullMQEventQueue';
+import type { EventWorker } from '@/event/application/EventWorker';
+import type { HttpServer } from '@/shared/infrastructure/http/HttpServer';
+import type { DeleteProcessor } from '@/shared/infrastructure/background/DeleteProcessor';
+import type { IPChecker } from '@/shared/infrastructure/background/IPChecker';
+import type { LeaseReader } from '@/shared/infrastructure/background/LeaseReader';
+import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import type { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
 
 export class Application {
   constructor(

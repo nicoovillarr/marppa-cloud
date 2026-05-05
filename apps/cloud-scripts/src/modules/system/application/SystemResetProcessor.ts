@@ -1,13 +1,13 @@
 import { EventType } from '@marppa-cloud/db';
-import type { IEventProcessor } from '../../event/domain/IEventProcessor';
-import type { IEventRepository } from '../../event/domain/IEventRepository';
-import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
-import type { EventPayload } from '../../event/domain/EventPayload';
-import type { IMeshService } from '../../mesh/infrastructure/IMeshService';
-import type { IOrbitService } from '../../orbit/infrastructure/IOrbitService';
-import type { IHiveService } from '../../worker/infrastructure/IHiveService';
+import type { IEventProcessor } from '@/event/domain/IEventProcessor';
+import type { IEventRepository } from '@/event/domain/IEventRepository';
+import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import type { EventPayload } from '@/event/domain/EventPayload';
+import type { IMeshService } from '@/mesh/infrastructure/IMeshService';
+import type { IOrbitService } from '@/orbit/infrastructure/IOrbitService';
+import type { IHiveService } from '@/worker/infrastructure/IHiveService';
 
-import { EventProcessor } from '../../../decorators/EventProcessor';
+import { EventProcessor } from '@/decorators/EventProcessor';
 
 @EventProcessor
 export class SystemResetProcessor implements IEventProcessor {

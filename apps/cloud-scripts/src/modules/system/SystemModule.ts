@@ -1,4 +1,4 @@
-import { Module } from '../../decorators/Module';
+import { Module } from '@/decorators/Module';
 import { SystemResetProcessor } from './application/SystemResetProcessor';
 
 @Module({

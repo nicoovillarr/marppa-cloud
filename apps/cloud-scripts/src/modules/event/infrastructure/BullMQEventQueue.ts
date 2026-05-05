@@ -1,6 +1,6 @@
 import { Queue } from 'bullmq';
 import type { IQueue } from '../domain/IQueue';
-import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
+import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
 import Redis from 'ioredis';
 
 const QUEUE_NAME = 'infrastructure-events';

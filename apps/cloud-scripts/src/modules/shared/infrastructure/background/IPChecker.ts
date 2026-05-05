@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@marppa-cloud/db';
 import { ResourceStatus } from '@marppa-cloud/db';
 import type { ILogger } from '../logger/ILogger';
-import { OrbitService } from '../../../orbit/infrastructure/OrbitService';
+import { OrbitService } from '@/orbit/infrastructure/OrbitService';
 
 export class IPChecker {
   private timer: NodeJS.Timeout | null = null;

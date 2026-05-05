@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
-import type { IQueue } from '../../../event/domain/IQueue';
+import type { IQueue } from '@/event/domain/IQueue';
 import type { ILogger } from '../logger/ILogger';
-import { Command } from '../../../../libs/Command';
+import { Command } from '@/libs/Command';
 import path from 'path';
 
 export class HttpServer {

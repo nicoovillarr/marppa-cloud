@@ -1,9 +1,9 @@
-import { Command } from '../../../libs/Command';
+import { Command } from '@/libs/Command';
 import fs from 'fs';
 const fsPromises = fs.promises;
 import path from 'path';
 import os from 'os';
-import { IPHelper } from '../../../libs/IPHelper';
+import { IPHelper } from '@/libs/IPHelper';
 import type { IMeshService } from './IMeshService';
 
 const INTERFACES_DIR = '/etc/network/interfaces.d';

@@ -1,4 +1,4 @@
-import { Module } from '../../decorators/Module';
+import { Module } from '@/decorators/Module';
 import { WorkerCreateProcessor } from './application/WorkerCreateProcessor';
 import { WorkerUpdateProcessor } from './application/WorkerUpdateProcessor';
 import { WorkerStartProcessor } from './application/WorkerStartProcessor';

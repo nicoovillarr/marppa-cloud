@@ -1,4 +1,4 @@
-import type { IEventProcessor } from '../modules/event/domain/IEventProcessor';
+import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 
 export type ProcessorConstructor = new (...args: any[]) => IEventProcessor;
 
