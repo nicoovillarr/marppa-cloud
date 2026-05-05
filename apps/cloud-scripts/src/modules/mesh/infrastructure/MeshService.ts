@@ -37,10 +37,24 @@ export class MeshService implements IMeshService {
   async createZone(cidr, bridgeName, gatewayIp) {
     const ipList = await this.getIpList(cidr);
     const gateway = gatewayIp || ipList[1];
-  
+
     await this.createInterface(bridgeName, cidr, gateway);
-    await this.createDnsmasqConfig(bridgeName, gateway, ipList);
-    await this.createNftablesConfig(bridgeName, cidr);
+
+    try {
+      await this.createDnsmasqConfig(bridgeName, gateway, ipList);
+    } catch (err) {
+      await fsPromises.rm(path.join(INTERFACES_DIR, bridgeName), { force: true });
+      throw err;
+    }
+
+    try {
+      await this.createNftablesConfig(bridgeName, cidr);
+    } catch (err) {
+      await fsPromises.rm(path.join(INTERFACES_DIR, bridgeName), { force: true });
+      await fsPromises.rm(path.join(DNSMASQ_DIR, `${bridgeName}.conf`), { force: true });
+      throw err;
+    }
+
     await this.restartServices();
   }
   
@@ -55,11 +69,11 @@ export class MeshService implements IMeshService {
     const netmask = await this.ipcalcField(cidr, 'Netmask');
   
     const ifaceConf = `auto ${bridgeName}
-  iface ${bridgeName} inet static
+iface ${bridgeName} inet static
   address ${gateway}
   netmask ${netmask}
   bridge_ports none
-  `;
+`;
   
     await fsPromises.writeFile(bridgeFile, ifaceConf);
   }
@@ -123,8 +137,9 @@ export class MeshService implements IMeshService {
       console.log('Restoring last backup...');
       await Command.runCommand('sudo', ['cp', this.latestBackup(), NFT_CONF_PATH]);
       await Command.runCommand('sudo', ['nft', '-f', NFT_CONF_PATH]);
+      throw err;
     }
-  
+
     console.log(`nftables configured successfully for ${bridgeName}`);
   }
   
@@ -228,11 +243,7 @@ export class MeshService implements IMeshService {
       await deleteMatchingRules(
         'inet filter',
         'input',
-        (line) =>
-          line.includes(`iifname "${bridgeName}"`) ||
-          line.includes('icmp type echo-request') ||
-          line.includes('udp sport 68 udp dport 67') ||
-          line.includes('udp sport 67 udp dport 68'),
+        (line) => line.includes(`iifname "${bridgeName}"`),
       );
   
       await deleteMatchingRules(
@@ -240,11 +251,7 @@ export class MeshService implements IMeshService {
         'forward',
         (line) =>
           line.includes(`iifname "${bridgeName}"`) ||
-          line.includes(`oifname "${bridgeName}"`) ||
-          line.includes('ct state established,related') ||
-          (line.includes(`ip daddr`) &&
-            line.includes('dport') &&
-            line.includes('accept')),
+          line.includes(`oifname "${bridgeName}"`),
       );
   
       await deleteMatchingRules(
@@ -258,7 +265,6 @@ export class MeshService implements IMeshService {
       const finalRuleset = await Command.runCommand('sudo', ['nft', 'list', 'ruleset']);
       await fsPromises.writeFile(`/tmp/nftables.conf`, finalRuleset, 'utf8');
       await Command.runCommand('sudo', ['mv', '/tmp/nftables.conf', NFT_CONF_PATH]);
-      await fsPromises.rm(`/tmp/nftables.conf`, { force: true });
   
       console.log(`Deleted nftables config for bridge ${bridgeName}`);
     } catch (err) {
@@ -294,8 +300,12 @@ export class MeshService implements IMeshService {
     await fsPromises.rm(dnsmasqFile, { force: true });
     await fsPromises.rm(nftFilePath, { force: true });
   
-    await Command.runCommand('sudo', ['ip', 'link', 'delete', bridgeName]);
-  
+    try {
+      await Command.runCommand('sudo', ['ip', 'link', 'delete', bridgeName]);
+    } catch (err) {
+      if (!err.message?.includes('Cannot find device')) throw err;
+    }
+
     await this.deleteNftablesConfig(bridgeName, cidr);
   
     await this.restartServices();
@@ -321,14 +331,6 @@ export class MeshService implements IMeshService {
   
     console.log(`Restarting dnsmasq to apply DHCP reservation for ${ip}`);
     await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
-  
-    try {
-      await Command.runCommand('sudo', ['pkill', '-HUP', 'dnsmasq']);
-      console.log(`Signaled dnsmasq to reload configuration`);
-    } catch (e) {
-      console.log(`Could not signal dnsmasq: ${e.message}`);
-    }
-  
     console.log(`✅ DHCP reservation added and activated: ${mac} → ${ip}`);
   }
   
@@ -373,7 +375,8 @@ export class MeshService implements IMeshService {
     );
   
     if (lines.length === newLines.length) {
-      throw new Error(`Could not find MAC ${mac} in ${dnsmasqFile}`);
+      console.log(`MAC ${mac} not found in ${dnsmasqFile}, nothing to remove`);
+      return;
     }
   
     await fsPromises.writeFile(dnsmasqFile, newLines.join('\n'));
@@ -511,7 +514,7 @@ export class MeshService implements IMeshService {
   
       const nftList = await Command.runCommand('sudo', ['nft', 'list', 'ruleset']);
       const inputRule = new RegExp(`iifname\\s+"?${bridgeName}"?\\s+accept`);
-      const forwardInRule = new RegExp(`iifname\\s+"?${bridgeName}"?\\s+accept`);
+      const forwardInRule = new RegExp(`iifname\\s+"?${bridgeName}"?.*accept`);
       const forwardOutRule = new RegExp(`oifname\\s+"?${bridgeName}"?\\s+accept`);
       const natRule = new RegExp(`ip\\s+saddr\\s+${cidr}\\s+masquerade`);
   
@@ -547,7 +550,16 @@ export class MeshService implements IMeshService {
     console.log(
       `Adding port forwarding ${protocol}/${extPortStr} → ${targetIp}:${intPortStr} via ${bridgeName}`,
     );
-  
+
+    const ruleset = await Command.runCommand('sudo', ['nft', 'list', 'ruleset']);
+    const alreadyExists = new RegExp(
+      `${protocol}\\s+dport\\s+${extPortStr}\\s+dnat\\s+to\\s+${targetIp}:${intPortStr}`,
+    ).test(ruleset);
+    if (alreadyExists) {
+      console.log(`Port forwarding rule already exists, skipping.`);
+      return;
+    }
+
     await Command.runCommand('sudo', [
       'nft',
       'add',
@@ -576,7 +588,7 @@ export class MeshService implements IMeshService {
       'state',
       'new',
       'iifname',
-      bridgeName,
+      externalInterface,
       'ip',
       'daddr',
       targetIp,
@@ -602,43 +614,39 @@ export class MeshService implements IMeshService {
       `Removing port forwarding for ${protocol}/${externalPort} → ${targetIp}:${internalPort} via ${bridgeName}`,
     );
   
-    await Command.runCommand('sudo', [
-      'nft',
-      'delete',
-      'rule',
-      'ip',
-      'nat',
+    const deleteRuleByHandle = async (table: string, chain: string, matchFn: (line: string) => boolean) => {
+      const output = await Command.runCommand('sudo', [
+        'nft', '-a', 'list', 'chain', ...table.split(' '), chain,
+      ]);
+      for (const line of output.split('\n')) {
+        const trimmed = line.trim();
+        const handleMatch = trimmed.match(/handle\s+(\d+)/);
+        if (handleMatch && matchFn(trimmed)) {
+          await Command.runCommand('sudo', [
+            'nft', 'delete', 'rule', ...table.split(' '), chain, 'handle', handleMatch[1],
+          ]);
+        }
+      }
+    };
+
+    await deleteRuleByHandle(
+      'ip nat',
       'prerouting',
-      'iifname',
-      externalInterface,
-      protocol,
-      'dport',
-      externalPort,
-      'dnat',
-      'to',
-      `${targetIp}:${internalPort}`,
-    ]);
-  
-    await Command.runCommand('sudo', [
-      'nft',
-      'delete',
-      'rule',
-      'inet',
-      'filter',
+      (line) =>
+        line.includes(`iifname "${externalInterface}"`) &&
+        line.includes(`${protocol} dport ${externalPort}`) &&
+        line.includes(`dnat to ${targetIp}:${internalPort}`),
+    );
+
+    await deleteRuleByHandle(
+      'inet filter',
       'forward',
-      'ct',
-      'state',
-      'new',
-      'iifname',
-      bridgeName,
-      'ip',
-      'daddr',
-      targetIp,
-      protocol,
-      'dport',
-      internalPort,
-    ]);
-  
+      (line) =>
+        line.includes(`iifname "${externalInterface}"`) &&
+        line.includes(`ip daddr ${targetIp}`) &&
+        line.includes(`${protocol} dport ${internalPort}`),
+    );
+
     await this.saveNftConfiguration();
     console.log('✅ Port forwarding rule removed and saved.');
   }
@@ -682,17 +690,17 @@ export class MeshService implements IMeshService {
         return acc;
       }, []);
   
-    let hostPort = null;
-    while (hostPort === null) {
-      const randomPort =
-        Math.floor(Math.random() * (Number(MAX_PORT) - Number(MIN_PORT) + 1)) +
-        Number(MIN_PORT);
-      if (!usedPorts[randomPort]) {
-        hostPort = randomPort;
-      }
+    const min = Number(MIN_PORT);
+    const max = Number(MAX_PORT);
+    const candidates = Array.from({ length: max - min + 1 }, (_, i) => min + i).filter(
+      (p) => !usedPorts[p],
+    );
+
+    if (candidates.length === 0) {
+      throw new Error(`No available ${protocol} ports in range ${MIN_PORT}-${MAX_PORT}`);
     }
-  
-    return hostPort;
+
+    return candidates[Math.floor(Math.random() * candidates.length)];
   }
   
   async listActiveZones() {

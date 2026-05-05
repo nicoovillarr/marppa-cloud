@@ -181,27 +181,23 @@ export class OrbitService implements IOrbitService {
       `Nginx config for portal ${portal.id} written to ${configPath}`,
     );
 
-    try {
-      await Command.runCommand('sudo', ['nginx', '-t'], true);
-      await Command.runCommand('sudo', ['systemctl', 'restart', 'nginx'], true);
-    } catch (error) {
-      console.error(`Nginx configuration test failed: ${error.message}`);
-    }
+    await Command.runCommand('sudo', ['nginx', '-t'], true);
+    await Command.runCommand('sudo', ['systemctl', 'restart', 'nginx'], true);
   }
 
   async deleteNginxConfig(portalId) {
     const configPath = `/etc/nginx/sites-available/${portalId}.conf`;
     const enabledPath = `/etc/nginx/sites-enabled/${portalId}.conf`;
 
-    try {
-      await fsPromises.unlink(configPath);
-      await fsPromises.unlink(enabledPath);
-      console.log(`Nginx config for portal ${portalId} deleted`);
-    } catch (error) {
-      console.error(
-        `Failed to delete Nginx config for portal ${portalId}: ${error.message}`,
-      );
+    for (const filePath of [enabledPath, configPath]) {
+      try {
+        await fsPromises.unlink(filePath);
+      } catch (err) {
+        if (err.code !== 'ENOENT') throw err;
+      }
     }
+
+    console.log(`Nginx config for portal ${portalId} deleted`);
   }
 
   async forceResetOrbit() {
@@ -264,6 +260,7 @@ export class OrbitService implements IOrbitService {
   buildNginxTree(portal, transponders, forceTransponder = null) {
     const listen = [];
     if (portal.listenHttp) listen.push('80');
+    if (portal.sslCertificate) listen.push('443 ssl');
 
     const locations = transponders
       .filter((t) => t.node || t.customIPAddress)

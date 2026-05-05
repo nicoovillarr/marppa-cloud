@@ -25,9 +25,8 @@ export class HiveService implements IHiveService {
 
       if (!fs.existsSync(name)) {
         console.log(`Downloading worker image from: ${url}`);
+        await Command.runCommand('wget', ['-O', name, '-c', url]);
       }
-
-      await Command.runCommand('wget', ['-O', name, '-c', url]);
 
       return true;
     } catch (error) {
@@ -66,6 +65,10 @@ export class HiveService implements IHiveService {
     }
 
     const imgPath = path.join(IMAGE_DIR, `${id}.img`);
+    if (fs.existsSync(imgPath)) {
+      throw new Error(`Worker disk image already exists at ${imgPath}`);
+    }
+
     const cloudInitPath = path.join(CLOUD_INIT_DIR_BASE, id);
     await fsPromises.mkdir(cloudInitPath, { recursive: true });
 
@@ -109,11 +112,13 @@ export class HiveService implements IHiveService {
     ]);
 
     let content = await fsPromises.readFile(grubPath, 'utf8');
-    content = content.replace(
-      /GRUB_CMDLINE_LINUX="([^"]*)"/,
-      (_, g1) => `GRUB_CMDLINE_LINUX="${g1} console=ttyS0"`,
-    );
-    await fsPromises.writeFile(grubPath, content);
+    if (!content.includes('console=ttyS0')) {
+      content = content.replace(
+        /GRUB_CMDLINE_LINUX="([^"]*)"/,
+        (_, g1) => `GRUB_CMDLINE_LINUX="${g1} console=ttyS0"`,
+      );
+      await fsPromises.writeFile(grubPath, content);
+    }
 
     console.log(`Inserting modified GRUB configuration into image: ${imgPath}`);
 
@@ -133,6 +138,21 @@ export class HiveService implements IHiveService {
 
   async addSerialTTYToSecuretty(imgPath: string): Promise<void> {
     console.log(`Adding serial TTY to securetty for image: ${imgPath}`);
+
+    const existing = await Command.runCommand('sudo', [
+      'guestfish',
+      '--ro',
+      '-a',
+      imgPath,
+      '-i',
+      'read-file',
+      '/etc/securetty',
+    ]).catch(() => '');
+
+    if (existing.includes('ttyS0')) {
+      console.log('ttyS0 already in /etc/securetty, skipping');
+      return;
+    }
 
     await Command.runCommand('sudo', [
       'guestfish',
@@ -354,7 +374,7 @@ ethernets:
     await fsPromises.writeFile(tmpPath, newXml);
 
     await Command.runCommand('sudo', ['virsh', 'define', tmpPath]);
-    await fsPromises.rm(tmpPath);
+    await fsPromises.rm(tmpPath, { force: true });
 
     console.log(`Network configuration updated for ${vmName}`);
   }
@@ -381,6 +401,17 @@ ethernets:
 
   async editWorkerDiskSpace(vmName: string, newDiskSizeGb: number): Promise<void> {
     const diskPath = path.join(IMAGE_DIR, `${vmName}.img`);
+
+    const info = await Command.runCommand('qemu-img', ['info', '--output=json', diskPath]);
+    const currentBytes = JSON.parse(info)['virtual-size'];
+    const currentGb = currentBytes / (1024 ** 3);
+
+    if (newDiskSizeGb <= currentGb) {
+      throw new Error(
+        `Cannot shrink disk: current size is ${currentGb.toFixed(1)}GB, requested ${newDiskSizeGb}GB`,
+      );
+    }
+
     await Command.runCommand('qemu-img', ['resize', diskPath, `${newDiskSizeGb}G`]);
   }
 
@@ -431,14 +462,14 @@ ethernets:
     const response = await Command.runCommand('sudo', ['virsh', 'list', '--all']);
     const lines = response.split('\n').filter(Boolean);
 
-    const vmNameRegex = /(w-\S+)/g;
+    const vmNameRegex = /(w-\S+)/;
     const vmNames = [];
 
     for (let i = 2; i < lines.length; i++) {
       const line = lines[i].trim();
-      const match = vmNameRegex.exec(line);
-      if (match && match[0]) {
-        vmNames.push(match[0]);
+      const match = line.match(vmNameRegex);
+      if (match && match[1]) {
+        vmNames.push(match[1]);
       }
     }
 
