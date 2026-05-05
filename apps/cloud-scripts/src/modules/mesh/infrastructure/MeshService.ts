@@ -115,20 +115,20 @@ iface ${bridgeName} inet static
   ) {
     console.log(`Configuring nftables for bridge: ${bridgeName}`);
   
-    const commands = [
-      `add rule inet filter input iifname "${bridgeName}" accept`,
-      `add rule ip nat postrouting oifname "${externalInterface}" ip saddr ${cidr} masquerade`,
-      `add rule inet filter forward iifname "${bridgeName}" accept`,
-      `add rule inet filter forward oifname "${bridgeName}" accept`,
+    const commands: string[][] = [
+      ['add', 'rule', 'inet', 'filter', 'input', 'iifname', `"${bridgeName}"`, 'accept'],
+      ['add', 'rule', 'ip', 'nat', 'postrouting', 'oifname', `"${externalInterface}"`, 'ip', 'saddr', cidr, 'masquerade'],
+      ['add', 'rule', 'inet', 'filter', 'forward', 'iifname', `"${bridgeName}"`, 'accept'],
+      ['add', 'rule', 'inet', 'filter', 'forward', 'oifname', `"${bridgeName}"`, 'accept'],
     ];
-  
+
     console.log(`Adding nftables rules for bridge: ${bridgeName}`);
-  
+
     await this.backupNftablesConfig();
-  
+
     try {
-      for (const cmd of commands) {
-        await Command.runCommand('sudo', ['nft', ...cmd.split(' ')]);
+      for (const args of commands) {
+        await Command.runCommand('sudo', ['nft', ...args]);
       }
   
       await this.saveNftConfiguration();
@@ -201,14 +201,9 @@ iface ${bridgeName} inet static
     cidr,
     externalInterface = process.env.BRIDGE_NAME,
   ) {
-    const deleteMatchingRules = async (table, chain, matchFn) => {
+    const deleteMatchingRules = async (tableArgs: string[], chain: string, matchFn: (line: string) => boolean) => {
       const output = await Command.runCommand('sudo', [
-        'nft',
-        '-a',
-        'list',
-        'chain',
-        ...table.split(' '),
-        chain,
+        'nft', '-a', 'list', 'chain', ...tableArgs, chain,
       ]);
       const lines = output.split('\n');
       for (const line of lines) {
@@ -217,45 +212,39 @@ iface ${bridgeName} inet static
         if (match && matchFn(trimmed)) {
           const handle = match[1];
           await Command.runCommand('sudo', [
-            'nft',
-            'delete',
-            'rule',
-            ...table.split(' '),
-            chain,
-            'handle',
-            handle,
+            'nft', 'delete', 'rule', ...tableArgs, chain, 'handle', handle,
           ]);
-          console.log(`Deleted rule from ${table} ${chain} handle ${handle}`);
+          console.log(`Deleted rule from ${tableArgs.join(' ')} ${chain} handle ${handle}`);
         }
       }
     };
-  
+
     try {
       await deleteMatchingRules(
-        'ip nat',
+        ['ip', 'nat'],
         'postrouting',
         (line) =>
           line.includes(`oifname "${externalInterface}"`) &&
           line.includes(`ip saddr ${cidr}`) &&
           line.includes('masquerade'),
       );
-  
+
       await deleteMatchingRules(
-        'inet filter',
+        ['inet', 'filter'],
         'input',
         (line) => line.includes(`iifname "${bridgeName}"`),
       );
-  
+
       await deleteMatchingRules(
-        'inet filter',
+        ['inet', 'filter'],
         'forward',
         (line) =>
           line.includes(`iifname "${bridgeName}"`) ||
           line.includes(`oifname "${bridgeName}"`),
       );
-  
+
       await deleteMatchingRules(
-        'ip nat',
+        ['ip', 'nat'],
         'prerouting',
         (line) =>
           line.includes(`iifname "${bridgeName}"`) && line.includes('dnat to'),
@@ -614,23 +603,23 @@ iface ${bridgeName} inet static
       `Removing port forwarding for ${protocol}/${externalPort} → ${targetIp}:${internalPort} via ${bridgeName}`,
     );
   
-    const deleteRuleByHandle = async (table: string, chain: string, matchFn: (line: string) => boolean) => {
+    const deleteRuleByHandle = async (tableArgs: string[], chain: string, matchFn: (line: string) => boolean) => {
       const output = await Command.runCommand('sudo', [
-        'nft', '-a', 'list', 'chain', ...table.split(' '), chain,
+        'nft', '-a', 'list', 'chain', ...tableArgs, chain,
       ]);
       for (const line of output.split('\n')) {
         const trimmed = line.trim();
         const handleMatch = trimmed.match(/handle\s+(\d+)/);
         if (handleMatch && matchFn(trimmed)) {
           await Command.runCommand('sudo', [
-            'nft', 'delete', 'rule', ...table.split(' '), chain, 'handle', handleMatch[1],
+            'nft', 'delete', 'rule', ...tableArgs, chain, 'handle', handleMatch[1],
           ]);
         }
       }
     };
 
     await deleteRuleByHandle(
-      'ip nat',
+      ['ip', 'nat'],
       'prerouting',
       (line) =>
         line.includes(`iifname "${externalInterface}"`) &&
@@ -639,7 +628,7 @@ iface ${bridgeName} inet static
     );
 
     await deleteRuleByHandle(
-      'inet filter',
+      ['inet', 'filter'],
       'forward',
       (line) =>
         line.includes(`iifname "${externalInterface}"`) &&

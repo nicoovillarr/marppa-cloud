@@ -1,8 +1,8 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { IQueue } from '../../../event/domain/IQueue';
 import type { ILogger } from '../logger/ILogger';
-
-const executeScript = require('../../../libs/execute-script');
+import { Command } from '../../../../libs/Command';
+import path from 'path';
 
 export class HttpServer {
   private app: FastifyInstance | null = null;
@@ -42,7 +42,9 @@ export class HttpServer {
         return reply.status(400).send({ message: 'Missing required fields: token, zone, record' });
       }
 
-      const result = await executeScript('update_dns.sh', [token, zone, record, ip]);
+      const scriptPath = path.join(__dirname, '..', '..', '..', '..', '..', 'scripts', 'update_dns.sh');
+      const scriptArgs = [token, zone, record, ip].filter((a): a is string => a !== undefined);
+      const result = await Command.runCommand('bash', [scriptPath, ...scriptArgs]).catch(() => null);
       if (!result) {
         return reply.status(500).send({ message: 'Failed to update DNS' });
       }

@@ -8,7 +8,23 @@ import type { IHiveService, WorkerImageSource, WorkerInstanceSource } from './IH
 const IMAGE_DIR = '/var/lib/libvirt/images';
 const CLOUD_INIT_DIR_BASE = '/var/lib/libvirt/cloud-init';
 
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+const SAFE_VM_NAME = /^[a-zA-Z0-9_-]+$/;
+
 export class HiveService implements IHiveService {
+  private validateVmName(vmName: string): void {
+    if (!SAFE_VM_NAME.test(vmName)) {
+      throw new Error(`Invalid VM name: ${vmName}`);
+    }
+  }
   workerImagePath(workerImage: WorkerImageSource): string {
     return path.join(
       IMAGE_DIR,
@@ -186,18 +202,16 @@ export class HiveService implements IHiveService {
 
     const userData = `#cloud-config
 hostname: ${name}
-ssh_pwauth: true
+ssh_pwauth: false
 users:
   - name: ubuntu
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     shell: /bin/bash
-    lock_passwd: false
-    plain_text_passwd: ubuntu
+    lock_passwd: true
     ${sshKeysYaml}
 
   - name: root
-    lock_passwd: false
-    plain_text_passwd: root
+    lock_passwd: true
 
 package_update: true
 package_upgrade: true
@@ -355,8 +369,8 @@ ethernets:
     if (bridgeName && mac) {
       const interfaceXml = `
   <interface type='bridge'>
-    <mac address='${mac}'/>
-    <source bridge='${bridgeName}'/>
+    <mac address='${escapeXml(mac)}'/>
+    <source bridge='${escapeXml(bridgeName)}'/>
     <model type='virtio'/>
     <driver name='vhost' queues='2'/>
   </interface>`;
@@ -494,6 +508,7 @@ ethernets:
   }
 
   async testWorkerLogin(vmName: string): Promise<boolean> {
+    this.validateVmName(vmName);
     try {
       console.log(`Testing login to worker VM: ${vmName}`);
 
@@ -517,6 +532,7 @@ ethernets:
     networkConfigured: boolean;
     sshConfigured: boolean;
   }> {
+    this.validateVmName(vmName);
     const status = {
       cloudInitExists: false,
       cloudInitComplete: false,
@@ -568,6 +584,7 @@ ethernets:
     cloudInitComplete: boolean;
     dhcpRequestVisible: boolean;
   }> {
+    this.validateVmName(vmName);
     const diagnostics = {
       vmRunning: false,
       vmInterfaces: [],
