@@ -4,6 +4,7 @@ const fsPromises = fs.promises;
 import path from 'path';
 import os from 'os';
 import { IPHelper } from '../../../libs/IPHelper';
+import type { IMeshService } from './IMeshService';
 
 const INTERFACES_DIR = '/etc/network/interfaces.d';
 const DNSMASQ_DIR = '/etc/dnsmasq.d';
@@ -11,7 +12,7 @@ const DNSMASQ_DIR = '/etc/dnsmasq.d';
 const NFT_CONF_PATH = '/etc/nftables.conf';
 const NFT_CONF_BACKUP_DIR = '/etc/nft-backups';
 
-export class MeshService {
+export class MeshService implements IMeshService {
   async getIpList(cidr) {
     console.log(`Getting IP list for CIDR: ${cidr}`);
   

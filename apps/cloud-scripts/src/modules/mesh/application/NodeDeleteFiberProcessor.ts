@@ -5,7 +5,7 @@ import type { IEventRepository } from '../../event/domain/IEventRepository';
 import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '../../event/domain/EventPayload';
 import { AbortError } from '../../event/domain/EventPayload';
-import { MeshService } from '../infrastructure/MeshService';
+import type { IMeshService } from '../infrastructure/IMeshService';
 
 import { EventProcessor } from '../../../decorators/EventProcessor';
 
@@ -17,7 +17,7 @@ export class NodeDeleteFiberProcessor implements IEventProcessor {
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
-    private readonly meshService: MeshService,
+    private readonly meshService: IMeshService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

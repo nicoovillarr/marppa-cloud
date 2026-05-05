@@ -1,21 +1,29 @@
 {
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
-  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
     {
       "type": "node",
       "request": "launch",
-      "name": "nodemon",
-      "runtimeExecutable": "nodemon",
-      "program": "${workspaceFolder}/src/index.js",
-      "restart": true,
+      "name": "dev",
+      "runtimeExecutable": "ts-node",
+      "runtimeArgs": ["--transpile-only"],
+      "args": ["src/index.ts"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "env": {
         "NODE_ENV": "development"
       }
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "attach (remote)",
+      "address": "localhost",
+      "port": 9229,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "${workspaceFolder}",
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"]
     }
   ]
 }

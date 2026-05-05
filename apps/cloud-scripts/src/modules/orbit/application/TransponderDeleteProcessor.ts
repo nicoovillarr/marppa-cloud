@@ -5,7 +5,7 @@ import type { IEventRepository } from '../../event/domain/IEventRepository';
 import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '../../event/domain/EventPayload';
 import { AbortError } from '../../event/domain/EventPayload';
-import { OrbitService } from '../infrastructure/OrbitService';
+import type { IOrbitService } from '../infrastructure/IOrbitService';
 
 import { EventProcessor } from '../../../decorators/EventProcessor';
 
@@ -17,7 +17,7 @@ export class TransponderDeleteProcessor implements IEventProcessor {
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
-    private readonly orbitService: OrbitService,
+    private readonly orbitService: IOrbitService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

@@ -16,8 +16,11 @@ import { ConsoleLogger } from '../modules/shared/infrastructure/logger/ConsoleLo
 import { getPrismaClient } from '../modules/shared/infrastructure/prisma/prismaClient';
 import { WebSocketServer } from '../modules/shared/infrastructure/websocket/WebSocketServer';
 import { HiveService } from '../modules/worker/infrastructure/HiveService';
+import { StubHiveService } from '../modules/worker/infrastructure/StubHiveService';
 import { MeshService } from '../modules/mesh/infrastructure/MeshService';
+import { StubMeshService } from '../modules/mesh/infrastructure/StubMeshService';
 import { OrbitService } from '../modules/orbit/infrastructure/OrbitService';
+import { StubOrbitService } from '../modules/orbit/infrastructure/StubOrbitService';
 import { getModuleProcessors } from '../decorators/Module';
 
 function toRegistrationName(value: string): string {
@@ -35,7 +38,10 @@ export function buildContainer() {
     REDIS_URL = 'redis://127.0.0.1:6379',
     JWT_SECRET = '',
     AUTH_TOKEN = '',
+    USE_STUBS = 'false',
   } = process.env;
+
+  const useStubs = USE_STUBS === 'true';
 
   const container = createContainer({
     injectionMode: InjectionMode.CLASSIC,
@@ -55,9 +61,9 @@ export function buildContainer() {
     deleteProcessor: asClass(DeleteProcessor).singleton(),
     ipChecker: asClass(IPChecker).singleton(),
     leaseReader: asClass(LeaseReader).singleton(),
-    hiveService: asClass(HiveService).singleton(),
-    meshService: asClass(MeshService).singleton(),
-    orbitService: asClass(OrbitService).singleton(),
+    hiveService: asClass(useStubs ? StubHiveService : HiveService).singleton(),
+    meshService: asClass(useStubs ? StubMeshService : MeshService).singleton(),
+    orbitService: asClass(useStubs ? StubOrbitService : OrbitService).singleton(),
     httpPort: asValue(Number(PORT)),
     wsPort: asValue(Number(WS_PORT)),
     jwtSecret: asValue(JWT_SECRET),

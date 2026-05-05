@@ -5,7 +5,7 @@ import type { IEventRepository } from '../../event/domain/IEventRepository';
 import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '../../event/domain/EventPayload';
 import { AbortError } from '../../event/domain/EventPayload';
-import { HiveService } from '../infrastructure/HiveService';
+import type { IHiveService } from '../infrastructure/IHiveService';
 
 import { EventProcessor } from '../../../decorators/EventProcessor';
 
@@ -17,7 +17,7 @@ export class WorkerImageCreateProcessor implements IEventProcessor {
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
-    private readonly hiveService: HiveService,
+    private readonly hiveService: IHiveService,
   ) {}
 
   async handle(event: EventPayload): Promise<void> {

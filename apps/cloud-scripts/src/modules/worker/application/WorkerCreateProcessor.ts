@@ -6,7 +6,7 @@ import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '../../event/domain/EventPayload';
 import { AbortError } from '../../event/domain/EventPayload';
 import type { WebSocketServer } from '../../shared/infrastructure/websocket/WebSocketServer';
-import { HiveService } from '../infrastructure/HiveService';
+import type { IHiveService } from '../infrastructure/IHiveService';
 
 type WorkerWithImageAndFlavor = Prisma.WorkerGetPayload<{
   include: { image: true; flavor: true };
@@ -23,7 +23,7 @@ export class WorkerCreateProcessor implements IEventProcessor {
     private readonly repository: IEventRepository,
     private readonly wsServer: WebSocketServer,
     private readonly logger: ILogger,
-    private readonly hiveService: HiveService,
+    private readonly hiveService: IHiveService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

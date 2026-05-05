@@ -1,21 +1,14 @@
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
-import type { WorkerFlavor, WorkerImage } from '@marppa-cloud/db';
 import { Command } from '../../../libs/Command';
 import { sleep } from '../../../libs/sleep';
+import type { IHiveService, WorkerImageSource, WorkerInstanceSource } from './IHiveService';
 
 const IMAGE_DIR = '/var/lib/libvirt/images';
 const CLOUD_INIT_DIR_BASE = '/var/lib/libvirt/cloud-init';
 
-type WorkerImageSource = Pick<
-  WorkerImage,
-  'osType' | 'osFamily' | 'osVersion' | 'imageUrl'
->;
-
-type WorkerInstanceSource = Pick<WorkerFlavor, 'ramMB' | 'cpuCores' | 'diskGB'>;
-
-export class HiveService {
+export class HiveService implements IHiveService {
   workerImagePath(workerImage: WorkerImageSource): string {
     return path.join(
       IMAGE_DIR,

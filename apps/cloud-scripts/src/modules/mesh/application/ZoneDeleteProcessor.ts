@@ -4,7 +4,7 @@ import type { IEventProcessor } from '../../event/domain/IEventProcessor';
 import type { IEventRepository } from '../../event/domain/IEventRepository';
 import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '../../event/domain/EventPayload';
-import { MeshService } from '../infrastructure/MeshService';
+import type { IMeshService } from '../infrastructure/IMeshService';
 
 import { EventProcessor } from '../../../decorators/EventProcessor';
 
@@ -16,11 +16,11 @@ export class ZoneDeleteProcessor implements IEventProcessor {
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
-    private readonly meshService: MeshService,
+    private readonly meshService: IMeshService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {
-    let zone: { id: string; status: string; nodes: unknown[]; [k: string]: unknown } | null = null;
+    let zone: { id: string; status: string; cidr: string; nodes: unknown[]; [k: string]: unknown } | null = null;
 
     const updateZoneStatus = async (status: ResourceStatus) => {
       await this.prisma.zone.update({

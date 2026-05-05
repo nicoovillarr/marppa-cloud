@@ -5,8 +5,8 @@ import type { IEventRepository } from '../../event/domain/IEventRepository';
 import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '../../event/domain/EventPayload';
 import type { WebSocketServer } from '../../shared/infrastructure/websocket/WebSocketServer';
-import { MeshService } from '../infrastructure/MeshService';
-import { HiveService } from '../../worker/infrastructure/HiveService';
+import type { IMeshService } from '../infrastructure/IMeshService';
+import type { IHiveService } from '../../worker/infrastructure/IHiveService';
 
 import { EventProcessor } from '../../../decorators/EventProcessor';
 
@@ -19,8 +19,8 @@ export class NodeUnassignWorkerProcessor implements IEventProcessor {
     private readonly repository: IEventRepository,
     private readonly wsServer: WebSocketServer,
     private readonly logger: ILogger,
-    private readonly meshService: MeshService,
-    private readonly hiveService: HiveService,
+    private readonly meshService: IMeshService,
+    private readonly hiveService: IHiveService,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

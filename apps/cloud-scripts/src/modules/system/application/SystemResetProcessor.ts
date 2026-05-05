@@ -3,9 +3,9 @@ import type { IEventProcessor } from '../../event/domain/IEventProcessor';
 import type { IEventRepository } from '../../event/domain/IEventRepository';
 import type { ILogger } from '../../shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '../../event/domain/EventPayload';
-import { MeshService } from '../../mesh/infrastructure/MeshService';
-import { OrbitService } from '../../orbit/infrastructure/OrbitService';
-import { HiveService } from '../../worker/infrastructure/HiveService';
+import type { IMeshService } from '../../mesh/infrastructure/IMeshService';
+import type { IOrbitService } from '../../orbit/infrastructure/IOrbitService';
+import type { IHiveService } from '../../worker/infrastructure/IHiveService';
 
 import { EventProcessor } from '../../../decorators/EventProcessor';
 
@@ -16,9 +16,9 @@ export class SystemResetProcessor implements IEventProcessor {
   constructor(
     private readonly repository: IEventRepository,
     private readonly logger: ILogger,
-    private readonly hiveService: HiveService,
-    private readonly meshService: MeshService,
-    private readonly orbitService: OrbitService,
+    private readonly hiveService: IHiveService,
+    private readonly meshService: IMeshService,
+    private readonly orbitService: IOrbitService,
   ) {}
 
   async handle(event: EventPayload): Promise<void> {

@@ -11,7 +11,14 @@
       "Bash(grep -E \"\\\\.\\(env|config|json|ts\\)$\")",
       "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\back\\\\prisma\\\\schema.prisma\" -Force)",
       "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\\\\prisma\" -Recurse -Force)",
-      "PowerShell(Move-Item *)"
+      "PowerShell(Move-Item *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\" -Recurse -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\\\\src\\\\libs\\\\WslCommand.ts\" -Force)",
+      "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\\\\src\\\\modules\\\\worker\\\\infrastructure\\\\WslHiveService.ts\" -Force)",
+      "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\\\\src\\\\modules\\\\mesh\\\\infrastructure\\\\WslMeshService.ts\" -Force)",
+      "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\\\\src\\\\modules\\\\orbit\\\\infrastructure\\\\WslOrbitService.ts\" -Force)",
+      "Bash(Write-Output \"Deleted\")"
     ]
   }
 }
