@@ -21,6 +21,7 @@ export class HiveService implements IHiveService {
       throw new Error(`Invalid VM name: ${vmName}`);
     }
   }
+
   workerImagePath(workerImage: WorkerImageSource): string {
     return path.join(
       IMAGE_DIR,
@@ -119,9 +120,10 @@ export class HiveService implements IHiveService {
     ]);
 
     const grubPath = path.join(tmpDir, 'grub');
+    const userName = process.env.USERNAME ?? process.env.USER;
     await Command.runCommand('sudo', [
       'chown',
-      `${process.env.USERNAME}:${process.env.USERNAME}`,
+      `${userName}:${userName}`,
       grubPath,
     ]);
 
@@ -246,7 +248,10 @@ local-hostname: ${name}
 version: 2
 renderer: networkd
 ethernets:
-  enp6s0:
+  id0:
+    match:
+      macaddress: "${mac}"
+    set-name: eth0
     dhcp4: true
 `;
 

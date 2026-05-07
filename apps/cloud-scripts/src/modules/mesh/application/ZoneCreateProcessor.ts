@@ -43,7 +43,7 @@ export class ZoneCreateProcessor implements IEventProcessor {
       }
 
       await updateZoneStatus(ResourceStatus.PROVISIONING);
-      await this.meshService.createZone(zone.cidr, zone.id, '');
+      await this.meshService.createZone(zone.cidr, zone.id, null);
       await updateZoneStatus(ResourceStatus.ACTIVE);
 
       const createdEvent = await this.repository.createEvent(EventType.ZONE_CREATED, event.createdBy, event.companyId);

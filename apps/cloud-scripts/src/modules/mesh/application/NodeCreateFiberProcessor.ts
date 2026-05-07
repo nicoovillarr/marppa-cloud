@@ -6,6 +6,7 @@ import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '@/event/domain/EventPayload';
 import { AbortError } from '@/event/domain/EventPayload';
 import type { IMeshService } from '../infrastructure/IMeshService';
+import { PortConflictError } from '../infrastructure/MeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
 
@@ -58,9 +59,18 @@ export class NodeCreateFiberProcessor implements IEventProcessor {
 
       await updateFiberStatus(ResourceStatus.PROVISIONING);
 
-      const hostPort = await this.meshService.findNextPort(fiber.protocol);
-
-      await this.meshService.addFiber(fiber.node.zoneId, fiber.protocol, hostPort, fiber.node.ipAddress, fiber.targetPort);
+      let hostPort!: number;
+      const MAX_PORT_RETRIES = 5;
+      for (let attempt = 0; attempt < MAX_PORT_RETRIES; attempt++) {
+        hostPort = await this.meshService.findNextPort(fiber.protocol);
+        try {
+          await this.meshService.addFiber(fiber.node.zoneId, fiber.protocol, hostPort, fiber.node.ipAddress, fiber.targetPort);
+          break;
+        } catch (err) {
+          if (err instanceof PortConflictError && attempt < MAX_PORT_RETRIES - 1) continue;
+          throw err;
+        }
+      }
 
       await this.prisma.fiber.update({
         where: { id: fiber.id },

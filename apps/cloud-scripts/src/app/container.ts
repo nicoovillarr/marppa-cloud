@@ -43,6 +43,8 @@ export function buildContainer() {
 
   const useStubs = USE_STUBS === 'true';
 
+  console.log(`[Container]: Using stubs ${(useStubs ? 'enabled' : 'disabled')}`);
+
   const container = createContainer({
     injectionMode: InjectionMode.CLASSIC,
   });

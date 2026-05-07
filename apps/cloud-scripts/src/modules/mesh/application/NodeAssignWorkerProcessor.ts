@@ -63,7 +63,12 @@ export class NodeAssignWorkerProcessor implements IEventProcessor {
       await updateNodeStatus(ResourceStatus.PROVISIONING);
 
       await this.meshService.addNodeToZone(node.zoneId, worker.macAddress, node.ipAddress);
-      await this.hiveService.editWorkerZone(worker.id, node.zoneId, worker.macAddress);
+      try {
+        await this.hiveService.editWorkerZone(worker.id, node.zoneId, worker.macAddress);
+      } catch (err) {
+        await this.meshService.deleteNodeFromZone(node.zoneId, worker.macAddress);
+        throw err;
+      }
 
       await this.prisma.worker.update({
         where: { id: worker.id },

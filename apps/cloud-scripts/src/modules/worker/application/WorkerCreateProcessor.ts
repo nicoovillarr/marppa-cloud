@@ -66,6 +66,12 @@ export class WorkerCreateProcessor implements IEventProcessor {
       }
 
       const publicSshProp = event.properties.find((r) => r.key === 'PublicSSH');
+      if (!publicSshProp) {
+        throw new AbortError(
+          `PublicSSH was not configured`,
+          EventType.WORKER_CREATE_FAILED,
+        );
+      }
 
       if (!(await this.hiveService.ensureWorkerImageExists(worker.image))) {
         throw new AbortError(

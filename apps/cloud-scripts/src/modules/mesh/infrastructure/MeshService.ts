@@ -1,5 +1,12 @@
 import { Command } from '@/libs/Command';
 import fs from 'fs';
+
+export class PortConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PortConflictError';
+  }
+}
 const fsPromises = fs.promises;
 import path from 'path';
 import os from 'os';
@@ -157,12 +164,14 @@ iface ${bridgeName} inet static
     console.log(`Backup created at ${backupFile}`);
   }
   
-  latestBackup() {
+  latestBackup(): string {
     const files = fs.readdirSync(NFT_CONF_BACKUP_DIR);
-  
-    const backups = files.filter((f) => f.startsWith('nftables-'));
-    backups.sort();
-  
+    const backups = files.filter((f) => f.startsWith('nftables-')).sort();
+
+    if (!backups.length) {
+      throw new Error(`No nftables backups found in ${NFT_CONF_BACKUP_DIR} — cannot restore`);
+    }
+
     return path.join(NFT_CONF_BACKUP_DIR, backups[backups.length - 1]);
   }
   
@@ -369,7 +378,7 @@ iface ${bridgeName} inet static
     }
   
     await fsPromises.writeFile(dnsmasqFile, newLines.join('\n'));
-    await this.restartServices();
+    await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
   }
   
   async linkVnetToBridge(vnetName, bridgeName) {
@@ -460,9 +469,6 @@ iface ${bridgeName} inet static
       const dnsmasqFile = path.join(DNSMASQ_DIR, `${bridgeName}.conf`);
       await fsPromises.access(dnsmasqFile);
   
-      const nftFilePath = `/etc/nftables.d/${bridgeName}.conf`;
-      await fsPromises.access(nftFilePath);
-  
       const netmask = await this.ipcalcField(cidr, 'Netmask');
       if (!netmask) {
         throw new Error(`Invalid CIDR: ${cidr}`);
@@ -547,6 +553,13 @@ iface ${bridgeName} inet static
     if (alreadyExists) {
       console.log(`Port forwarding rule already exists, skipping.`);
       return;
+    }
+
+    const portTaken = new RegExp(
+      `${protocol}\\s+dport\\s+${extPortStr}\\s+dnat\\s+to\\s+`,
+    ).test(ruleset);
+    if (portTaken) {
+      throw new PortConflictError(`Port ${extPortStr}/${protocol} is already mapped to a different target`);
     }
 
     await Command.runCommand('sudo', [
