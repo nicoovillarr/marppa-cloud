@@ -1,4 +1,4 @@
-﻿import { EventType, ResourceStatus } from '@marppa-cloud/db';
+import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 import { IEventRepository } from '@/event/domain/IEventRepository';
@@ -9,10 +9,8 @@ import { IMeshService } from '../infrastructure/IMeshService';
 import { PortConflictError } from '../infrastructure/MeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
-import { Injectable } from '@/decorators/Injectable';
 import { Inject } from '@/decorators/Inject';
 
-@Injectable()
 @EventProcessor(EventType.NODE_CREATE_FIBER)
 export class NodeCreateFiberProcessor implements IEventProcessor {
 

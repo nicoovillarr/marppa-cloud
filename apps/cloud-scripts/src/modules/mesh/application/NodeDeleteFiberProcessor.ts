@@ -1,4 +1,4 @@
-﻿import { EventType, ResourceStatus } from '@marppa-cloud/db';
+import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 import { IEventRepository } from '@/event/domain/IEventRepository';
@@ -8,10 +8,8 @@ import { AbortError } from '@/event/domain/EventPayload';
 import { IMeshService } from '../infrastructure/IMeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
-import { Injectable } from '@/decorators/Injectable';
 import { Inject } from '@/decorators/Inject';
 
-@Injectable()
 @EventProcessor(EventType.NODE_DELETE_FIBER)
 export class NodeDeleteFiberProcessor implements IEventProcessor {
 

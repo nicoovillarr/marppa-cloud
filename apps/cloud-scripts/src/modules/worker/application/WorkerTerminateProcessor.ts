@@ -1,4 +1,4 @@
-﻿import { EventType, ResourceStatus } from '@marppa-cloud/db';
+import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 import { IEventRepository } from '@/event/domain/IEventRepository';
@@ -9,10 +9,8 @@ import { IHiveService } from '../infrastructure/IHiveService';
 import { IMeshService } from '@/mesh/infrastructure/IMeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
-import { Injectable } from '@/decorators/Injectable';
 import { Inject } from '@/decorators/Inject';
 
-@Injectable()
 @EventProcessor(EventType.WORKER_TERMINATE)
 export class WorkerTerminateProcessor implements IEventProcessor {
 

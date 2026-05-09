@@ -1,4 +1,4 @@
-﻿import { EventType, ResourceStatus } from '@marppa-cloud/db';
+import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 import { IEventRepository } from '@/event/domain/IEventRepository';
@@ -7,10 +7,8 @@ import type { EventPayload } from '@/event/domain/EventPayload';
 import { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
-import { Injectable } from '@/decorators/Injectable';
 import { Inject } from '@/decorators/Inject';
 
-@Injectable()
 @EventProcessor(EventType.WORKER_UPDATE)
 export class WorkerUpdateProcessor implements IEventProcessor {
   constructor(

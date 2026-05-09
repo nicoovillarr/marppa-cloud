@@ -1,4 +1,4 @@
-﻿import { EventType } from '@marppa-cloud/db';
+import { EventType } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 import { IEventRepository } from '@/event/domain/IEventRepository';
 import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
@@ -8,10 +8,8 @@ import { IOrbitService } from '@/orbit/infrastructure/IOrbitService';
 import { IHiveService } from '@/worker/infrastructure/IHiveService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
-import { Injectable } from '@/decorators/Injectable';
 import { Inject } from '@/decorators/Inject';
 
-@Injectable()
 @EventProcessor(EventType.SYSTEM_RESET)
 export class SystemResetProcessor implements IEventProcessor {
 

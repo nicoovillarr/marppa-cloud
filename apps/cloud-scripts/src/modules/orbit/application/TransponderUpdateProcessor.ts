@@ -1,4 +1,4 @@
-﻿import { EventType, ResourceStatus } from '@marppa-cloud/db';
+import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 import { IEventRepository } from '@/event/domain/IEventRepository';
@@ -7,9 +7,7 @@ import { AbortError } from '@/event/domain/EventPayload';
 import { IOrbitService } from '../infrastructure/IOrbitService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
-import { Injectable } from '@/decorators/Injectable';
 
-@Injectable()
 @EventProcessor(EventType.TRANSPONDER_UPDATE)
 export class TransponderUpdateProcessor implements IEventProcessor {
 
