@@ -16,7 +16,7 @@ export class HttpServer implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const { HTTP_PORT, AUTH_TOKEN } = process.env;
+    const { HTTP_PORT = 8080, AUTH_TOKEN } = process.env;
 
     const app = Fastify({ logger: false });
 

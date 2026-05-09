@@ -9,7 +9,9 @@ export class RedisService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor(private readonly logger: LoggerService) {
-    super(process.env.REDIS_URL);
+    super(process.env.REDIS_URL, {
+      maxRetriesPerRequest: null,
+    });
   }
 
   public onModuleInit(): void {

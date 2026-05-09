@@ -12,6 +12,7 @@ import { AppModule } from '../AppModule';
 import { ProcessorRegistry } from '@/event/application/ProcessorRegistry';
 import {
   getModuleMeta,
+  isForwardRef,
   type Lifecycle,
   type ModuleConstructor,
   type ProviderDefinition,
@@ -30,12 +31,20 @@ export interface AppBootstrap {
   lifecycleProviders: object[];
 }
 
+interface ModuleScope {
+  visible: Set<string>;
+  exports: Set<string>;
+}
+
 interface CollectedGraph {
   providers: NormalizedProvider[];
   processors: Constructor[];
   processorKeys: Map<Constructor, string>;
   modules: ModuleConstructor[];
   moduleKeys: Map<ModuleConstructor, string>;
+  scopes: Map<ModuleConstructor, ModuleScope>;
+  processorOwner: Map<Constructor, ModuleConstructor>;
+  providerOwner: Map<string, ModuleConstructor>;
 }
 
 export interface OnModuleInit {
@@ -60,6 +69,14 @@ export class AppContainer {
   private static readonly _clsKeys = new Map<Function, string>();
   private static readonly REGISTRY_KEY =
     AppContainer._classKey(ProcessorRegistry);
+
+  private static readonly _PRIMITIVES = new Set<Function>([
+    Number, String, Boolean, BigInt, Symbol,
+  ]);
+
+  private static _isPrimitive(token: ProviderToken): boolean {
+    return typeof token === 'function' && AppContainer._PRIMITIVES.has(token as Function);
+  }
 
   private static _symbolKey(sym: symbol): string {
     let k = AppContainer._symKeys.get(sym);
@@ -136,7 +153,9 @@ export class AppContainer {
     }
 
     return asFunction((cradle: Record<string, unknown>) => {
-      const args = tokens.map((t) => cradle[AppContainer.tokenKey(t)]);
+      const args = tokens.map((t) =>
+        AppContainer._isPrimitive(t) ? undefined : cradle[AppContainer.tokenKey(t)],
+      );
       return new Cls(...args);
     }).setLifetime(AppContainer._awilixLifetime(lifecycle));
   }
@@ -162,8 +181,12 @@ export class AppContainer {
       processorKeys: new Map(),
       modules: [],
       moduleKeys: new Map(),
+      scopes: new Map(),
+      processorOwner: new Map(),
+      providerOwner: new Map(),
     };
     const visited = new Set<ModuleConstructor>();
+    const deferredScopes: Array<{ mod: ModuleConstructor; forwardImports: ModuleConstructor[] }> = [];
 
     const visit = (
       mod: ModuleConstructor,
@@ -177,26 +200,74 @@ export class AppContainer {
       if (visited.has(mod)) return;
       visited.add(mod);
 
-      const { imports, providers, processors } = getModuleMeta(mod);
-      for (const imp of imports) visit(imp, [...stack, mod]);
+      const { imports: rawImports, providers, processors, exports: exportTokens } = getModuleMeta(mod);
 
-      graph.providers.push(
-        ...providers.map(
-          (def): NormalizedProvider =>
-            typeof def === 'function' ? { provide: def } : def,
-        ),
+      const deferred: ModuleConstructor[] = [];
+      for (const rawImp of rawImports) {
+        const imp: ModuleConstructor = isForwardRef(rawImp) ? rawImp.forwardRef() : rawImp as ModuleConstructor;
+        if (isForwardRef(rawImp) && stack.includes(imp)) {
+          deferred.push(imp);
+          continue;
+        }
+        visit(imp, [...stack, mod]);
+      }
+
+      const normalizedProviders = providers.map(
+        (def): NormalizedProvider =>
+          typeof def === 'function' ? { provide: def } : def,
       );
+
+      const visible = new Set<string>();
+      for (const def of normalizedProviders) {
+        visible.add(AppContainer.tokenKey(def.provide));
+      }
+      for (const rawImp of rawImports) {
+        const imp: ModuleConstructor = isForwardRef(rawImp) ? rawImp.forwardRef() : rawImp as ModuleConstructor;
+        const impScope = graph.scopes.get(imp);
+        if (impScope) {
+          for (const key of impScope.exports) visible.add(key);
+        }
+      }
+
+      const exportSet = new Set<string>(
+        exportTokens.map((t) => AppContainer.tokenKey(t)),
+      );
+
+      graph.scopes.set(mod, { visible, exports: exportSet });
+
+      graph.providers.push(...normalizedProviders);
+      for (const def of normalizedProviders) {
+        graph.providerOwner.set(AppContainer.tokenKey(def.provide), mod);
+      }
+
       for (const cls of processors) {
         graph.processors.push(cls);
         graph.processorKeys.set(cls, AppContainer._freshKey());
+        graph.processorOwner.set(cls, mod);
       }
+
       if (mod !== root) {
         graph.modules.push(mod);
         graph.moduleKeys.set(mod, AppContainer._freshKey());
       }
+
+      if (deferred.length > 0) {
+        deferredScopes.push({ mod, forwardImports: deferred });
+      }
     };
 
     visit(root, []);
+
+    for (const { mod, forwardImports } of deferredScopes) {
+      const scope = graph.scopes.get(mod)!;
+      for (const imp of forwardImports) {
+        const impScope = graph.scopes.get(imp);
+        if (impScope) {
+          for (const key of impScope.exports) scope.visible.add(key);
+        }
+      }
+    }
+
     return graph;
   }
 
@@ -217,11 +288,18 @@ export class AppContainer {
       seenEvents.add(type);
     }
 
-    const known = new Set<string>([AppContainer.REGISTRY_KEY]);
+    const globalKnown = new Set<string>([AppContainer.REGISTRY_KEY]);
     for (const def of graph.providers)
-      known.add(AppContainer.tokenKey(def.provide));
+      globalKnown.add(AppContainer.tokenKey(def.provide));
 
-    const checkClass = (cls: Constructor, label: string): void => {
+    const getVisible = (mod: ModuleConstructor | undefined): Set<string> => {
+      if (!mod) return globalKnown;
+      const scope = graph.scopes.get(mod);
+      if (!scope) return globalKnown;
+      return new Set([...scope.visible, AppContainer.REGISTRY_KEY]);
+    };
+
+    const checkClass = (cls: Constructor, label: string, visible: Set<string>): void => {
       let tokens: ProviderToken[];
       try {
         tokens = AppContainer._resolveParamTokens(cls);
@@ -229,30 +307,43 @@ export class AppContainer {
         throw new Error(`${label}: ${e.message}`);
       }
       for (let i = 0; i < tokens.length; i++) {
+        if (AppContainer._isPrimitive(tokens[i])) continue;
         const key = AppContainer.tokenKey(tokens[i]);
-        if (!known.has(key))
+        if (!visible.has(key))
           throw new Error(
-            `${label}: param ${i} refers to unknown token "${key}"`,
+            `${label}: param ${i} refers to token "${key}" not visible in module scope — add it to the module's imports/exports`,
           );
       }
     };
 
     for (const def of graph.providers) {
+      const ownerMod = graph.providerOwner.get(AppContainer.tokenKey(def.provide));
+      const visible = getVisible(ownerMod);
       if ('useClass' in def) {
         checkClass(
           def.useClass,
           `Provider "${AppContainer.tokenKey(def.provide)}" (${def.useClass.name})`,
+          visible,
         );
       } else if (!('useFactory' in def) && !('useValue' in def)) {
         checkClass(
           def.provide as Constructor,
           `Provider (${(def.provide as Constructor).name})`,
+          visible,
         );
       }
     }
-    for (const cls of graph.processors)
-      checkClass(cls, `Processor ${cls.name}`);
-    for (const mod of graph.modules) checkClass(mod, `Module ${mod.name}`);
+
+    for (const cls of graph.processors) {
+      const ownerMod = graph.processorOwner.get(cls);
+      const visible = getVisible(ownerMod);
+      checkClass(cls, `Processor ${cls.name}`, visible);
+    }
+
+    for (const mod of graph.modules) {
+      const visible = getVisible(mod);
+      checkClass(mod, `Module ${mod.name}`, visible);
+    }
 
     const edges = new Map<string, string[]>();
     for (const def of graph.providers) {
@@ -261,9 +352,9 @@ export class AppContainer {
         try {
           edges.set(
             from,
-            AppContainer._resolveParamTokens(def.useClass).map((t) =>
-              AppContainer.tokenKey(t),
-            ),
+            AppContainer._resolveParamTokens(def.useClass)
+              .filter((t) => !AppContainer._isPrimitive(t))
+              .map((t) => AppContainer.tokenKey(t)),
           );
         } catch {
           edges.set(from, []);

@@ -1,6 +1,5 @@
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import type { Prisma } from '@marppa-cloud/db';
-import { PrismaClient } from '@marppa-cloud/db';
 import { IEventProcessor } from '@/event/application/EventWorker';
 import type { EventPayload } from '@/event/domain/models/EventPayload';
 import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';

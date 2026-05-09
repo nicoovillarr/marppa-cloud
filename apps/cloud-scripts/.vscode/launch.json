@@ -7,7 +7,8 @@
       "name": "dev",
       "runtimeExecutable": "node",
       "runtimeArgs": [
-        "${workspaceFolder}\\..\\..\\node_modules\\tsx\\dist\\cli.mjs"
+        "--require", "ts-node/register",
+        "--require", "tsconfig-paths/register"
       ],
       "args": ["${workspaceFolder}\\src\\index.ts"],
       "cwd": "${workspaceFolder}",

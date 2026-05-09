@@ -15,10 +15,27 @@ export type ProviderDefinition =
   | { provide: ProviderToken; useValue: unknown }
   | { provide: AnyConstructor; lifecycle?: Lifecycle };
 
+export interface ForwardRef {
+  forwardRef: () => ModuleConstructor;
+}
+
+export function forwardRef(fn: () => ModuleConstructor): ForwardRef {
+  return { forwardRef: fn };
+}
+
+export function isForwardRef(val: unknown): val is ForwardRef {
+  return (
+    typeof val === 'object' &&
+    val !== null &&
+    typeof (val as any).forwardRef === 'function'
+  );
+}
+
 interface ModuleMetadata {
-  imports?:    ModuleConstructor[];
+  imports?:    (ModuleConstructor | ForwardRef)[];
   processors?: ProcessorConstructor[];
   providers?:  ProviderDefinition[];
+  exports?:    ProviderToken[];
 }
 
 export type ModuleConstructor = new (...args: any[]) => object;
@@ -26,9 +43,10 @@ export type ModuleConstructor = new (...args: any[]) => object;
 const registry = new WeakMap<ModuleConstructor, ModuleMetadata>();
 
 export interface ModuleData {
-  imports:    ModuleConstructor[];
+  imports:    (ModuleConstructor | ForwardRef)[];
   processors: ProcessorConstructor[];
   providers:  ProviderDefinition[];
+  exports:    ProviderToken[];
 }
 
 export function getModuleMeta(mod: ModuleConstructor): ModuleData {
@@ -37,6 +55,7 @@ export function getModuleMeta(mod: ModuleConstructor): ModuleData {
     imports:    meta.imports    ?? [],
     processors: meta.processors ?? [],
     providers:  meta.providers  ?? [],
+    exports:    meta.exports    ?? [],
   };
 }
 

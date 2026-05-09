@@ -13,7 +13,7 @@ export class PrismaService
   private readonly pool: Pool;
 
   constructor() {
-    const { DB_CA } = process.env;
+    const { DATABASE_URL, DB_CA } = process.env;
     let ssl: ConnectionOptions | undefined;
 
     if (DB_CA) {
@@ -23,7 +23,7 @@ export class PrismaService
     }
 
     const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: DATABASE_URL,
       ssl,
     });
 
@@ -33,7 +33,7 @@ export class PrismaService
       adapter,
       log:
         process.env.NODE_ENV === 'development'
-          ? ['query', 'info', 'warn', 'error']
+          ? ['info', 'warn', 'error']
           : ['warn', 'error'],
     });
 

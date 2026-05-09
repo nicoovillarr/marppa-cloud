@@ -1,15 +1,16 @@
 import fs from 'fs';
 const fsPromises = fs.promises;
 import { Command } from '@/libs/Command';
-import { PrismaClient, ResourceStatus } from '@marppa-cloud/db';
+import { ResourceStatus } from '@marppa-cloud/db';
 import { OrbitService } from '../../domain/services/OrbitService';
 import { Injectable } from '@/decorators/Injectable';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 
 const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
 
 @Injectable()
 export class LinuxOrbitService extends OrbitService {
-  constructor(private readonly prisma: PrismaClient) {
+  constructor(private readonly prisma: PrismaService) {
     super();
   }
 

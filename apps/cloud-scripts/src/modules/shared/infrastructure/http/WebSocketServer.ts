@@ -16,7 +16,7 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly logger: LoggerService) {}
 
   public onModuleInit(): void {
-    const { WS_PORT, JWT_SECRET } = process.env;
+    const { WS_PORT = 5000 } = process.env;
 
     this.wss = new WsServer({ port: Number(WS_PORT) });
 

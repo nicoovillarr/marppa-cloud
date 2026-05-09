@@ -15,13 +15,13 @@ export class NodeDeleteFiberProcessor implements IEventProcessor {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly logger: LoggerService,
+
+    @Inject(MESH_SERVICE_TOKEN)
     private readonly meshService: MeshService,
     
     @Inject(EVENT_REPOSITORY_TOKEN)
     private readonly repository: EventRepository,
-
-    @Inject(MESH_SERVICE_TOKEN)
-    private readonly logger: LoggerService,
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {

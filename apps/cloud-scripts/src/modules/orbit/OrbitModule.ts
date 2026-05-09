@@ -1,4 +1,6 @@
 import { Module } from '@/decorators/Module';
+import { SharedModule } from '@/shared/SharedModule';
+import { EventModule } from '@/event/EventModule';
 import { PortalCreateProcessor } from './application/PortalCreateProcessor';
 import { PortalUpdateProcessor } from './application/PortalUpdateProcessor';
 import { PortalDeleteProcessor } from './application/PortalDeleteProcessor';
@@ -12,6 +14,7 @@ import { ORBIT_SERVICE_TOKEN } from './domain/services/OrbitService';
 const useStubs = process.env.USE_STUBS === 'true';
 
 @Module({
+  imports: [SharedModule, EventModule],
   providers: [
     {
       provide: ORBIT_SERVICE_TOKEN,
@@ -26,5 +29,6 @@ const useStubs = process.env.USE_STUBS === 'true';
     TransponderUpdateProcessor,
     TransponderDeleteProcessor,
   ],
+  exports: [ORBIT_SERVICE_TOKEN],
 })
 export class OrbitModule {}

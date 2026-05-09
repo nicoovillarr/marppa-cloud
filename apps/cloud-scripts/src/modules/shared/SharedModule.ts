@@ -13,5 +13,12 @@ import { WebSocketServer } from './infrastructure/http/WebSocketServer';
     HttpServer,
     WebSocketServer,
   ],
+  exports: [
+    PrismaService,
+    LoggerService,
+    RedisService,
+    HttpServer,
+    WebSocketServer,
+  ],
 })
 export class SharedModule {}

@@ -30,6 +30,10 @@ export class LoggerService implements OnModuleInit {
     return path.join(this.logDir, 'app.log');
   }
 
+  private get shouldLogFile(): boolean {
+    return this.logDir != null && fs.existsSync(this.logFile);
+  }
+
   public onModuleInit(): Promise<void> | void {
     if (this.logDir) {
       if (!fs.existsSync(this.logDir)) {
@@ -105,14 +109,16 @@ export class LoggerService implements OnModuleInit {
   }
 
   private rotateOnStartup(): void {
-    if (fs.existsSync(this.logFile)) {
-      const stats = fs.statSync(this.logFile);
-      if (stats.size > 0) this.rotateQueue();
-      else this.currentSize = stats.size;
-    }
+    if (!this.shouldLogFile) return
+      
+    const stats = fs.statSync(this.logFile);
+    if (stats.size > 0) this.rotateQueue();
+    else this.currentSize = stats.size;
   }
 
   private writeToFile(level: string, message: string): void {
+    if (!this.shouldLogFile) return;
+
     const line = `${this.timestamp()} [${level}] ${message}\n`;
     const lineSize = Buffer.byteLength(line, 'utf8');
 
