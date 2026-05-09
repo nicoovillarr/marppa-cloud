@@ -2,13 +2,14 @@
 import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '@/event/domain/EventPayload';
 import { AbortError } from '@/event/domain/EventPayload';
 import { IMeshService } from '../infrastructure/IMeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
 import { Injectable } from '@/decorators/Injectable';
+import { Inject } from '@/decorators/Inject';
 
 @Injectable()
 @EventProcessor(EventType.NODE_DELETE_FIBER)
@@ -17,8 +18,10 @@ export class NodeDeleteFiberProcessor implements IEventProcessor {
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
-    private readonly logger: ILogger,
     private readonly meshService: IMeshService,
+    
+    @Inject(ILOGGER_TOKEN)
+    private readonly logger: ILogger,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

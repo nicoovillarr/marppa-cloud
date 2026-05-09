@@ -1,6 +1,7 @@
 import fs from 'fs';
-import { ILogger } from '../logger/ILogger';
+import { ILogger, ILOGGER_TOKEN } from '../logger/ILogger';
 import { Injectable } from '@/decorators/Injectable';
+import { Inject } from '@/decorators/Inject';
 
 const LEASES_FILE = '/var/lib/misc/dnsmasq.leases';
 
@@ -9,8 +10,10 @@ export class LeaseReader {
   private timer: NodeJS.Timeout | null = null;
 
   constructor(
-    private readonly logger: ILogger,
     private readonly intervalMs: number = 15_000,
+    
+    @Inject(ILOGGER_TOKEN)
+    private readonly logger: ILogger,
   ) {}
 
   start(): void {

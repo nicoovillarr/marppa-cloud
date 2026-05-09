@@ -2,7 +2,7 @@
 import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '@/event/domain/EventPayload';
 import { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
 import { IMeshService } from '../infrastructure/IMeshService';
@@ -10,6 +10,7 @@ import { IHiveService } from '@/worker/infrastructure/IHiveService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
 import { Injectable } from '@/decorators/Injectable';
+import { Inject } from '@/decorators/Inject';
 
 @Injectable()
 @EventProcessor(EventType.NODE_UNASSIGN_WORKER)
@@ -19,9 +20,11 @@ export class NodeUnassignWorkerProcessor implements IEventProcessor {
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
     private readonly wsServer: WebSocketServer,
-    private readonly logger: ILogger,
     private readonly meshService: IMeshService,
     private readonly hiveService: IHiveService,
+    
+    @Inject(ILOGGER_TOKEN)
+    private readonly logger: ILogger,
   ) { }
 
   async handle(event: EventPayload): Promise<void> {

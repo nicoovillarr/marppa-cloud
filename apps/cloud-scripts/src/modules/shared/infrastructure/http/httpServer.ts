@@ -1,14 +1,16 @@
 import Fastify, { type FastifyInstance } from 'fastify';
-import { ILogger } from '../logger/ILogger';
+import { ILogger, ILOGGER_TOKEN } from '../logger/ILogger';
 import { Command } from '@/libs/Command';
 import path from 'path';
 import { Injectable } from '@/decorators/Injectable';
+import { Inject } from '@/decorators/Inject';
 
 @Injectable()
 export class HttpServer {
   private app: FastifyInstance | null = null;
 
   constructor(
+    @Inject(ILOGGER_TOKEN)
     private readonly logger: ILogger,
   ) {}
 
@@ -43,6 +45,16 @@ export class HttpServer {
 
       if (!token || !zone || !record) {
         return reply.status(400).send({ message: 'Missing required fields: token, zone, record' });
+      }
+
+      const ZONE_RE = /^[a-zA-Z0-9.\-]{1,253}$/;
+      const RECORD_RE = /^[a-zA-Z0-9._\-]{1,63}$/;
+      const IP_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
+      if (!ZONE_RE.test(zone) || !RECORD_RE.test(record)) {
+        return reply.status(400).send({ message: 'Invalid zone or record format' });
+      }
+      if (ip !== undefined && !IP_RE.test(ip)) {
+        return reply.status(400).send({ message: 'Invalid IP format' });
       }
 
       const scriptPath = path.join(__dirname, '..', '..', '..', '..', '..', 'scripts', 'update_dns.sh');

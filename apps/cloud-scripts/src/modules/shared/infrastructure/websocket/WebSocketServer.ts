@@ -1,7 +1,8 @@
 import WebSocket, { WebSocketServer as WsServer } from 'ws';
 import { jwtVerify } from 'jose';
-import type { ILogger } from '../logger/ILogger';
+import { ILOGGER_TOKEN, type ILogger } from '../logger/ILogger';
 import { Injectable } from '@/decorators/Injectable';
+import { Inject } from '@/decorators/Inject';
 
 type ChannelMap = Record<string, Set<string>>;
 type ClientMap = Record<string, Map<string, WebSocket>>;
@@ -13,14 +14,12 @@ export class WebSocketServer {
   private wss: WsServer | null = null;
 
   constructor(
+    @Inject(ILOGGER_TOKEN)
     private readonly logger: ILogger,
   ) {}
 
   init(): void {
-    const {
-      WS_PORT,
-      JWT_SECRET,
-    } = process.env;
+    const { WS_PORT, JWT_SECRET } = process.env;
 
     this.wss = new WsServer({ port: Number(WS_PORT) });
 
@@ -37,16 +36,25 @@ export class WebSocketServer {
           if (type === 'AUTH') {
             const accessToken = data.accessToken as string | undefined;
             if (!accessToken) {
-              socket.send(JSON.stringify({ type: 'AUTH_FAILURE', message: 'No token' }));
+              socket.send(
+                JSON.stringify({ type: 'AUTH_FAILURE', message: 'No token' }),
+              );
               return;
             }
 
             try {
-              const secret = new TextEncoder().encode(JWT_SECRET);
+              if (!process.env.JWT_SECRET)
+                throw new Error('JWT_SECRET env var is required');
+              const secret = new TextEncoder().encode(process.env.JWT_SECRET);
               const { payload } = await jwtVerify(accessToken, secret);
               socket.userId = payload.userId as string;
             } catch {
-              socket.send(JSON.stringify({ type: 'AUTH_FAILURE', message: 'Invalid token' }));
+              socket.send(
+                JSON.stringify({
+                  type: 'AUTH_FAILURE',
+                  message: 'Invalid token',
+                }),
+              );
               return;
             }
 
@@ -69,15 +77,26 @@ export class WebSocketServer {
             if (type === 'SUBSCRIBE_CHANNEL') {
               if (!this.channels[channel]) this.channels[channel] = new Set();
               this.channels[channel].add(userId);
-              socket.send(JSON.stringify({ type: 'SUBSCRIBE_CHANNEL_SUCCEEDED', channel }));
-              this.logger.log(`[WebSocketServer] ${userId} subscribed to ${channel}`);
+              socket.send(
+                JSON.stringify({
+                  type: 'SUBSCRIBE_CHANNEL_SUCCEEDED',
+                  channel,
+                }),
+              );
+              this.logger.log(
+                `[WebSocketServer] ${userId} subscribed to ${channel}`,
+              );
             } else if (type === 'UNSUBSCRIBE_CHANNEL') {
               this.channels[channel]?.delete(userId);
-              this.logger.log(`[WebSocketServer] ${userId} unsubscribed from ${channel}`);
+              this.logger.log(
+                `[WebSocketServer] ${userId} unsubscribed from ${channel}`,
+              );
             }
           }
         } catch (err) {
-          this.logger.error(`[WebSocketServer] Error handling message: ${String(err)}`);
+          this.logger.error(
+            `[WebSocketServer] Error handling message: ${String(err)}`,
+          );
         }
       });
 
@@ -142,7 +161,10 @@ export class WebSocketServer {
   ): void {
     this.sendMessage(`hive:worker:${worker.id}`, type, data);
     if (worker.ownerId) {
-      this.sendMessage(`company:${worker.ownerId}:hive`, type, { workerId: worker.id, data });
+      this.sendMessage(`company:${worker.ownerId}:hive`, type, {
+        workerId: worker.id,
+        data,
+      });
     }
   }
 
@@ -153,7 +175,10 @@ export class WebSocketServer {
   ): void {
     this.sendMessage(`mesh:zone:${node.id}`, type, data);
     if (node.ownerId) {
-      this.sendMessage(`company:${node.ownerId}:mesh`, type, { nodeId: node.id, data });
+      this.sendMessage(`company:${node.ownerId}:mesh`, type, {
+        nodeId: node.id,
+        data,
+      });
     }
   }
 }

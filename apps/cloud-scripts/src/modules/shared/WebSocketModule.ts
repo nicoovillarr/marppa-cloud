@@ -3,7 +3,7 @@ import { WebSocketServer } from './infrastructure/websocket/WebSocketServer';
 
 @Module({
   providers: [
-    { provide: WebSocketServer },
+    WebSocketServer,
   ],
 })
 export class WebSocketModule {

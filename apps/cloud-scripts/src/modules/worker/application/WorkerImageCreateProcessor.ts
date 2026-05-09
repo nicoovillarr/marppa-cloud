@@ -2,13 +2,14 @@
 import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '@/event/domain/EventPayload';
 import { AbortError } from '@/event/domain/EventPayload';
 import { IHiveService } from '../infrastructure/IHiveService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
 import { Injectable } from '@/decorators/Injectable';
+import { Inject } from '@/decorators/Inject';
 
 @Injectable()
 @EventProcessor(EventType.WORKER_IMAGE_CREATE)
@@ -17,8 +18,10 @@ export class WorkerImageCreateProcessor implements IEventProcessor {
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
-    private readonly logger: ILogger,
     private readonly hiveService: IHiveService,
+    
+    @Inject(ILOGGER_TOKEN)
+    private readonly logger: ILogger,
   ) {}
 
   async handle(event: EventPayload): Promise<void> {

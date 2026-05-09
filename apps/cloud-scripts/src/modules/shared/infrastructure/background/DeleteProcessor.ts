@@ -1,7 +1,8 @@
 import { Prisma, type PrismaClient } from '@marppa-cloud/db';
 import { ResourceStatus } from '@marppa-cloud/db';
-import { ILogger } from '../logger/ILogger';
+import { ILogger, ILOGGER_TOKEN } from '../logger/ILogger';
 import { Injectable } from '@/decorators/Injectable';
+import { Inject } from '@/decorators/Inject';
 
 @Injectable()
 export class DeleteProcessor {
@@ -9,8 +10,10 @@ export class DeleteProcessor {
 
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly logger: ILogger,
     private readonly intervalMs: number = 5 * 60 * 1000,
+    
+    @Inject(ILOGGER_TOKEN)
+    private readonly logger: ILogger,
   ) { }
 
   start(): void {

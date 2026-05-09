@@ -1,8 +1,9 @@
 import type { PrismaClient } from '@marppa-cloud/db';
 import { ResourceStatus } from '@marppa-cloud/db';
-import { ILogger } from '../logger/ILogger';
+import { ILogger, ILOGGER_TOKEN } from '../logger/ILogger';
 import { IOrbitService } from '@/orbit/infrastructure/IOrbitService';
 import { Injectable } from '@/decorators/Injectable';
+import { Inject } from '@/decorators/Inject';
 
 @Injectable()
 export class IPChecker {
@@ -11,9 +12,11 @@ export class IPChecker {
 
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly logger: ILogger,
     private readonly orbitService: IOrbitService,
     private readonly intervalMs: number = 10 * 60 * 1000,
+    
+    @Inject(ILOGGER_TOKEN)
+    private readonly logger: ILogger,
   ) {}
 
   start(): void {

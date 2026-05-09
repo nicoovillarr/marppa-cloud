@@ -2,9 +2,10 @@ import { Worker, type Job } from 'bullmq';
 import type Redis from 'ioredis';
 import { Injectable } from '@/decorators/Injectable';
 import { IEventRepository } from '../domain/IEventRepository';
-import { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
 import { ProcessorRegistry } from './ProcessorRegistry';
 import { AbortError } from '../domain/EventPayload';
+import { Inject } from '@/decorators/Inject';
 
 const QUEUE_NAME = 'infrastructure-events';
 
@@ -16,16 +17,14 @@ export class EventWorker {
     redis: Redis,
     private readonly registry: ProcessorRegistry,
     private readonly repository: IEventRepository,
+
+    @Inject(ILOGGER_TOKEN)
     private readonly logger: ILogger,
   ) {
-    this.worker = new Worker(
-      QUEUE_NAME,
-      (job: Job) => this.process(job),
-      {
-        connection: redis as never,
-        concurrency: 1,
-      },
-    );
+    this.worker = new Worker(QUEUE_NAME, (job: Job) => this.process(job), {
+      connection: redis as never,
+      concurrency: 1,
+    });
 
     this.worker.on('completed', (job) => {
       this.logger.info(`[EventWorker] Job ${job.id} completed`);
@@ -74,9 +73,7 @@ export class EventWorker {
     try {
       await processor.handle(event);
       await this.repository.markProcessed(eventId);
-      this.logger.log(
-        `[EventWorker] Event ${eventId} processed successfully`,
-      );
+      this.logger.log(`[EventWorker] Event ${eventId} processed successfully`);
     } catch (err) {
       if (err instanceof AbortError) {
         this.logger.warn(

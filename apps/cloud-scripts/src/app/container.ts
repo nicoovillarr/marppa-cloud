@@ -22,6 +22,7 @@ import { getEventType } from '@/decorators/EventProcessor';
 import { getInjectMetadata } from '@/decorators/Inject';
 
 type Constructor = abstract new (...args: any[]) => any;
+type NormalizedProvider = Exclude<ProviderDefinition, Constructor>;
 
 export interface AppBootstrap {
   container: AwilixContainer;
@@ -29,7 +30,7 @@ export interface AppBootstrap {
 }
 
 interface CollectedGraph {
-  providers:     ProviderDefinition[];
+  providers:     NormalizedProvider[];
   processors:    Constructor[];
   processorKeys: Map<Constructor, string>;
   modules:       ModuleConstructor[];
@@ -108,7 +109,7 @@ export class AppContainer {
     }).setLifetime(AppContainer._awilixLifetime(lifecycle));
   }
 
-  private static _makeRegistration(def: ProviderDefinition) {
+  private static _makeRegistration(def: NormalizedProvider) {
     if ('useValue'   in def) return asValue(def.useValue);
     if ('useFactory' in def) return asFunction(def.useFactory).setLifetime(AppContainer._awilixLifetime(def.lifecycle));
     if ('useClass'   in def) return AppContainer._makeClassResolver(def.useClass, def.lifecycle);
@@ -135,7 +136,9 @@ export class AppContainer {
       const { imports, providers, processors } = getModuleMeta(mod);
       for (const imp of imports) visit(imp, [...stack, mod]);
 
-      graph.providers.push(...providers);
+      graph.providers.push(...providers.map((def): NormalizedProvider =>
+        typeof def === 'function' ? { provide: def } : def,
+      ));
       for (const cls of processors) {
         graph.processors.push(cls);
         graph.processorKeys.set(cls, AppContainer._freshKey());

@@ -15,6 +15,8 @@ const IMAGE_DIR = '/var/lib/libvirt/images';
 const CLOUD_INIT_DIR_BASE = '/var/lib/libvirt/cloud-init';
 
 const SAFE_VM_NAME = /^[a-zA-Z0-9_-]+$/;
+const ALLOWED_IMAGE_URL = /^https?:\/\/[a-zA-Z0-9.\-]+(:\d+)?\//;
+const VALID_SSH_KEY = /^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521) [A-Za-z0-9+\/=]+ \S+$/;
 
 @Injectable()
 export class HiveService extends IHiveService {
@@ -41,6 +43,21 @@ export class HiveService extends IHiveService {
       console.log(`Ensuring worker image exists at: ${name}`);
 
       if (!fs.existsSync(name)) {
+        if (!ALLOWED_IMAGE_URL.test(workerImage.imageUrl)) {
+          throw new Error(`Invalid image URL: ${workerImage.imageUrl}`);
+        }
+
+        const allowedImageDomains = process.env.ALLOWED_IMAGE_DOMAINS
+          ?.split(',')
+          .map((domain) => domain.trim().toLowerCase())
+          .filter(Boolean);
+        if (allowedImageDomains?.length) {
+          const imageHost = new URL(workerImage.imageUrl).hostname.toLowerCase();
+          if (!allowedImageDomains.includes(imageHost)) {
+            throw new Error(`Image URL domain not allowed: ${imageHost}`);
+          }
+        }
+
         console.log(`Downloading worker image from: ${url}`);
         await Command.runCommand('wget', ['-O', name, '-c', url]);
       }
@@ -194,6 +211,16 @@ export class HiveService extends IHiveService {
     console.log(`Creating cloud-init ISO for VM: ${name}`);
 
     await fsPromises.mkdir(destDir, { recursive: true });
+
+    if (!SAFE_VM_NAME.test(name)) {
+      throw new Error(`Invalid VM hostname: ${name}`);
+    }
+
+    for (const key of sshPublicKeys) {
+      if (!VALID_SSH_KEY.test(key.trim())) {
+        throw new Error(`Invalid SSH public key format: ${key.substring(0, 40)}...`);
+      }
+    }
 
     const sshKeysYaml =
       sshPublicKeys.length > 0

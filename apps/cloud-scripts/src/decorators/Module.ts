@@ -9,6 +9,7 @@ export type Lifecycle = 'singleton' | 'transient' | 'scoped';
 export type ProviderToken = string | symbol | AnyConstructor;
 
 export type ProviderDefinition =
+  | AnyConstructor
   | { provide: ProviderToken; useClass: AnyConstructor; lifecycle?: Lifecycle }
   | { provide: ProviderToken; useFactory: (...args: any[]) => unknown; lifecycle?: Lifecycle }
   | { provide: ProviderToken; useValue: unknown }

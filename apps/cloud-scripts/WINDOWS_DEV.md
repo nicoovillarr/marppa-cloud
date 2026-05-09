@@ -307,7 +307,7 @@ From the repo root inside WSL2:
 npm install
 cd apps/cloud-scripts
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 ```
 
 ---

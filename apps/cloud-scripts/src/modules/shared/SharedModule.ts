@@ -3,11 +3,11 @@ import { PrismaClient } from '@marppa-cloud/db';
 import { Module } from '@/decorators/Module';
 import { ConsoleLogger } from './infrastructure/logger/ConsoleLogger';
 import { getPrismaClient } from './infrastructure/prisma/prismaClient';
-import { ILogger } from './infrastructure/logger/ILogger';
+import { ILogger, ILOGGER_TOKEN } from './infrastructure/logger/ILogger';
 
 @Module({
   providers: [
-    { provide: ILogger, useClass: ConsoleLogger },
+    { provide: ILOGGER_TOKEN, useClass: ConsoleLogger },
     { provide: PrismaClient, useFactory: () => getPrismaClient() },
     { provide: Redis, useFactory: () => new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379') },
   ],

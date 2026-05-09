@@ -2,13 +2,11 @@ import type { PrismaClient } from '@marppa-cloud/db';
 import { Injectable } from '@/decorators/Injectable';
 import { IEventRepository } from '../domain/IEventRepository';
 import type { EventPayload } from '../domain/EventPayload';
-import { ILogger } from '@/shared/infrastructure/logger/ILogger';
 
 @Injectable()
 export class PrismaEventRepository extends IEventRepository {
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly logger: ILogger,
   ) { super(); }
 
   async findById(id: number): Promise<EventPayload | null> {

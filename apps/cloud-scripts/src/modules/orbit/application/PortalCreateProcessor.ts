@@ -2,7 +2,6 @@
 import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
 import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger } from '@/shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '@/event/domain/EventPayload';
 import { AbortError } from '@/event/domain/EventPayload';
 import { IOrbitService } from '../infrastructure/IOrbitService';
@@ -17,7 +16,6 @@ export class PortalCreateProcessor implements IEventProcessor {
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: IEventRepository,
-    private readonly logger: ILogger,
     private readonly orbitService: IOrbitService,
   ) { }
 
