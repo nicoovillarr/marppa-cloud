@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import type { ILogger } from './ILogger';
+import { ILogger } from './ILogger';
 
 const logDir = path.resolve('./logs');
 const logFile = path.join(logDir, 'app.log');
@@ -81,8 +81,9 @@ function formatArgs(args: unknown[]): string {
     .join(' ');
 }
 
-export class ConsoleLogger implements ILogger {
+export class ConsoleLogger extends ILogger {
   constructor() {
+    super();
     rotateOnStartup();
   }
 

@@ -2,14 +2,16 @@ import fs from 'fs';
 const fsPromises = fs.promises;
 import { Command } from '@/libs/Command';
 import { PrismaClient, ResourceStatus } from '@marppa-cloud/db';
-import type { IOrbitService } from './IOrbitService';
+import { IOrbitService } from './IOrbitService';
+import { Injectable } from '@/decorators/Injectable';
 
 const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
 
-export class OrbitService implements IOrbitService {
+@Injectable()
+export class OrbitService extends IOrbitService {
   constructor(
-    private readonly prisma: PrismaClient
-  ) { }
+    private readonly prisma: PrismaClient,
+  ) { super(); }
 
   async createPortal(id, address, type, apiKey) {
     console.log(`Creating portal ${id} (${address}) of type ${type}`);
@@ -279,7 +281,7 @@ export class OrbitService implements IOrbitService {
     }
     const server = {
       server: {
-        listen: listen.join(' '),
+        listen,
         server_name:
           portal.address + (portal.defaultServer ? ' default_server' : ''),
         ...(portal.sslCertificate && {

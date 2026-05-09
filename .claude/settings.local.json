@@ -18,7 +18,13 @@
       "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\\\\src\\\\modules\\\\worker\\\\infrastructure\\\\WslHiveService.ts\" -Force)",
       "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\\\\src\\\\modules\\\\mesh\\\\infrastructure\\\\WslMeshService.ts\" -Force)",
       "Bash(Remove-Item \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\\\\src\\\\modules\\\\orbit\\\\infrastructure\\\\WslOrbitService.ts\" -Force)",
-      "Bash(Write-Output \"Deleted\")"
+      "Bash(Write-Output \"Deleted\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(xargs grep -l \"HttpServer\\\\|fetch\\\\|http\\\\|axios\")",
+      "Bash(xargs grep -l \"fetch\\\\|axios\\\\|superagent\")",
+      "Bash(xargs grep -l \"cloud-scripts\\\\|localhost\\\\|http://\\\\|fetch\\\\|axios\")",
+      "Bash(xargs grep -l \"authToken\\\\|TOKEN\\\\|auth\\\\|Auth\")"
     ]
   }
 }

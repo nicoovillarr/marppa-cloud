@@ -1,6 +1,8 @@
-import type { IMeshService } from './IMeshService';
+import { IMeshService } from './IMeshService';
+import { Injectable } from '@/decorators/Injectable';
 
-export class StubMeshService implements IMeshService {
+@Injectable()
+export class StubMeshService extends IMeshService {
   async getIpList(cidr: string): Promise<string[]> {
     console.log(`[STUB] getIpList: ${cidr}`);
     return ['10.0.0.0', '10.0.0.1', '10.0.0.2', '10.0.0.3', '10.0.0.254'];
@@ -10,7 +12,7 @@ export class StubMeshService implements IMeshService {
     console.log('[STUB] restartServices');
   }
 
-  async createZone(cidr: string, bridgeName: string, gatewayIp: string): Promise<void> {
+  async createZone(cidr: string, bridgeName: string, gatewayIp: string | null): Promise<void> {
     console.log(`[STUB] createZone: cidr=${cidr} bridge=${bridgeName} gateway=${gatewayIp}`);
   }
 

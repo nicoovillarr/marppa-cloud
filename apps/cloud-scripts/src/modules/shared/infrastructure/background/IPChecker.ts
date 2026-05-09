@@ -1,8 +1,10 @@
 import type { PrismaClient } from '@marppa-cloud/db';
 import { ResourceStatus } from '@marppa-cloud/db';
-import type { ILogger } from '../logger/ILogger';
+import { ILogger } from '../logger/ILogger';
 import { IOrbitService } from '@/orbit/infrastructure/IOrbitService';
+import { Injectable } from '@/decorators/Injectable';
 
+@Injectable()
 export class IPChecker {
   private timer: NodeJS.Timeout | null = null;
   private lastIP: string | null = null;
@@ -66,4 +68,3 @@ export class IPChecker {
     }
   }
 }
-

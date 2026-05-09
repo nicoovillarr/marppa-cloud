@@ -1,23 +1,30 @@
 import Fastify, { type FastifyInstance } from 'fastify';
-import type { IQueue } from '@/event/domain/IQueue';
-import type { ILogger } from '../logger/ILogger';
+import { IQueue } from '@/event/domain/IQueue';
+import { ILogger } from '../logger/ILogger';
 import { Command } from '@/libs/Command';
 import path from 'path';
+import { Injectable } from '@/decorators/Injectable';
+import { Inject } from '@/decorators/Inject';
+import { HTTP_PORT, AUTH_TOKEN } from '@/tokens';
 
+@Injectable()
 export class HttpServer {
   private app: FastifyInstance | null = null;
 
   constructor(
     private readonly logger: ILogger,
     private readonly queue: IQueue,
-    private readonly httpPort: number,
-    private readonly authToken: string,
   ) {}
 
   async start(): Promise<void> {
     if (this.app) {
       return;
     }
+
+    const {
+      HTTP_PORT,
+      AUTH_TOKEN
+    } = process.env;
 
     const app = Fastify({ logger: false });
 
@@ -26,7 +33,7 @@ export class HttpServer {
     const requireAuth = (authorization: string | undefined): boolean => {
       if (!authorization?.startsWith('Bearer ')) return false;
       const token = authorization.slice('Bearer '.length);
-      return token === this.authToken;
+      return token === AUTH_TOKEN;
     };
 
     app.post<{
@@ -52,10 +59,10 @@ export class HttpServer {
       return reply.send({ message: 'DNS update request received' });
     });
 
-    await app.listen({ port: this.httpPort, host: '0.0.0.0' });
+    await app.listen({ port: Number(HTTP_PORT), host: '0.0.0.0' });
 
     this.app = app;
-    this.logger.info(`[HTTP] Fastify server listening on port ${this.httpPort}`);
+    this.logger.info(`[HTTP] Fastify server listening on port ${HTTP_PORT}`);
   }
 
   async close(): Promise<void> {

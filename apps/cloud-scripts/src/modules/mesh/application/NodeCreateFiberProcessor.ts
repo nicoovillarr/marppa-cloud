@@ -1,18 +1,19 @@
-import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import type { PrismaClient } from '@marppa-cloud/db';
+﻿import { EventType, ResourceStatus } from '@marppa-cloud/db';
+import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import type { IEventRepository } from '@/event/domain/IEventRepository';
-import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { IEventRepository } from '@/event/domain/IEventRepository';
+import { ILogger } from '@/shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '@/event/domain/EventPayload';
 import { AbortError } from '@/event/domain/EventPayload';
-import type { IMeshService } from '../infrastructure/IMeshService';
+import { IMeshService } from '../infrastructure/IMeshService';
 import { PortConflictError } from '../infrastructure/MeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { Injectable } from '@/decorators/Injectable';
 
-@EventProcessor
+@Injectable()
+@EventProcessor(EventType.NODE_CREATE_FIBER)
 export class NodeCreateFiberProcessor implements IEventProcessor {
-  readonly eventType = EventType.NODE_CREATE_FIBER;
 
   constructor(
     private readonly prisma: PrismaClient,

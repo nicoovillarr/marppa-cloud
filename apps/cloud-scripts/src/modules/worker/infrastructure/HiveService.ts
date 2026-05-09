@@ -3,19 +3,21 @@ import fsPromises from 'fs/promises';
 import path from 'path';
 import { Command } from '@/libs/Command';
 import { sleep } from '@/libs/sleep';
-import type {
+import {
   IHiveService,
-  WorkerImageSource,
-  WorkerInstanceSource,
+  type WorkerImageSource,
+  type WorkerInstanceSource,
 } from './IHiveService';
 import { Utils } from '@/libs/Utils';
+import { Injectable } from '@/decorators/Injectable';
 
 const IMAGE_DIR = '/var/lib/libvirt/images';
 const CLOUD_INIT_DIR_BASE = '/var/lib/libvirt/cloud-init';
 
 const SAFE_VM_NAME = /^[a-zA-Z0-9_-]+$/;
 
-export class HiveService implements IHiveService {
+@Injectable()
+export class HiveService extends IHiveService {
   private validateVmName(vmName: string): void {
     if (!SAFE_VM_NAME.test(vmName)) {
       throw new Error(`Invalid VM name: ${vmName}`);

@@ -1,13 +1,15 @@
 import type { PrismaClient } from '@marppa-cloud/db';
-import type { IEventRepository } from '../domain/IEventRepository';
+import { Injectable } from '@/decorators/Injectable';
+import { IEventRepository } from '../domain/IEventRepository';
 import type { EventPayload } from '../domain/EventPayload';
-import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { ILogger } from '@/shared/infrastructure/logger/ILogger';
 
-export class PrismaEventRepository implements IEventRepository {
+@Injectable()
+export class PrismaEventRepository extends IEventRepository {
   constructor(
     private readonly prisma: PrismaClient,
     private readonly logger: ILogger,
-  ) {}
+  ) { super(); }
 
   async findById(id: number): Promise<EventPayload | null> {
     return this.prisma.event.findUnique({
@@ -75,4 +77,3 @@ export class PrismaEventRepository implements IEventRepository {
     });
   }
 }
-

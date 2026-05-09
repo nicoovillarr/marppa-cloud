@@ -1,6 +1,8 @@
-import type { IHiveService, WorkerImageSource, WorkerInstanceSource } from './IHiveService';
+import { IHiveService, type WorkerImageSource, type WorkerInstanceSource } from './IHiveService';
+import { Injectable } from '@/decorators/Injectable';
 
-export class StubHiveService implements IHiveService {
+@Injectable()
+export class StubHiveService extends IHiveService {
   workerImagePath(workerImage: WorkerImageSource): string {
     return `/stub/images/${workerImage.osType}-${workerImage.osFamily}-${workerImage.osVersion}.img`.toLowerCase();
   }

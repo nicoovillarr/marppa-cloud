@@ -4,8 +4,8 @@
   "description": "Infrastructure event worker. Manages DNS, network, virtual machines, containers and more.",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node --transpile-only src/index.ts",
-    "dev:watch": "nodemon --exec ts-node --transpile-only src/index.ts",
+    "dev": "tsx src/index.ts",
+    "dev:watch": "tsx watch src/index.ts",
     "build": "tsup src/index.ts --format cjs --out-dir dist",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
@@ -30,6 +30,7 @@
     "fastify": "^4.0.0",
     "ioredis": "^5.0.0",
     "jose": "^5.0.0",
+    "reflect-metadata": "^0.2.2",
     "ws": "^8.0.0"
   },
   "devDependencies": {

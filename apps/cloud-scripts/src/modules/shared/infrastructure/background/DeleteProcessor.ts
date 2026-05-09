@@ -1,8 +1,9 @@
 import { Prisma, type PrismaClient } from '@marppa-cloud/db';
 import { ResourceStatus } from '@marppa-cloud/db';
-import type { ILogger } from '../logger/ILogger';
+import { ILogger } from '../logger/ILogger';
+import { Injectable } from '@/decorators/Injectable';
 
-
+@Injectable()
 export class DeleteProcessor {
   private timer: NodeJS.Timeout | null = null;
 
@@ -62,4 +63,3 @@ export class DeleteProcessor {
     }
   }
 }
-

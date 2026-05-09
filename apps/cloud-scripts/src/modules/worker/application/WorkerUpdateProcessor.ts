@@ -1,16 +1,17 @@
-import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import type { PrismaClient } from '@marppa-cloud/db';
+﻿import { EventType, ResourceStatus } from '@marppa-cloud/db';
+import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import type { IEventRepository } from '@/event/domain/IEventRepository';
-import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { IEventRepository } from '@/event/domain/IEventRepository';
+import { ILogger } from '@/shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '@/event/domain/EventPayload';
-import type { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
+import { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { Injectable } from '@/decorators/Injectable';
 
-@EventProcessor
+@Injectable()
+@EventProcessor(EventType.WORKER_UPDATE)
 export class WorkerUpdateProcessor implements IEventProcessor {
-  readonly eventType = EventType.WORKER_UPDATE;
 
   constructor(
     private readonly prisma: PrismaClient,

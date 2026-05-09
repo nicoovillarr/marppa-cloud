@@ -11,7 +11,8 @@ const fsPromises = fs.promises;
 import path from 'path';
 import os from 'os';
 import { IPHelper } from '@/libs/IPHelper';
-import type { IMeshService } from './IMeshService';
+import { IMeshService } from './IMeshService';
+import { Injectable } from '@/decorators/Injectable';
 
 const INTERFACES_DIR = '/etc/network/interfaces.d';
 const DNSMASQ_DIR = '/etc/dnsmasq.d';
@@ -19,7 +20,8 @@ const DNSMASQ_DIR = '/etc/dnsmasq.d';
 const NFT_CONF_PATH = '/etc/nftables.conf';
 const NFT_CONF_BACKUP_DIR = '/etc/nft-backups';
 
-export class MeshService implements IMeshService {
+@Injectable()
+export class MeshService extends IMeshService {
   async getIpList(cidr) {
     console.log(`Getting IP list for CIDR: ${cidr}`);
   
@@ -120,6 +122,7 @@ iface ${bridgeName} inet static
     cidr,
     externalInterface = process.env.BRIDGE_NAME,
   ) {
+    if (!externalInterface) throw new Error('BRIDGE_NAME environment variable is required');
     console.log(`Configuring nftables for bridge: ${bridgeName}`);
   
     const commands: string[][] = [
@@ -210,6 +213,7 @@ iface ${bridgeName} inet static
     cidr,
     externalInterface = process.env.BRIDGE_NAME,
   ) {
+    if (!externalInterface) throw new Error('BRIDGE_NAME environment variable is required');
     const deleteMatchingRules = async (tableArgs: string[], chain: string, matchFn: (line: string) => boolean) => {
       const output = await Command.runCommand('sudo', [
         'nft', '-a', 'list', 'chain', ...tableArgs, chain,
@@ -537,6 +541,7 @@ iface ${bridgeName} inet static
     internalPort,
     externalInterface = process.env.BRIDGE_NAME,
   ) {
+    if (!externalInterface) throw new Error('BRIDGE_NAME environment variable is required');
     const portToString = (p) => (Array.isArray(p) ? `${p[0]}-${p[1]}` : p);
   
     const extPortStr = portToString(externalPort);
@@ -612,6 +617,7 @@ iface ${bridgeName} inet static
     internalPort,
     externalInterface = process.env.BRIDGE_NAME,
   ) {
+    if (!externalInterface) throw new Error('BRIDGE_NAME environment variable is required');
     console.log(
       `Removing port forwarding for ${protocol}/${externalPort} → ${targetIp}:${internalPort} via ${bridgeName}`,
     );
@@ -676,7 +682,11 @@ iface ${bridgeName} inet static
   
   async findNextPort(protocol) {
     const { MIN_PORT, MAX_PORT } = process.env;
-  
+
+    if (!MIN_PORT || !MAX_PORT) {
+      throw new Error('MIN_PORT and MAX_PORT environment variables are required');
+    }
+
     const portRegex = new RegExp(
       `${protocol}\\s+dport\\s+(?<port>[0-9]+)\\s+dnat\\s+to\\s+[0-9.]+:[0-9]+`,
     );

@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(Get-ChildItem -Path \"D:\\\\dev\\\\repos\\\\marppa\\\\marppa-cloud\\\\apps\\\\cloud-scripts\" -Recurse -File)",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Remove-Item *)"
     ]
   }
 }

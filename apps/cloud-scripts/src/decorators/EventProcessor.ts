@@ -1,10 +1,13 @@
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
+const processorMeta = new WeakMap<Function, string>();
 
-type ProcessorConstructor = new (...args: any[]) => IEventProcessor;
+export function EventProcessor(eventType: string): ClassDecorator {
+  return (target: Function): void => {
+    processorMeta.set(target, eventType);
+  };
+}
 
-export function EventProcessor<T extends ProcessorConstructor>(
-  target: T,
-  _context: ClassDecoratorContext<T>,
-): T {
-  return target;
+export function getEventType(target: Function): string {
+  const type = processorMeta.get(target);
+  if (!type) throw new Error(`${(target as any).name} is missing @EventProcessor decorator`);
+  return type;
 }

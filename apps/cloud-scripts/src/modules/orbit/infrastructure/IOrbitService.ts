@@ -1,10 +1,10 @@
-export interface IOrbitService {
-  createPortal(id: string, address: string, type: string, apiKey: string): Promise<void>;
-  updateDynamicDNS(id: string, address: string, type: string, apiKey: string): Promise<void>;
-  getPublicIPAddress(): Promise<string | null>;
-  batchUpdateDynamicDNS(portals: any[], ip: string | null): Promise<void>;
-  updateCloudflareDNS(apiToken: string, domain: string, ip: string, options?: any): Promise<any>;
-  generateNginxConfig(portal: any, forceTransponder?: any): Promise<void>;
-  deleteNginxConfig(portalId: string): Promise<void>;
-  forceResetOrbit(): Promise<void>;
+export abstract class IOrbitService {
+  abstract createPortal(id: string, address: string, type: string, apiKey: string): Promise<void>;
+  abstract updateDynamicDNS(id: string, address: string, type: string, apiKey: string): Promise<void>;
+  abstract getPublicIPAddress(): Promise<string | null>;
+  abstract batchUpdateDynamicDNS(portals: any[], ip: string | null): Promise<void>;
+  abstract updateCloudflareDNS(apiToken: string, domain: string, ip: string, options?: any): Promise<any>;
+  abstract generateNginxConfig(portal: any, forceTransponder?: any): Promise<void>;
+  abstract deleteNginxConfig(portalId: string): Promise<void>;
+  abstract forceResetOrbit(): Promise<void>;
 }

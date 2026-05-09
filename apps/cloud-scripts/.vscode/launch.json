@@ -5,25 +5,17 @@
       "type": "node",
       "request": "launch",
       "name": "dev",
-      "runtimeExecutable": "ts-node",
-      "runtimeArgs": ["--transpile-only"],
-      "args": ["src/index.ts"],
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "${workspaceFolder}\\..\\..\\node_modules\\tsx\\dist\\cli.mjs"
+      ],
+      "args": ["${workspaceFolder}\\src\\index.ts"],
+      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "env": {
         "NODE_ENV": "development"
       }
-    },
-    {
-      "type": "node",
-      "request": "attach",
-      "name": "attach (remote)",
-      "address": "localhost",
-      "port": 9229,
-      "localRoot": "${workspaceFolder}",
-      "remoteRoot": "${workspaceFolder}",
-      "restart": true,
-      "skipFiles": ["<node_internals>/**"]
     }
   ]
 }

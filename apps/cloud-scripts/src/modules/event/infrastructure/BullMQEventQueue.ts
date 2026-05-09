@@ -1,17 +1,20 @@
 import { Queue } from 'bullmq';
-import type { IQueue } from '../domain/IQueue';
-import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { Injectable } from '@/decorators/Injectable';
+import { IQueue } from '../domain/IQueue';
+import { ILogger } from '@/shared/infrastructure/logger/ILogger';
 import Redis from 'ioredis';
 
 const QUEUE_NAME = 'infrastructure-events';
 
-export class BullMQEventQueue implements IQueue {
+@Injectable()
+export class BullMQEventQueue extends IQueue {
   private readonly queue: Queue;
 
   constructor(
     redis: Redis,
     private readonly logger: ILogger,
   ) {
+    super();
     this.queue = new Queue(QUEUE_NAME, {
       connection: redis as never,
       defaultJobOptions: {

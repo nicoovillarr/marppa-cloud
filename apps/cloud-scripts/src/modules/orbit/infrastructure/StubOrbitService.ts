@@ -1,6 +1,8 @@
-import type { IOrbitService } from './IOrbitService';
+import { IOrbitService } from './IOrbitService';
+import { Injectable } from '@/decorators/Injectable';
 
-export class StubOrbitService implements IOrbitService {
+@Injectable()
+export class StubOrbitService extends IOrbitService {
   async createPortal(id: string, address: string, type: string, _apiKey: string): Promise<void> {
     console.log(`[STUB] createPortal: id=${id} address=${address} type=${type}`);
   }

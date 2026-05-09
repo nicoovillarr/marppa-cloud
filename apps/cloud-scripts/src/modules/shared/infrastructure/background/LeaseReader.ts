@@ -1,8 +1,10 @@
 import fs from 'fs';
-import type { ILogger } from '../logger/ILogger';
+import { ILogger } from '../logger/ILogger';
+import { Injectable } from '@/decorators/Injectable';
 
 const LEASES_FILE = '/var/lib/misc/dnsmasq.leases';
 
+@Injectable()
 export class LeaseReader {
   private timer: NodeJS.Timeout | null = null;
 

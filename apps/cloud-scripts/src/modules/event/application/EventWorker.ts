@@ -1,12 +1,14 @@
 import { Worker, type Job } from 'bullmq';
 import type Redis from 'ioredis';
-import type { IEventRepository } from '../domain/IEventRepository';
-import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
-import type { ProcessorRegistry } from './ProcessorRegistry';
+import { Injectable } from '@/decorators/Injectable';
+import { IEventRepository } from '../domain/IEventRepository';
+import { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { ProcessorRegistry } from './ProcessorRegistry';
 import { AbortError } from '../domain/EventPayload';
 
 const QUEUE_NAME = 'infrastructure-events';
 
+@Injectable()
 export class EventWorker {
   private readonly worker: Worker;
 

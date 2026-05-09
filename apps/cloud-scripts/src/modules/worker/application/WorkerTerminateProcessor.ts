@@ -1,18 +1,19 @@
-import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import type { PrismaClient } from '@marppa-cloud/db';
+﻿import { EventType, ResourceStatus } from '@marppa-cloud/db';
+import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import type { IEventRepository } from '@/event/domain/IEventRepository';
-import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { IEventRepository } from '@/event/domain/IEventRepository';
+import { ILogger } from '@/shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '@/event/domain/EventPayload';
-import type { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
-import type { IHiveService } from '../infrastructure/IHiveService';
-import type { IMeshService } from '@/mesh/infrastructure/IMeshService';
+import { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
+import { IHiveService } from '../infrastructure/IHiveService';
+import { IMeshService } from '@/mesh/infrastructure/IMeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { Injectable } from '@/decorators/Injectable';
 
-@EventProcessor
+@Injectable()
+@EventProcessor(EventType.WORKER_TERMINATE)
 export class WorkerTerminateProcessor implements IEventProcessor {
-  readonly eventType = EventType.WORKER_TERMINATE;
 
   constructor(
     private readonly prisma: PrismaClient,

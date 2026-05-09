@@ -1,10 +1,12 @@
 import WebSocket, { WebSocketServer as WsServer } from 'ws';
 import { jwtVerify } from 'jose';
 import type { ILogger } from '../logger/ILogger';
+import { Injectable } from '@/decorators/Injectable';
 
 type ChannelMap = Record<string, Set<string>>;
 type ClientMap = Record<string, Map<string, WebSocket>>;
 
+@Injectable()
 export class WebSocketServer {
   private readonly channels: ChannelMap = {};
   private readonly clients: ClientMap = {};
@@ -12,12 +14,15 @@ export class WebSocketServer {
 
   constructor(
     private readonly logger: ILogger,
-    private readonly wsPort: number = 8080,
-    private readonly jwtSecret: string = '',
   ) {}
 
   init(): void {
-    this.wss = new WsServer({ port: this.wsPort });
+    const {
+      WS_PORT,
+      JWT_SECRET,
+    } = process.env;
+
+    this.wss = new WsServer({ port: Number(WS_PORT) });
 
     this.wss.on('connection', (socket: WebSocket & { userId?: string }) => {
       socket.on('message', async (message: Buffer) => {
@@ -37,7 +42,7 @@ export class WebSocketServer {
             }
 
             try {
-              const secret = new TextEncoder().encode(this.jwtSecret);
+              const secret = new TextEncoder().encode(JWT_SECRET);
               const { payload } = await jwtVerify(accessToken, secret);
               socket.userId = payload.userId as string;
             } catch {
@@ -92,7 +97,7 @@ export class WebSocketServer {
       this.logger.log('[WebSocketServer] Client connected');
     });
 
-    this.logger.info(`[WebSocketServer] Listening on port ${this.wsPort}`);
+    this.logger.info(`[WebSocketServer] Listening on port ${WS_PORT}`);
   }
 
   async close(): Promise<void> {

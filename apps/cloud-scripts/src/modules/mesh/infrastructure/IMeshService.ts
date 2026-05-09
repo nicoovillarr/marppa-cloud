@@ -1,31 +1,31 @@
-export interface IMeshService {
-  getIpList(cidr: string): Promise<string[]>;
-  restartServices(): Promise<void>;
-  createZone(cidr: string, bridgeName: string, gatewayIp: string): Promise<void>;
-  createInterface(bridgeName: string, cidr: string, gateway: string): Promise<void>;
-  ipcalcField(cidr: string, field: string): Promise<string | null>;
-  createDnsmasqConfig(bridgeName: string, gateway: string, ipList: string[]): Promise<void>;
-  createNftablesConfig(bridgeName: string, cidr: string, externalInterface?: string): Promise<void>;
-  backupNftablesConfig(): Promise<void>;
-  latestBackup(): string;
-  saveNftConfiguration(): Promise<void>;
-  deleteNftablesConfig(bridgeName: string, cidr: string, externalInterface?: string): Promise<void>;
-  deleteZone(bridgeName: string, cidr: string): Promise<void>;
-  addNodeToZone(bridgeName: string, mac: string, ip: string): Promise<void>;
-  isIpInZoneRange(bridgeName: string, ip: string): Promise<boolean>;
-  checkNodeInZone(bridgeName: string, ip: string): Promise<boolean>;
-  deleteNodeFromZone(bridgeName: string, mac: string): Promise<void>;
-  linkVnetToBridge(vnetName: string, bridgeName: string): Promise<void>;
-  unlinkVnetFromBridge(vnetName: string, bridgeName: string): Promise<void>;
-  isZoneValid(bridgeName: string, cidr: string): Promise<boolean>;
-  addFiber(bridgeName: string, protocol: string, externalPort: number | number[], targetIp: string, internalPort: number | number[], externalInterface?: string): Promise<void>;
-  removeFiber(bridgeName: string, protocol: string, externalPort: number | number[], targetIp: string, internalPort: number | number[], externalInterface?: string): Promise<void>;
-  isPortAvailable(ipAddress: string, targetPort: number, protocol: string): Promise<boolean>;
-  findNextPort(protocol: string): Promise<number>;
-  listActiveZones(): Promise<string[]>;
-  forceResetMesh(): Promise<void>;
-  verifyWorkerConnectivity(ip: string, timeout?: number): Promise<boolean>;
-  diagnoseBridgeConnectivity(bridgeName: string, ip: string): Promise<{
+export abstract class IMeshService {
+  abstract getIpList(cidr: string): Promise<string[]>;
+  abstract restartServices(): Promise<void>;
+  abstract createZone(cidr: string, bridgeName: string, gatewayIp: string | null): Promise<void>;
+  abstract createInterface(bridgeName: string, cidr: string, gateway: string): Promise<void>;
+  abstract ipcalcField(cidr: string, field: string): Promise<string | null>;
+  abstract createDnsmasqConfig(bridgeName: string, gateway: string, ipList: string[]): Promise<void>;
+  abstract createNftablesConfig(bridgeName: string, cidr: string, externalInterface?: string): Promise<void>;
+  abstract backupNftablesConfig(): Promise<void>;
+  abstract latestBackup(): string;
+  abstract saveNftConfiguration(): Promise<void>;
+  abstract deleteNftablesConfig(bridgeName: string, cidr: string, externalInterface?: string): Promise<void>;
+  abstract deleteZone(bridgeName: string, cidr: string): Promise<void>;
+  abstract addNodeToZone(bridgeName: string, mac: string, ip: string): Promise<void>;
+  abstract isIpInZoneRange(bridgeName: string, ip: string): Promise<boolean>;
+  abstract checkNodeInZone(bridgeName: string, ip: string): Promise<boolean>;
+  abstract deleteNodeFromZone(bridgeName: string, mac: string): Promise<void>;
+  abstract linkVnetToBridge(vnetName: string, bridgeName: string): Promise<void>;
+  abstract unlinkVnetFromBridge(vnetName: string, bridgeName: string): Promise<void>;
+  abstract isZoneValid(bridgeName: string, cidr: string): Promise<boolean>;
+  abstract addFiber(bridgeName: string, protocol: string, externalPort: number | number[], targetIp: string, internalPort: number | number[], externalInterface?: string): Promise<void>;
+  abstract removeFiber(bridgeName: string, protocol: string, externalPort: number | number[], targetIp: string, internalPort: number | number[], externalInterface?: string): Promise<void>;
+  abstract isPortAvailable(ipAddress: string, targetPort: number, protocol: string): Promise<boolean>;
+  abstract findNextPort(protocol: string): Promise<number>;
+  abstract listActiveZones(): Promise<string[]>;
+  abstract forceResetMesh(): Promise<void>;
+  abstract verifyWorkerConnectivity(ip: string, timeout?: number): Promise<boolean>;
+  abstract diagnoseBridgeConnectivity(bridgeName: string, ip: string): Promise<{
     bridgeExists: boolean;
     bridgeUp: boolean;
     dhcpConfigExists: boolean;
@@ -33,9 +33,9 @@ export interface IMeshService {
     arpEntry: boolean;
     pingSuccessful: boolean;
   }>;
-  forceRenewDhcpLease(bridgeName: string, mac?: string | null): Promise<boolean>;
-  fixVnetBridgeConnection(vnetName: string, bridgeName: string): Promise<boolean>;
-  validateNftables(nftRuleset: string, zones: any[], nodes: any[], fibers: any[]): {
+  abstract forceRenewDhcpLease(bridgeName: string, mac?: string | null): Promise<boolean>;
+  abstract fixVnetBridgeConnection(vnetName: string, bridgeName: string): Promise<boolean>;
+  abstract validateNftables(nftRuleset: string, zones: any[], nodes: any[], fibers: any[]): {
     valid: boolean;
     missing: { nat: any[]; fibers: any[] };
     details: string[];

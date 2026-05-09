@@ -1,17 +1,18 @@
-import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import type { PrismaClient } from '@marppa-cloud/db';
+﻿import { EventType, ResourceStatus } from '@marppa-cloud/db';
+import { PrismaClient } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import type { IEventRepository } from '@/event/domain/IEventRepository';
-import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { IEventRepository } from '@/event/domain/IEventRepository';
+import { ILogger } from '@/shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '@/event/domain/EventPayload';
 import { AbortError } from '@/event/domain/EventPayload';
-import type { IOrbitService } from '../infrastructure/IOrbitService';
+import { IOrbitService } from '../infrastructure/IOrbitService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { Injectable } from '@/decorators/Injectable';
 
-@EventProcessor
+@Injectable()
+@EventProcessor(EventType.PORTAL_UPDATE)
 export class PortalUpdateProcessor implements IEventProcessor {
-  readonly eventType = EventType.PORTAL_UPDATE;
 
   constructor(
     private readonly prisma: PrismaClient,
@@ -49,18 +50,16 @@ export class PortalUpdateProcessor implements IEventProcessor {
       );
 
       if (forceSync) {
-        const { status } = portal;
-
-        if (status !== ResourceStatus.QUEUED) {
+        if (portal.status !== ResourceStatus.QUEUED) {
           throw new AbortError(
-            `Portal status (${status}) is not valid for event ID: ${event.id}`,
+            `Portal status (${portal.status}) is not valid for event ID: ${event.id}`,
             EventType.PORTAL_UPDATE_FAILED,
           );
         }
 
         await updatePortalStatus(ResourceStatus.PROVISIONING);
         await this.orbitService.updateDynamicDNS(portal.id, portal.address, portal.type, portal.apiKey);
-        await updatePortalStatus(status as ResourceStatus);
+        await updatePortalStatus(ResourceStatus.ACTIVE);
       }
 
       const eventCreated = await this.repository.createEvent(EventType.PORTAL_UPDATED, event.createdBy, event.companyId);

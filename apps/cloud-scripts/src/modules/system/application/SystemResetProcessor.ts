@@ -1,17 +1,18 @@
-import { EventType } from '@marppa-cloud/db';
+﻿import { EventType } from '@marppa-cloud/db';
 import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import type { IEventRepository } from '@/event/domain/IEventRepository';
-import type { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { IEventRepository } from '@/event/domain/IEventRepository';
+import { ILogger } from '@/shared/infrastructure/logger/ILogger';
 import type { EventPayload } from '@/event/domain/EventPayload';
-import type { IMeshService } from '@/mesh/infrastructure/IMeshService';
-import type { IOrbitService } from '@/orbit/infrastructure/IOrbitService';
-import type { IHiveService } from '@/worker/infrastructure/IHiveService';
+import { IMeshService } from '@/mesh/infrastructure/IMeshService';
+import { IOrbitService } from '@/orbit/infrastructure/IOrbitService';
+import { IHiveService } from '@/worker/infrastructure/IHiveService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { Injectable } from '@/decorators/Injectable';
 
-@EventProcessor
+@Injectable()
+@EventProcessor(EventType.SYSTEM_RESET)
 export class SystemResetProcessor implements IEventProcessor {
-  readonly eventType = EventType.SYSTEM_RESET;
 
   constructor(
     private readonly repository: IEventRepository,
