@@ -1,26 +1,26 @@
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import { PrismaClient } from '@marppa-cloud/db';
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
-import type { EventPayload } from '@/event/domain/EventPayload';
-import { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
+import { IEventProcessor } from '@/event/application/EventWorker';
+import type { EventPayload } from '@/event/domain/models/EventPayload';
+import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
+import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
 
 @EventProcessor(EventType.WORKER_UPDATE)
 export class WorkerUpdateProcessor implements IEventProcessor {
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly repository: IEventRepository,
+    private readonly prisma: PrismaService,
     private readonly wsServer: WebSocketServer,
+    private readonly logger: LoggerService,
     
-    @Inject(ILOGGER_TOKEN)
-    private readonly logger: ILogger,
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
   ) {}
 
-  async handle(event: EventPayload): Promise<void> {
+  public async handle(event: EventPayload): Promise<void> {
     let worker: {
       id: string;
       status: string;
@@ -65,18 +65,18 @@ export class WorkerUpdateProcessor implements IEventProcessor {
 
       await updateWorkerStatus(ResourceStatus.INACTIVE);
 
-      const eventUpdated = await this.repository.createEvent(
+      const eventUpdatedId = await this.repository.createEvent(
         EventType.WORKER_UPDATED,
         event.createdBy,
         event.companyId,
       );
       await this.repository.addEventResource(
-        eventUpdated.id,
+        eventUpdatedId,
         'Event',
         String(event.id),
       );
       await this.repository.addEventResource(
-        eventUpdated.id,
+        eventUpdatedId,
         'Worker',
         worker.id,
       );

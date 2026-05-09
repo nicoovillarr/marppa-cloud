@@ -1,28 +1,39 @@
+import type { EventPayload } from '../domain/models/EventPayload';
 import { Worker, type Job } from 'bullmq';
-import type Redis from 'ioredis';
 import { Injectable } from '@/decorators/Injectable';
-import { IEventRepository } from '../domain/IEventRepository';
-import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
 import { ProcessorRegistry } from './ProcessorRegistry';
-import { AbortError } from '../domain/EventPayload';
+import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
+import {
+  EVENT_REPOSITORY_TOKEN,
+  EventRepository,
+} from '../domain/repositories/EventRepository';
+import { AbortError } from '../domain/errors/AbortError';
+import { RedisService } from '@/shared/infrastructure/services/RedisService';
 import { Inject } from '@/decorators/Inject';
+import { OnModuleDestroy, OnModuleInit } from '@/app/container';
 
 const QUEUE_NAME = 'infrastructure-events';
 
+export interface IEventProcessor {
+  handle(event: EventPayload): Promise<void>;
+}
+
 @Injectable()
-export class EventWorker {
-  private readonly worker: Worker;
+export class EventWorker implements OnModuleInit, OnModuleDestroy {
+  private worker: Worker;
 
   constructor(
-    redis: Redis,
+    private readonly redis: RedisService,
     private readonly registry: ProcessorRegistry,
-    private readonly repository: IEventRepository,
+    private readonly logger: LoggerService,
 
-    @Inject(ILOGGER_TOKEN)
-    private readonly logger: ILogger,
-  ) {
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
+  ) {}
+  
+  public onModuleInit(): void {
     this.worker = new Worker(QUEUE_NAME, (job: Job) => this.process(job), {
-      connection: redis as never,
+      connection: this.redis as never,
       concurrency: 1,
     });
 
@@ -37,6 +48,9 @@ export class EventWorker {
     });
 
     this.logger.info('[EventWorker] Worker started (concurrency: 1)');
+  }
+  public async onModuleDestroy(): Promise<void> {
+    await this.worker.close();
   }
 
   private async process(job: Job): Promise<void> {
@@ -82,7 +96,7 @@ export class EventWorker {
 
         if (err.failureEventType) {
           try {
-            const failedEvent = await this.repository.createEvent(
+            const failedEventId = await this.repository.createEvent(
               err.failureEventType,
               event.createdBy,
               event.companyId,
@@ -90,7 +104,7 @@ export class EventWorker {
               err.message,
             );
             await this.repository.addEventResource(
-              failedEvent.id,
+              failedEventId,
               'Event',
               String(eventId),
             );
@@ -112,9 +126,5 @@ export class EventWorker {
       await this.repository.incrementRetry(eventId);
       throw err;
     }
-  }
-
-  async close(): Promise<void> {
-    await this.worker.close();
   }
 }

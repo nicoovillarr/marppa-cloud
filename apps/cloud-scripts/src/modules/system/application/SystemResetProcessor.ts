@@ -1,29 +1,35 @@
 import { EventType } from '@marppa-cloud/db';
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
-import type { EventPayload } from '@/event/domain/EventPayload';
-import { IMeshService } from '@/mesh/infrastructure/IMeshService';
-import { IOrbitService } from '@/orbit/infrastructure/IOrbitService';
-import { IHiveService } from '@/worker/infrastructure/IHiveService';
+import { IEventProcessor } from '@/event/application/EventWorker';
+import type { EventPayload } from '@/event/domain/models/EventPayload';
+import { MESH_SERVICE_TOKEN, MeshService } from '@/mesh/domain/services/MeshService';
+import { ORBIT_SERVICE_TOKEN, OrbitService } from '@/orbit/domain/services/OrbitService';
+import { HIVE_SERVICE_TOKEN, HiveService } from '@/worker/domain/services/HiveService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
+import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
 import { Inject } from '@/decorators/Inject';
 
 @EventProcessor(EventType.SYSTEM_RESET)
 export class SystemResetProcessor implements IEventProcessor {
 
   constructor(
-    private readonly repository: IEventRepository,
-    private readonly hiveService: IHiveService,
-    private readonly meshService: IMeshService,
-    private readonly orbitService: IOrbitService,
+    private readonly logger: LoggerService,
     
-    @Inject(ILOGGER_TOKEN)
-    private readonly logger: ILogger,
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
+
+    @Inject(HIVE_SERVICE_TOKEN)
+    private readonly hiveService: HiveService,
+
+    @Inject(MESH_SERVICE_TOKEN)
+    private readonly meshService: MeshService,
+
+    @Inject(ORBIT_SERVICE_TOKEN)
+    private readonly orbitService: OrbitService,
   ) {}
 
-  async handle(event: EventPayload): Promise<void> {
+  public async handle(event: EventPayload): Promise<void> {
     try {
       await this.hiveService.forceResetHive();
       await this.meshService.forceResetMesh();

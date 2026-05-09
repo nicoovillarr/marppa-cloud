@@ -1,28 +1,30 @@
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import { PrismaClient } from '@marppa-cloud/db';
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
-import type { EventPayload } from '@/event/domain/EventPayload';
-import { AbortError } from '@/event/domain/EventPayload';
-import { IMeshService } from '../infrastructure/IMeshService';
+import { IEventProcessor } from '@/event/application/EventWorker';
+import type { EventPayload } from '@/event/domain/models/EventPayload';
+import { MESH_SERVICE_TOKEN, MeshService } from '../domain/services/MeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
+import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
+import { AbortError } from '@/event/domain/errors/AbortError';
 import { Inject } from '@/decorators/Inject';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 
 @EventProcessor(EventType.NODE_UPDATE_FIBER)
 export class NodeUpdateFiberProcessor implements IEventProcessor {
 
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly repository: IEventRepository,
-    private readonly meshService: IMeshService,
+    private readonly prisma: PrismaService,
+    private readonly logger: LoggerService,
+
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
     
-    @Inject(ILOGGER_TOKEN)
-    private readonly logger: ILogger,
+    @Inject(MESH_SERVICE_TOKEN)
+    private readonly meshService: MeshService,
   ) { }
 
-  async handle(event: EventPayload): Promise<void> {
+  public async handle(event: EventPayload): Promise<void> {
     let fiber: { id: number; status: string; protocol: string; hostPort: number | null; targetPort: number; node: { ipAddress: string; zoneId: string } } | null = null;
 
     const updateFiberStatus = async (status: ResourceStatus) => {
@@ -33,9 +35,9 @@ export class NodeUpdateFiberProcessor implements IEventProcessor {
     };
 
     const addCompleteEvent = async (fiberId: number) => {
-      const createdEvent = await this.repository.createEvent(EventType.NODE_FIBER_UPDATED, event.createdBy, event.companyId);
-      await this.repository.addEventResource(createdEvent.id, 'Event', String(event.id));
-      await this.repository.addEventResource(createdEvent.id, 'Fiber', String(fiberId));
+      const createdEventId = await this.repository.createEvent(EventType.NODE_FIBER_UPDATED, event.createdBy, event.companyId);
+      await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
+      await this.repository.addEventResource(createdEventId, 'Fiber', String(fiberId));
     };
 
     try {

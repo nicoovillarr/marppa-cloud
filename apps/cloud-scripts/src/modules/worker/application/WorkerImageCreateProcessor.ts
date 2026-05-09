@@ -1,28 +1,29 @@
-import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import { PrismaClient } from '@marppa-cloud/db';
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
-import type { EventPayload } from '@/event/domain/EventPayload';
-import { AbortError } from '@/event/domain/EventPayload';
-import { IHiveService } from '../infrastructure/IHiveService';
+import { EventType } from '@marppa-cloud/db';
+import { IEventProcessor } from '@/event/application/EventWorker';
+import type { EventPayload } from '@/event/domain/models/EventPayload';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
+import { AbortError } from '@/event/domain/errors/AbortError';
+import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
+import { HIVE_SERVICE_TOKEN, HiveService } from '../domain/services/HiveService';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
 
 @EventProcessor(EventType.WORKER_IMAGE_CREATE)
 export class WorkerImageCreateProcessor implements IEventProcessor {
-
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly repository: IEventRepository,
-    private readonly hiveService: IHiveService,
-    
-    @Inject(ILOGGER_TOKEN)
-    private readonly logger: ILogger,
+    private readonly prisma: PrismaService,
+    private readonly logger: LoggerService,
+
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
+
+    @Inject(HIVE_SERVICE_TOKEN)
+    private readonly hiveService: HiveService,
   ) {}
 
-  async handle(event: EventPayload): Promise<void> {
+  public async handle(event: EventPayload): Promise<void> {
     try {
       const resourceWorkerImage = event.resources.find(
         (r) => r.resourceType === 'WorkerImage',
@@ -52,18 +53,18 @@ export class WorkerImageCreateProcessor implements IEventProcessor {
         );
       }
 
-      const eventCreated = await this.repository.createEvent(
+      const eventCreatedId = await this.repository.createEvent(
         EventType.WORKER_IMAGE_CREATED,
         event.createdBy,
         event.companyId,
       );
       await this.repository.addEventResource(
-        eventCreated.id,
+        eventCreatedId,
         'Event',
         String(event.id),
       );
       await this.repository.addEventResource(
-        eventCreated.id,
+        eventCreatedId,
         'WorkerImage',
         String(workerImage.id),
       );

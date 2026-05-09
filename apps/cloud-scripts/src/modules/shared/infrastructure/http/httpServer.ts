@@ -1,32 +1,28 @@
 import Fastify, { type FastifyInstance } from 'fastify';
-import { ILogger, ILOGGER_TOKEN } from '../logger/ILogger';
 import { Command } from '@/libs/Command';
 import path from 'path';
 import { Injectable } from '@/decorators/Injectable';
-import { Inject } from '@/decorators/Inject';
+import { LoggerService } from '../services/LoggerService';
+import { OnModuleDestroy, OnModuleInit } from '@/app/container';
 
 @Injectable()
-export class HttpServer {
+export class HttpServer implements OnModuleInit, OnModuleDestroy {
   private app: FastifyInstance | null = null;
 
-  constructor(
-    @Inject(ILOGGER_TOKEN)
-    private readonly logger: ILogger,
-  ) {}
+  constructor(private readonly logger: LoggerService) {}
 
-  async start(): Promise<void> {
+  public async onModuleInit(): Promise<void> {
     if (this.app) {
       return;
     }
 
-    const {
-      HTTP_PORT,
-      AUTH_TOKEN
-    } = process.env;
+    const { HTTP_PORT, AUTH_TOKEN } = process.env;
 
     const app = Fastify({ logger: false });
 
-    app.get('/health', async (_req, reply) => reply.send({ status: 'healthy' }));
+    app.get('/health', async (_req, reply) =>
+      reply.send({ status: 'healthy' }),
+    );
 
     const requireAuth = (authorization: string | undefined): boolean => {
       if (!authorization?.startsWith('Bearer ')) return false;
@@ -44,22 +40,40 @@ export class HttpServer {
       const { token, zone, record, ip } = req.body;
 
       if (!token || !zone || !record) {
-        return reply.status(400).send({ message: 'Missing required fields: token, zone, record' });
+        return reply
+          .status(400)
+          .send({ message: 'Missing required fields: token, zone, record' });
       }
 
       const ZONE_RE = /^[a-zA-Z0-9.\-]{1,253}$/;
       const RECORD_RE = /^[a-zA-Z0-9._\-]{1,63}$/;
       const IP_RE = /^(\d{1,3}\.){3}\d{1,3}$/;
       if (!ZONE_RE.test(zone) || !RECORD_RE.test(record)) {
-        return reply.status(400).send({ message: 'Invalid zone or record format' });
+        return reply
+          .status(400)
+          .send({ message: 'Invalid zone or record format' });
       }
       if (ip !== undefined && !IP_RE.test(ip)) {
         return reply.status(400).send({ message: 'Invalid IP format' });
       }
 
-      const scriptPath = path.join(__dirname, '..', '..', '..', '..', '..', 'scripts', 'update_dns.sh');
-      const scriptArgs = [token, zone, record, ip].filter((a): a is string => a !== undefined);
-      const result = await Command.runCommand('bash', [scriptPath, ...scriptArgs]).catch(() => null);
+      const scriptPath = path.join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        'scripts',
+        'update_dns.sh',
+      );
+      const scriptArgs = [token, zone, record, ip].filter(
+        (a): a is string => a !== undefined,
+      );
+      const result = await Command.runCommand('bash', [
+        scriptPath,
+        ...scriptArgs,
+      ]).catch(() => null);
       if (!result) {
         return reply.status(500).send({ message: 'Failed to update DNS' });
       }
@@ -73,7 +87,7 @@ export class HttpServer {
     this.logger.info(`[HTTP] Fastify server listening on port ${HTTP_PORT}`);
   }
 
-  async close(): Promise<void> {
+  public async onModuleDestroy(): Promise<void> {
     if (!this.app) {
       return;
     }

@@ -1,23 +1,28 @@
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import { PrismaClient } from '@marppa-cloud/db';
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import { IEventRepository } from '@/event/domain/IEventRepository';
-import type { EventPayload } from '@/event/domain/EventPayload';
-import { AbortError } from '@/event/domain/EventPayload';
-import { IOrbitService } from '../infrastructure/IOrbitService';
+import { IEventProcessor } from '@/event/application/EventWorker';
+import type { EventPayload } from '@/event/domain/models/EventPayload';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
+import { ORBIT_SERVICE_TOKEN, OrbitService } from '../domain/services/OrbitService';
+import { AbortError } from '@/event/domain/errors/AbortError';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
+import { Inject } from '@/decorators/Inject';
 
 @EventProcessor(EventType.PORTAL_DELETE)
 export class PortalDeleteProcessor implements IEventProcessor {
 
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly repository: IEventRepository,
-    private readonly orbitService: IOrbitService,
+    private readonly prisma: PrismaService,
+
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
+
+    @Inject(ORBIT_SERVICE_TOKEN)
+    private readonly orbitService: OrbitService,
   ) { }
 
-  async handle(event: EventPayload): Promise<void> {
+  public async handle(event: EventPayload): Promise<void> {
     let portal: { id: string; status: string; [k: string]: unknown } | null = null;
 
     const updatePortalStatus = async (status: ResourceStatus) => {
@@ -52,9 +57,9 @@ export class PortalDeleteProcessor implements IEventProcessor {
       await this.orbitService.deleteNginxConfig(portal.id);
       await updatePortalStatus(ResourceStatus.DELETED);
 
-      const eventCreated = await this.repository.createEvent(EventType.PORTAL_DELETED, event.createdBy, event.companyId);
-      await this.repository.addEventResource(eventCreated.id, 'Event', String(event.id));
-      await this.repository.addEventResource(eventCreated.id, 'Portal', portal.id);
+      const eventCreatedId = await this.repository.createEvent(EventType.PORTAL_DELETED, event.createdBy, event.companyId);
+      await this.repository.addEventResource(eventCreatedId, 'Event', String(event.id));
+      await this.repository.addEventResource(eventCreatedId, 'Portal', portal.id);
     } catch (error) {
       if (error instanceof AbortError) throw error;
       if (portal) {

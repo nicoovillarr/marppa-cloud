@@ -1,28 +1,30 @@
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import { PrismaClient } from '@marppa-cloud/db';
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
-import type { EventPayload } from '@/event/domain/EventPayload';
-import { AbortError } from '@/event/domain/EventPayload';
-import { IMeshService } from '../infrastructure/IMeshService';
+import { IEventProcessor } from '@/event/application/EventWorker';
+import type { EventPayload } from '@/event/domain/models/EventPayload';
+import { MESH_SERVICE_TOKEN, MeshService } from '../domain/services/MeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
+import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
+import { AbortError } from '@/event/domain/errors/AbortError';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
 
 @EventProcessor(EventType.NODE_DELETE_FIBER)
 export class NodeDeleteFiberProcessor implements IEventProcessor {
 
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly repository: IEventRepository,
-    private readonly meshService: IMeshService,
+    private readonly prisma: PrismaService,
+    private readonly meshService: MeshService,
     
-    @Inject(ILOGGER_TOKEN)
-    private readonly logger: ILogger,
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
+
+    @Inject(MESH_SERVICE_TOKEN)
+    private readonly logger: LoggerService,
   ) { }
 
-  async handle(event: EventPayload): Promise<void> {
+  public async handle(event: EventPayload): Promise<void> {
     let fiber: { id: number; status: string; protocol: string; hostPort: number | null; targetPort: number; node: { ipAddress: string; zoneId: string } } | null = null;
 
     const updateFiberStatus = async (status: ResourceStatus) => {
@@ -67,9 +69,9 @@ export class NodeDeleteFiberProcessor implements IEventProcessor {
 
       await updateFiberStatus(ResourceStatus.DELETED);
 
-      const createdEvent = await this.repository.createEvent(EventType.NODE_FIBER_DELETED, event.createdBy, event.companyId);
-      await this.repository.addEventResource(createdEvent.id, 'Event', String(event.id));
-      await this.repository.addEventResource(createdEvent.id, 'Fiber', String(fiber.id));
+      const createdEventId = await this.repository.createEvent(EventType.NODE_FIBER_DELETED, event.createdBy, event.companyId);
+      await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
+      await this.repository.addEventResource(createdEventId, 'Fiber', String(fiber.id));
     } catch (error) {
       if (error instanceof AbortError) throw error;
 

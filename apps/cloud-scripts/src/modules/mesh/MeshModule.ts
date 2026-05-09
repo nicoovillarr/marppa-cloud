@@ -6,15 +6,18 @@ import { NodeUnassignWorkerProcessor } from './application/NodeUnassignWorkerPro
 import { NodeCreateFiberProcessor } from './application/NodeCreateFiberProcessor';
 import { NodeUpdateFiberProcessor } from './application/NodeUpdateFiberProcessor';
 import { NodeDeleteFiberProcessor } from './application/NodeDeleteFiberProcessor';
-import { MeshService } from './infrastructure/MeshService';
-import { StubMeshService } from './infrastructure/StubMeshService';
-import { IMeshService } from './infrastructure/IMeshService';
+import { LinuxMeshService } from './infrastructure/services/LinuxMeshService';
+import { StubMeshService } from './infrastructure/services/StubMeshService';
+import { MESH_SERVICE_TOKEN, MeshService } from './domain/services/MeshService';
 
 const useStubs = process.env.USE_STUBS === 'true';
 
 @Module({
   providers: [
-    { provide: IMeshService, useClass: useStubs ? StubMeshService : MeshService },
+    {
+      provide: MESH_SERVICE_TOKEN,
+      useClass: useStubs ? StubMeshService : LinuxMeshService,
+    },
   ],
   processors: [
     ZoneCreateProcessor,

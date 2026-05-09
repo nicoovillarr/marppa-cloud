@@ -1,30 +1,36 @@
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import type { Prisma } from '@marppa-cloud/db';
 import { PrismaClient } from '@marppa-cloud/db';
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import { IEventRepository } from '@/event/domain/IEventRepository';
-import type { EventPayload } from '@/event/domain/EventPayload';
-import { AbortError } from '@/event/domain/EventPayload';
-import { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
-import { IHiveService } from '../infrastructure/IHiveService';
+import { IEventProcessor } from '@/event/application/EventWorker';
+import type { EventPayload } from '@/event/domain/models/EventPayload';
+import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 
 type WorkerWithImageAndFlavor = Prisma.WorkerGetPayload<{
   include: { image: true; flavor: true };
 }>;
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { AbortError } from '@/event/domain/errors/AbortError';
+import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
+import { HIVE_SERVICE_TOKEN, HiveService } from '../domain/services/HiveService';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
+import { Inject } from '@/decorators/Inject';
 
 @EventProcessor(EventType.WORKER_CREATE)
 export class WorkerCreateProcessor implements IEventProcessor {
 
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly repository: IEventRepository,
+    private readonly prisma: PrismaService,
     private readonly wsServer: WebSocketServer,
-    private readonly hiveService: IHiveService,
+
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
+
+    @Inject(HIVE_SERVICE_TOKEN)
+    private readonly hiveService: HiveService,
   ) { }
 
-  async handle(event: EventPayload): Promise<void> {
+  public async handle(event: EventPayload): Promise<void> {
     let worker: WorkerWithImageAndFlavor | null = null;
 
     const updateWorkerStatus = async (status: ResourceStatus) => {
@@ -93,13 +99,13 @@ export class WorkerCreateProcessor implements IEventProcessor {
 
       this.wsServer.sendWorkerMessage(worker, 'CREATED', worker);
 
-      const createdEvent = await this.repository.createEvent(
+      const createdEventId = await this.repository.createEvent(
         EventType.WORKER_CREATED,
         event.createdBy,
         event.companyId,
       );
-      await this.repository.addEventResource(createdEvent.id, 'Event', String(event.id));
-      await this.repository.addEventResource(createdEvent.id, 'Worker', worker.id);
+      await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
+      await this.repository.addEventResource(createdEventId, 'Worker', worker.id);
     } catch (error) {
       if (error instanceof AbortError) throw error;
 

@@ -1,31 +1,35 @@
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import { PrismaClient } from '@marppa-cloud/db';
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
-import type { EventPayload } from '@/event/domain/EventPayload';
-import { WebSocketServer } from '@/shared/infrastructure/websocket/WebSocketServer';
-import { IHiveService } from '../infrastructure/IHiveService';
-import { IMeshService } from '@/mesh/infrastructure/IMeshService';
+import { IEventProcessor } from '@/event/application/EventWorker';
+import type { EventPayload } from '@/event/domain/models/EventPayload';
+import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
+import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
+import { MESH_SERVICE_TOKEN, MeshService } from '@/mesh/domain/services/MeshService';
+import { HIVE_SERVICE_TOKEN, HiveService } from '../domain/services/HiveService';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
 
 @EventProcessor(EventType.WORKER_TERMINATE)
 export class WorkerTerminateProcessor implements IEventProcessor {
 
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly repository: IEventRepository,
+    private readonly prisma: PrismaService,
     private readonly wsServer: WebSocketServer,
-    private readonly hiveService: IHiveService,
-    private readonly meshService: IMeshService,
-    
-    @Inject(ILOGGER_TOKEN)
-    private readonly logger: ILogger,
+    private readonly logger: LoggerService,
+
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
+
+    @Inject(HIVE_SERVICE_TOKEN)
+    private readonly hiveService: HiveService,
+
+    @Inject(MESH_SERVICE_TOKEN)
+    private readonly meshService: MeshService,
   ) { }
 
-  async handle(event: EventPayload): Promise<void> {
+  public async handle(event: EventPayload): Promise<void> {
     let worker: { id: string; status: string; ownerId: string; node: { zoneId: string } | null; [k: string]: unknown } | null = null;
 
     const updateWorkerStatus = async (status: ResourceStatus) => {
@@ -62,9 +66,9 @@ export class WorkerTerminateProcessor implements IEventProcessor {
 
       this.wsServer.sendWorkerMessage({ id: worker.id }, 'WORKER_TERMINATED', null);
 
-      const eventUpdated = await this.repository.createEvent(EventType.WORKER_TERMINATED, event.createdBy, event.companyId);
-      await this.repository.addEventResource(eventUpdated.id, 'Event', String(event.id));
-      await this.repository.addEventResource(eventUpdated.id, 'Worker', worker.id);
+      const eventUpdatedId = await this.repository.createEvent(EventType.WORKER_TERMINATED, event.createdBy, event.companyId);
+      await this.repository.addEventResource(eventUpdatedId, 'Event', String(event.id));
+      await this.repository.addEventResource(eventUpdatedId, 'Worker', worker.id);
     } catch (error) {
       this.logger.error(`Error processing event ID ${event.id}: ${String(error)}`);
 

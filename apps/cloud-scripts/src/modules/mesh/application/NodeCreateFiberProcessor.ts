@@ -1,29 +1,31 @@
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import { PrismaClient } from '@marppa-cloud/db';
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import { IEventRepository } from '@/event/domain/IEventRepository';
-import { ILogger, ILOGGER_TOKEN } from '@/shared/infrastructure/logger/ILogger';
-import type { EventPayload } from '@/event/domain/EventPayload';
-import { AbortError } from '@/event/domain/EventPayload';
-import { IMeshService } from '../infrastructure/IMeshService';
-import { PortConflictError } from '../infrastructure/MeshService';
+import { IEventProcessor } from '@/event/application/EventWorker';
+import type { EventPayload } from '@/event/domain/models/EventPayload';
+import { MESH_SERVICE_TOKEN, MeshService } from '../domain/services/MeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
+import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
+import { AbortError } from '@/event/domain/errors/AbortError';
 import { Inject } from '@/decorators/Inject';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
+import { PortConflictError } from '../domain/errors/PortConflictError';
 
 @EventProcessor(EventType.NODE_CREATE_FIBER)
 export class NodeCreateFiberProcessor implements IEventProcessor {
 
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly repository: IEventRepository,
-    private readonly meshService: IMeshService,
-    
-    @Inject(ILOGGER_TOKEN)
-    private readonly logger: ILogger,
+    private readonly prisma: PrismaService,
+    private readonly logger: LoggerService,
+
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
+
+    @Inject(MESH_SERVICE_TOKEN)
+    private readonly meshService: MeshService,
   ) { }
 
-  async handle(event: EventPayload): Promise<void> {
+  public async handle(event: EventPayload): Promise<void> {
     let fiber: { id: number; status: string; protocol: string; hostPort: number | null; targetPort: number; node: { ipAddress: string; zoneId: string } } | null = null;
 
     const updateFiberStatus = async (status: ResourceStatus) => {
@@ -62,14 +64,14 @@ export class NodeCreateFiberProcessor implements IEventProcessor {
       await updateFiberStatus(ResourceStatus.PROVISIONING);
 
       let hostPort!: number;
-      const MAX_PORT_RETRIES = 5;
-      for (let attempt = 0; attempt < MAX_PORT_RETRIES; attempt++) {
+      const maxPortRetries = 5;
+      for (let attempt = 0; attempt < maxPortRetries; attempt++) {
         hostPort = await this.meshService.findNextPort(fiber.protocol);
         try {
           await this.meshService.addFiber(fiber.node.zoneId, fiber.protocol, hostPort, fiber.node.ipAddress, fiber.targetPort);
           break;
         } catch (err) {
-          if (err instanceof PortConflictError && attempt < MAX_PORT_RETRIES - 1) continue;
+          if (err instanceof PortConflictError && attempt < maxPortRetries - 1) continue;
           throw err;
         }
       }
@@ -79,9 +81,9 @@ export class NodeCreateFiberProcessor implements IEventProcessor {
         data: { hostPort, status: ResourceStatus.ACTIVE, updatedBy: event.createdBy },
       });
 
-      const createdEvent = await this.repository.createEvent(EventType.NODE_FIBER_CREATED, event.createdBy, event.companyId);
-      await this.repository.addEventResource(createdEvent.id, 'Event', String(event.id));
-      await this.repository.addEventResource(createdEvent.id, 'Fiber', String(fiber.id));
+      const createdEventId = await this.repository.createEvent(EventType.NODE_FIBER_CREATED, event.createdBy, event.companyId);
+      await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
+      await this.repository.addEventResource(createdEventId, 'Fiber', String(fiber.id));
     } catch (error) {
       if (error instanceof AbortError) throw error;
 

@@ -1,25 +1,23 @@
 import { Module } from '@/decorators/Module';
-import { PrismaEventRepository } from './infrastructure/PrismaEventRepository';
-import { BullMQEventQueue } from './infrastructure/BullMQEventQueue';
+import { PrismaEventRepository } from './infrastructure/repositories/PrismaEventRepository';
+import { BullMQEventQueueRepository } from './infrastructure/repositories/BullMQEventQueueRepository';
 import { EventWorker } from './application/EventWorker';
-import { IEventRepository } from './domain/IEventRepository';
-import { IQueue } from './domain/IQueue';
+import { EVENT_REPOSITORY_TOKEN } from './domain/repositories/EventRepository';
+import { EVENT_QUEUE_REPOSITORY_TOKEN } from './domain/repositories/EventQueueRepository';
 
 @Module({
   providers: [
-    { provide: IEventRepository, useClass: PrismaEventRepository },
-    { provide: IQueue, useClass: BullMQEventQueue },
-    { provide: EventWorker },
+    EventWorker,
+
+    {
+      provide: EVENT_REPOSITORY_TOKEN,
+      useClass: PrismaEventRepository,
+    },
+
+    {
+      provide: EVENT_QUEUE_REPOSITORY_TOKEN,
+      useClass: BullMQEventQueueRepository,
+    },
   ],
 })
-export class EventModule {
-  constructor(
-    private readonly worker: EventWorker,
-    private readonly queue: IQueue,
-  ) {}
-
-  async stop(): Promise<void> {
-    await this.worker.close();
-    await this.queue.close();
-  }
-}
+export class EventModule {}

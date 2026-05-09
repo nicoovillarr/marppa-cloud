@@ -5,17 +5,18 @@ import { PortalDeleteProcessor } from './application/PortalDeleteProcessor';
 import { TransponderCreateProcessor } from './application/TransponderCreateProcessor';
 import { TransponderUpdateProcessor } from './application/TransponderUpdateProcessor';
 import { TransponderDeleteProcessor } from './application/TransponderDeleteProcessor';
-import { OrbitService } from './infrastructure/OrbitService';
-import { StubOrbitService } from './infrastructure/StubOrbitService';
-import { IOrbitService } from './infrastructure/IOrbitService';
-import { IPChecker } from '@/shared/infrastructure/background/IPChecker';
+import { LinuxOrbitService } from './infrastructure/services/LinuxOrbitService';
+import { StubOrbitService } from './infrastructure/services/StubOrbitService';
+import { ORBIT_SERVICE_TOKEN } from './domain/services/OrbitService';
 
 const useStubs = process.env.USE_STUBS === 'true';
 
 @Module({
   providers: [
-    { provide: IOrbitService, useClass: useStubs ? StubOrbitService : OrbitService },
-    { provide: IPChecker },
+    {
+      provide: ORBIT_SERVICE_TOKEN,
+      useClass: useStubs ? StubOrbitService : LinuxOrbitService,
+    },
   ],
   processors: [
     PortalCreateProcessor,
@@ -26,14 +27,4 @@ const useStubs = process.env.USE_STUBS === 'true';
     TransponderDeleteProcessor,
   ],
 })
-export class OrbitModule {
-  constructor(private readonly ipChecker: IPChecker) {}
-
-  start(): void {
-    this.ipChecker.start();
-  }
-
-  stop(): void {
-    this.ipChecker.stop();
-  }
-}
+export class OrbitModule {}

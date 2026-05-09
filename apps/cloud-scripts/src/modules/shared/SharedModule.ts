@@ -1,30 +1,17 @@
-import Redis from 'ioredis';
-import { PrismaClient } from '@marppa-cloud/db';
 import { Module } from '@/decorators/Module';
-import { ConsoleLogger } from './infrastructure/logger/ConsoleLogger';
-import { getPrismaClient } from './infrastructure/prisma/prismaClient';
-import { ILogger, ILOGGER_TOKEN } from './infrastructure/logger/ILogger';
+import { PrismaService } from './infrastructure/services/PrismaService';
+import { LoggerService } from './infrastructure/services/LoggerService';
+import { RedisService } from './infrastructure/services/RedisService';
+import { HttpServer } from './infrastructure/http/HttpServer';
+import { WebSocketServer } from './infrastructure/http/WebSocketServer';
 
 @Module({
   providers: [
-    { provide: ILOGGER_TOKEN, useClass: ConsoleLogger },
-    { provide: PrismaClient, useFactory: () => getPrismaClient() },
-    { provide: Redis, useFactory: () => new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379') },
+    PrismaService,
+    LoggerService,
+    RedisService,
+    HttpServer,
+    WebSocketServer,
   ],
 })
-export class SharedModule {
-  constructor(
-    private readonly redis: Redis,
-    private readonly prisma: PrismaClient,
-    private readonly logger: ILogger,
-  ) {}
-
-  start(): void {
-    this.redis.on('error', (err) => this.logger.error(`[Redis] ${String(err)}`));
-  }
-
-  async stop(): Promise<void> {
-    await this.redis.quit();
-    await this.prisma.$disconnect();
-  }
-}
+export class SharedModule {}

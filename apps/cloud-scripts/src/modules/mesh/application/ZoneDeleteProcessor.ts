@@ -1,22 +1,27 @@
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
-import { PrismaClient } from '@marppa-cloud/db';
-import type { IEventProcessor } from '@/event/domain/IEventProcessor';
-import { IEventRepository } from '@/event/domain/IEventRepository';
-import type { EventPayload } from '@/event/domain/EventPayload';
-import { IMeshService } from '../infrastructure/IMeshService';
+import { IEventProcessor } from '@/event/application/EventWorker';
+import type { EventPayload } from '@/event/domain/models/EventPayload';
+import { MESH_SERVICE_TOKEN, MeshService } from '../domain/services/MeshService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
+import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
+import { Inject } from '@/decorators/Inject';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 
 @EventProcessor(EventType.ZONE_DELETE)
 export class ZoneDeleteProcessor implements IEventProcessor {
 
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly repository: IEventRepository,
-    private readonly meshService: IMeshService,
+    private readonly prisma: PrismaService,
+
+    @Inject(EVENT_REPOSITORY_TOKEN)
+    private readonly repository: EventRepository,
+
+    @Inject(MESH_SERVICE_TOKEN)
+    private readonly meshService: MeshService,
   ) { }
 
-  async handle(event: EventPayload): Promise<void> {
+  public async handle(event: EventPayload): Promise<void> {
     let zone: { id: string; status: string; cidr: string; nodes: unknown[]; [k: string]: unknown } | null = null;
 
     const updateZoneStatus = async (status: ResourceStatus) => {
@@ -49,9 +54,9 @@ export class ZoneDeleteProcessor implements IEventProcessor {
       await this.meshService.deleteZone(zone.id, zone.cidr);
       await updateZoneStatus(ResourceStatus.DELETED);
 
-      const createdEvent = await this.repository.createEvent(EventType.ZONE_DELETED, event.createdBy, event.companyId);
-      await this.repository.addEventResource(createdEvent.id, 'Event', String(event.id));
-      await this.repository.addEventResource(createdEvent.id, 'Zone', zone.id);
+      const createdEventId = await this.repository.createEvent(EventType.ZONE_DELETED, event.createdBy, event.companyId);
+      await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
+      await this.repository.addEventResource(createdEventId, 'Zone', zone.id);
     } catch (error) {
       if (zone) {
         await updateZoneStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);

@@ -1,5 +1,5 @@
-import { AppContainer } from '@/app/container';
-import { ILogger } from '@/shared/infrastructure/logger/ILogger';
+import { AppContainer, isOnModuleDestroy, isOnModuleInit } from '@/app/container';
+import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
 
 interface LifecycleModule {
   start?(): Promise<void> | void;
@@ -7,9 +7,13 @@ interface LifecycleModule {
 }
 
 async function main(): Promise<void> {
-  const { container, modules } = AppContainer.build();
-  const logger = container.resolve<ILogger>(AppContainer.tokenKey(ILogger));
+  const { container, modules, lifecycleProviders } = AppContainer.build();
+  const logger = container.resolve<LoggerService>(AppContainer.tokenKey(LoggerService));
   const lifecycle = modules as LifecycleModule[];
+
+  for (const provider of lifecycleProviders) {
+    if (isOnModuleInit(provider)) await provider.onModuleInit();
+  }
 
   for (const mod of lifecycle) {
     await mod.start?.();
@@ -22,6 +26,10 @@ async function main(): Promise<void> {
 
     for (const mod of [...lifecycle].reverse()) {
       await mod.stop?.();
+    }
+
+    for (const provider of [...lifecycleProviders].reverse()) {
+      if (isOnModuleDestroy(provider)) await provider.onModuleDestroy();
     }
 
     logger.info('[Main] Shutdown complete.');
