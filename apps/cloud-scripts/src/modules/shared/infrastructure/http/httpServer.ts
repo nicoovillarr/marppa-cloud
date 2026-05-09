@@ -1,11 +1,8 @@
 import Fastify, { type FastifyInstance } from 'fastify';
-import { IQueue } from '@/event/domain/IQueue';
 import { ILogger } from '../logger/ILogger';
 import { Command } from '@/libs/Command';
 import path from 'path';
 import { Injectable } from '@/decorators/Injectable';
-import { Inject } from '@/decorators/Inject';
-import { HTTP_PORT, AUTH_TOKEN } from '@/tokens';
 
 @Injectable()
 export class HttpServer {
@@ -13,7 +10,6 @@ export class HttpServer {
 
   constructor(
     private readonly logger: ILogger,
-    private readonly queue: IQueue,
   ) {}
 
   async start(): Promise<void> {

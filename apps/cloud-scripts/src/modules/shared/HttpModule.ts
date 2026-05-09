@@ -1,11 +1,8 @@
 import { Module } from '@/decorators/Module';
-import { HTTP_PORT, AUTH_TOKEN } from '@/tokens';
-import { HttpServer } from './infrastructure/http/httpServer';
+import { HttpServer } from './infrastructure/http/HttpServer';
 
 @Module({
   providers: [
-    { provide: HTTP_PORT, useValue: Number(process.env.HTTP_PORT ?? 3000) },
-    { provide: AUTH_TOKEN, useValue: process.env.AUTH_TOKEN ?? '' },
     { provide: HttpServer },
   ],
 })

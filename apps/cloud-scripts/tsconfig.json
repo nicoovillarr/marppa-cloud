@@ -20,7 +20,6 @@
     "allowJs": true,
     "checkJs": false,
     "paths": {
-      "@/tokens": ["./src/tokens.ts"],
       "@/app/*": ["./src/app/*"],
       "@/decorators/*": ["./src/decorators/*"],
       "@/libs/*": ["./src/libs/*"],
