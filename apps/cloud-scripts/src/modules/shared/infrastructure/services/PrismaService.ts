@@ -1,4 +1,4 @@
-import { OnModuleDestroy, OnModuleInit } from '@/app/container';
+import { OnModuleDestroy, OnModuleInit } from '@/libs/Container';
 import { Injectable } from '@/decorators/Injectable';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';

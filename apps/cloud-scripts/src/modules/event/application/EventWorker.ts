@@ -10,7 +10,7 @@ import {
 import { AbortError } from '../domain/errors/AbortError';
 import { RedisService } from '@/shared/infrastructure/services/RedisService';
 import { Inject } from '@/decorators/Inject';
-import { OnModuleDestroy, OnModuleInit } from '@/app/container';
+import { OnModuleDestroy, OnModuleInit } from '@/libs/Container';
 
 const QUEUE_NAME = 'infrastructure-events';
 

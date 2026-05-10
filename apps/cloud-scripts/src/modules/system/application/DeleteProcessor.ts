@@ -3,7 +3,7 @@ import { ResourceStatus } from '@marppa-cloud/db';
 import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '../../shared/infrastructure/services/LoggerService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
-import { OnModuleDestroy, OnModuleInit } from '@/app/container';
+import { OnModuleDestroy, OnModuleInit } from '@/libs/Container';
 
 @Injectable()
 export class DeleteProcessor implements OnModuleInit, OnModuleDestroy {

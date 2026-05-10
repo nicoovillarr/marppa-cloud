@@ -1,7 +1,7 @@
 import { Injectable } from '@/decorators/Injectable';
 import Redis from 'ioredis';
 import { LoggerService } from './LoggerService';
-import { OnModuleDestroy, OnModuleInit } from '@/app/container';
+import { OnModuleDestroy, OnModuleInit } from '@/libs/Container';
 
 @Injectable()
 export class RedisService

@@ -3,7 +3,7 @@ import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
 import { RedisService } from '@/shared/infrastructure/services/RedisService';
 import { EventQueueRepository } from '../../domain/repositories/EventQueueRepository';
-import { OnModuleDestroy } from '@/app/container';
+import { OnModuleDestroy } from '@/libs/Container';
 
 const QUEUE_NAME = 'infrastructure-events';
 

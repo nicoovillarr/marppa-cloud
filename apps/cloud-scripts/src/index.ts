@@ -2,7 +2,7 @@ import {
   AppContainer,
   isOnModuleDestroy,
   isOnModuleInit,
-} from '@/app/container';
+} from '@/libs/Container';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
 import { configDotenv } from 'dotenv';
 

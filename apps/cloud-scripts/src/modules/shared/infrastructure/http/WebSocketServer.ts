@@ -2,7 +2,7 @@ import WebSocket, { WebSocketServer as WsServer } from 'ws';
 import { jwtVerify } from 'jose';
 import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '../services/LoggerService';
-import { OnModuleDestroy, OnModuleInit } from '@/app/container';
+import { OnModuleDestroy, OnModuleInit } from '@/libs/Container';
 
 type ChannelMap = Record<string, Set<string>>;
 type ClientMap = Record<string, Map<string, WebSocket>>;
@@ -16,7 +16,7 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly logger: LoggerService) {}
 
   public onModuleInit(): void {
-    const { WS_PORT = 5000 } = process.env;
+    const { WS_PORT, JWT_SECRET } = process.env;
 
     this.wss = new WsServer({ port: Number(WS_PORT) });
 
@@ -40,9 +40,9 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
             }
 
             try {
-              if (!process.env.JWT_SECRET)
+              if (!JWT_SECRET)
                 throw new Error('JWT_SECRET env var is required');
-              const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+              const secret = new TextEncoder().encode(JWT_SECRET);
               const { payload } = await jwtVerify(accessToken, secret);
               socket.userId = payload.userId as string;
             } catch {

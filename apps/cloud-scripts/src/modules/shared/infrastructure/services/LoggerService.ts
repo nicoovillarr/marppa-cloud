@@ -1,4 +1,4 @@
-import { OnModuleInit } from '@/app/container';
+import { OnModuleInit } from '@/libs/Container';
 import { Injectable } from '@/decorators/Injectable';
 import fs from 'fs';
 import path from 'path';
@@ -23,6 +23,8 @@ export class LoggerService implements OnModuleInit {
 
     if (LOG_DIR) {
       this.logDir = path.resolve(LOG_DIR);
+    } else {
+      this.info('[LoggerService]: LOG_DIR not defined');
     }
   }
 
@@ -31,7 +33,7 @@ export class LoggerService implements OnModuleInit {
   }
 
   private get shouldLogFile(): boolean {
-    return this.logDir != null && fs.existsSync(this.logFile);
+    return this.logDir != null && fs.existsSync(this.logDir);
   }
 
   public onModuleInit(): Promise<void> | void {
@@ -109,11 +111,17 @@ export class LoggerService implements OnModuleInit {
   }
 
   private rotateOnStartup(): void {
-    if (!this.shouldLogFile) return
-      
+    if (!this.shouldLogFile || !fs.existsSync(this.logFile)) {
+      this.currentSize = 0;
+      return;
+    }
+
     const stats = fs.statSync(this.logFile);
-    if (stats.size > 0) this.rotateQueue();
-    else this.currentSize = stats.size;
+    this.currentSize = stats.size;
+
+    if (this.currentSize >= this.maxLogSize) {
+      this.rotateQueue();
+    }
   }
 
   private writeToFile(level: string, message: string): void {

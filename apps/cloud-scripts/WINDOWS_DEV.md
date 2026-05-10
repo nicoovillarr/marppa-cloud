@@ -276,26 +276,7 @@ cd apps/cloud-scripts
 cp .env.template .env.development.local
 ```
 
-Edit `.env.development.local`:
-
-```env
-PORT=3000
-WS_PORT=8080
-AUTH_TOKEN="your-auth-token"
-
-REDIS_URL="redis://127.0.0.1:6379"
-DATABASE_URL="postgresql://marppa:marppa@localhost:5432/marppa_cloud"
-
-JWT_SECRET="your-jwt-secret"
-
-MAX_LOG_SIZE=10
-LOG_BACKUP_COUNT=5
-
-BRIDGE_NAME=eth0
-
-MIN_PORT=40000
-MAX_PORT=50000
-```
+Edit `.env.development.local`.
 
 ---
 

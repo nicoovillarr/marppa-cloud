@@ -9,35 +9,40 @@ import { MeshService } from '../../domain/services/MeshService';
 import { Injectable } from '@/decorators/Injectable';
 import { PortConflictError } from '../../domain/errors/PortConflictError';
 
-const INTERFACES_DIR = '/etc/network/interfaces.d';
-const DNSMASQ_DIR = '/etc/dnsmasq.d';
-
-const NFT_CONF_PATH = '/etc/nftables.conf';
-const NFT_CONF_BACKUP_DIR = '/etc/nft-backups';
-
 @Injectable()
 export class LinuxMeshService extends MeshService {
+  private readonly interfacesDir: string = '/etc/network/interfaces.d';
+  private readonly dnsmasqDir: string = '/etc/dnsmasq.d';
+  private readonly nftConfPath: string = '/etc/nftables.conf';
+  private readonly nftConfBackupDir: string = '/etc/nft-backups';
+  private readonly bridgeName: string;
+
+  constructor() {
+    super();
+    this.bridgeName = this.bridgeName;
+  }
+
   public async getIpList(cidr) {
     console.log(`Getting IP list for CIDR: ${cidr}`);
-  
+
     const output = await Command.runCommand('nmap', ['-sL', '-n', cidr]);
-  
+
     if (!output) {
       throw new Error(`No output from nmap for CIDR ${cidr}`);
     }
-  
+
     return output
       .split('\n')
       .filter((l) => l.startsWith('Nmap scan report'))
       .map((l) => l.substring('Nmap scan report for'.length).trim());
   }
-  
+
   public async restartServices() {
     await Command.runCommand('sudo', ['systemctl', 'restart', 'networking']);
     await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
     await Command.runCommand('sudo', ['systemctl', 'restart', 'nftables']);
   }
-  
+
   public async createZone(cidr, bridgeName, gatewayIp) {
     const ipList = await this.getIpList(cidr);
     const gateway = gatewayIp || ipList[1];
@@ -47,84 +52,132 @@ export class LinuxMeshService extends MeshService {
     try {
       await this.createDnsmasqConfig(bridgeName, gateway, ipList);
     } catch (err) {
-      await fsPromises.rm(path.join(INTERFACES_DIR, bridgeName), { force: true });
+      await fsPromises.rm(path.join(this.interfacesDir, bridgeName), {
+        force: true,
+      });
       throw err;
     }
 
     try {
       await this.createNftablesConfig(bridgeName, cidr);
     } catch (err) {
-      await fsPromises.rm(path.join(INTERFACES_DIR, bridgeName), { force: true });
-      await fsPromises.rm(path.join(DNSMASQ_DIR, `${bridgeName}.conf`), { force: true });
+      await fsPromises.rm(path.join(this.interfacesDir, bridgeName), {
+        force: true,
+      });
+      await fsPromises.rm(path.join(this.dnsmasqDir, `${bridgeName}.conf`), {
+        force: true,
+      });
       throw err;
     }
 
     await this.restartServices();
   }
-  
+
   public async createInterface(bridgeName, cidr, gateway) {
-    const bridgeFile = path.join(INTERFACES_DIR, bridgeName);
+    const bridgeFile = path.join(this.interfacesDir, bridgeName);
     if (fs.existsSync(bridgeFile)) {
       throw new Error(`${bridgeFile} already exists`);
     }
-  
+
     console.log(`Creating interface for bridge: ${bridgeName}`);
-  
+
     const netmask = await this.ipcalcField(cidr, 'Netmask');
-  
+
     const ifaceConf = `auto ${bridgeName}
 iface ${bridgeName} inet static
   address ${gateway}
   netmask ${netmask}
   bridge_ports none
 `;
-  
+
     await fsPromises.writeFile(bridgeFile, ifaceConf);
   }
-  
+
   public async ipcalcField(cidr, field) {
     const output = await Command.runCommand('ipcalc', [cidr]);
-    const line = output.split('\n').find((l) => l.trim().startsWith(`${field}:`));
-  
+    const line = output
+      .split('\n')
+      .find((l) => l.trim().startsWith(`${field}:`));
+
     if (!line) return null;
-  
+
     const match = line.match(/^[^:]+:\s+([^\s]+)/);
     return match ? match[1] : null;
   }
-  
+
   public async createDnsmasqConfig(bridgeName, gateway, ipList) {
-    const dnsmasqFile = path.join(DNSMASQ_DIR, `${bridgeName}.conf`);
+    const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
     if (fs.existsSync(dnsmasqFile)) {
       throw new Error(`${dnsmasqFile} already exists`);
     }
-  
+
     console.log(`Creating dnsmasq config for bridge: ${bridgeName}`);
-  
+
     const dhcpStart = ipList[2];
     const dhcpEnd = ipList[ipList.length - 2];
-  
+
     const dnsmasqConf = `interface=${bridgeName}
   bind-interfaces
   dhcp-option=3,${gateway}
   dhcp-range=${dhcpStart},${dhcpEnd},12h
   `;
-  
+
     await fsPromises.writeFile(dnsmasqFile, dnsmasqConf);
   }
-  
+
   public async createNftablesConfig(
     bridgeName,
     cidr,
-    externalInterface = process.env.BRIDGE_NAME,
+    externalInterface = this.bridgeName,
   ) {
-    if (!externalInterface) throw new Error('BRIDGE_NAME environment variable is required');
+    if (!externalInterface)
+      throw new Error('BRIDGE_NAME environment variable is required');
     console.log(`Configuring nftables for bridge: ${bridgeName}`);
-  
+
     const commands: string[][] = [
-      ['add', 'rule', 'inet', 'filter', 'input', 'iifname', `"${bridgeName}"`, 'accept'],
-      ['add', 'rule', 'ip', 'nat', 'postrouting', 'oifname', `"${externalInterface}"`, 'ip', 'saddr', cidr, 'masquerade'],
-      ['add', 'rule', 'inet', 'filter', 'forward', 'iifname', `"${bridgeName}"`, 'accept'],
-      ['add', 'rule', 'inet', 'filter', 'forward', 'oifname', `"${bridgeName}"`, 'accept'],
+      [
+        'add',
+        'rule',
+        'inet',
+        'filter',
+        'input',
+        'iifname',
+        `"${bridgeName}"`,
+        'accept',
+      ],
+      [
+        'add',
+        'rule',
+        'ip',
+        'nat',
+        'postrouting',
+        'oifname',
+        `"${externalInterface}"`,
+        'ip',
+        'saddr',
+        cidr,
+        'masquerade',
+      ],
+      [
+        'add',
+        'rule',
+        'inet',
+        'filter',
+        'forward',
+        'iifname',
+        `"${bridgeName}"`,
+        'accept',
+      ],
+      [
+        'add',
+        'rule',
+        'inet',
+        'filter',
+        'forward',
+        'oifname',
+        `"${bridgeName}"`,
+        'accept',
+      ],
     ];
 
     console.log(`Adding nftables rules for bridge: ${bridgeName}`);
@@ -135,41 +188,49 @@ iface ${bridgeName} inet static
       for (const args of commands) {
         await Command.runCommand('sudo', ['nft', ...args]);
       }
-  
+
       await this.saveNftConfiguration();
     } catch (err) {
       console.error('There was an error applying nftables:', err.message);
       console.log('Restoring last backup...');
-      await Command.runCommand('sudo', ['cp', this.latestBackup(), NFT_CONF_PATH]);
-      await Command.runCommand('sudo', ['nft', '-f', NFT_CONF_PATH]);
+      await Command.runCommand('sudo', [
+        'cp',
+        this.latestBackup(),
+        this.nftConfPath,
+      ]);
+      await Command.runCommand('sudo', ['nft', '-f', this.nftConfPath]);
       throw err;
     }
 
     console.log(`nftables configured successfully for ${bridgeName}`);
   }
-  
+
   public async backupNftablesConfig() {
     console.log('Creating backup of current nftables configuration...');
-  
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupFile = path.join(
-      NFT_CONF_BACKUP_DIR,
+      this.nftConfBackupDir,
       `nftables-${timestamp}.conf`,
     );
-  
-    await Command.runCommand('sudo', ['cp', NFT_CONF_PATH, backupFile]);
-  
+
+    await Command.runCommand('sudo', ['cp', this.nftConfPath, backupFile]);
+
     console.log(`Backup created at ${backupFile}`);
   }
-  
+
   public async saveNftConfiguration() {
     console.log('💾 Saving nftables configuration...');
-  
+
     const tmpPath = path.join(os.tmpdir(), `nftables-${Date.now()}.conf`);
-    const ruleset = await Command.runCommand('sudo', ['nft', 'list', 'ruleset']);
-  
+    const ruleset = await Command.runCommand('sudo', [
+      'nft',
+      'list',
+      'ruleset',
+    ]);
+
     await fsPromises.writeFile(tmpPath, ruleset, { encoding: 'utf8' });
-  
+
     try {
       await Command.runCommand('sudo', ['nft', '-c', '-f', tmpPath]);
     } catch (err) {
@@ -177,7 +238,7 @@ iface ${bridgeName} inet static
       await fsPromises.rm(tmpPath, { force: true });
       throw new Error(err.stderr || err.message);
     }
-  
+
     await Command.runCommand('sudo', [
       'install',
       '-m',
@@ -185,22 +246,32 @@ iface ${bridgeName} inet static
       tmpPath,
       '/etc/nftables.conf',
     ]);
-  
+
     await Command.runCommand('sudo', ['nft', '-f', '/etc/nftables.conf']);
-  
+
     await fsPromises.rm(tmpPath, { force: true });
     console.log('✅ nftables configuration validated, applied, and saved.');
   }
-  
+
   public async deleteNftablesConfig(
     bridgeName,
     cidr,
-    externalInterface = process.env.BRIDGE_NAME,
+    externalInterface = this.bridgeName,
   ) {
-    if (!externalInterface) throw new Error('BRIDGE_NAME environment variable is required');
-    const deleteMatchingRules = async (tableArgs: string[], chain: string, matchFn: (line: string) => boolean) => {
+    if (!externalInterface)
+      throw new Error('BRIDGE_NAME environment variable is required');
+    const deleteMatchingRules = async (
+      tableArgs: string[],
+      chain: string,
+      matchFn: (line: string) => boolean,
+    ) => {
       const output = await Command.runCommand('sudo', [
-        'nft', '-a', 'list', 'chain', ...tableArgs, chain,
+        'nft',
+        '-a',
+        'list',
+        'chain',
+        ...tableArgs,
+        chain,
       ]);
       const lines = output.split('\n');
       for (const line of lines) {
@@ -209,9 +280,17 @@ iface ${bridgeName} inet static
         if (match && matchFn(trimmed)) {
           const handle = match[1];
           await Command.runCommand('sudo', [
-            'nft', 'delete', 'rule', ...tableArgs, chain, 'handle', handle,
+            'nft',
+            'delete',
+            'rule',
+            ...tableArgs,
+            chain,
+            'handle',
+            handle,
           ]);
-          console.log(`Deleted rule from ${tableArgs.join(' ')} ${chain} handle ${handle}`);
+          console.log(
+            `Deleted rule from ${tableArgs.join(' ')} ${chain} handle ${handle}`,
+          );
         }
       }
     };
@@ -226,10 +305,8 @@ iface ${bridgeName} inet static
           line.includes('masquerade'),
       );
 
-      await deleteMatchingRules(
-        ['inet', 'filter'],
-        'input',
-        (line) => line.includes(`iifname "${bridgeName}"`),
+      await deleteMatchingRules(['inet', 'filter'], 'input', (line) =>
+        line.includes(`iifname "${bridgeName}"`),
       );
 
       await deleteMatchingRules(
@@ -246,22 +323,30 @@ iface ${bridgeName} inet static
         (line) =>
           line.includes(`iifname "${bridgeName}"`) && line.includes('dnat to'),
       );
-  
+
       console.log('Saving nftables configuration...');
-      const finalRuleset = await Command.runCommand('sudo', ['nft', 'list', 'ruleset']);
+      const finalRuleset = await Command.runCommand('sudo', [
+        'nft',
+        'list',
+        'ruleset',
+      ]);
       await fsPromises.writeFile(`/tmp/nftables.conf`, finalRuleset, 'utf8');
-      await Command.runCommand('sudo', ['mv', '/tmp/nftables.conf', NFT_CONF_PATH]);
-  
+      await Command.runCommand('sudo', [
+        'mv',
+        '/tmp/nftables.conf',
+        this.nftConfPath,
+      ]);
+
       console.log(`Deleted nftables config for bridge ${bridgeName}`);
     } catch (err) {
       console.error('Failed to delete nftables config:', err.message);
     }
   }
-  
+
   public async deleteZone(bridgeName, cidr) {
-    const bridgeFile = path.join(INTERFACES_DIR, bridgeName);
-    const dnsmasqFile = path.join(DNSMASQ_DIR, `${bridgeName}.conf`);
-  
+    const bridgeFile = path.join(this.interfacesDir, bridgeName);
+    const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
+
     try {
       const content = await fsPromises.readFile(dnsmasqFile, 'utf8');
       const hasMappedIps = content
@@ -273,19 +358,19 @@ iface ${bridgeName} inet static
     } catch (err) {
       if (err.code !== 'ENOENT') throw err;
     }
-  
-    let confText = await fsPromises.readFile(NFT_CONF_PATH, 'utf8');
+
+    let confText = await fsPromises.readFile(this.nftConfPath, 'utf8');
     const nftFilePath = `/etc/nftables.d/${bridgeName}.conf`;
     const includeLine = `include "${nftFilePath}"`;
     if (confText.includes(includeLine)) {
       confText = confText.replace(includeLine, '');
-      await fsPromises.writeFile(NFT_CONF_PATH, confText);
+      await fsPromises.writeFile(this.nftConfPath, confText);
     }
-  
+
     await fsPromises.rm(bridgeFile, { force: true });
     await fsPromises.rm(dnsmasqFile, { force: true });
     await fsPromises.rm(nftFilePath, { force: true });
-  
+
     try {
       await Command.runCommand('sudo', ['ip', 'link', 'delete', bridgeName]);
     } catch (err) {
@@ -293,101 +378,117 @@ iface ${bridgeName} inet static
     }
 
     await this.deleteNftablesConfig(bridgeName, cidr);
-  
+
     await this.restartServices();
   }
-  
+
   public async addNodeToZone(bridgeName, mac, ip) {
     if (!(await this.isIpInZoneRange(bridgeName, ip))) {
       throw new Error(`IP ${ip} is not in the DHCP range for ${bridgeName}`);
     }
-  
+
     if (await this.checkNodeInZone(bridgeName, ip)) {
       throw new Error(`Node with IP ${ip} already exists in ${bridgeName}`);
     }
-  
+
     console.log(
       `Adding DHCP reservation: ${mac} → ${ip} on bridge ${bridgeName}`,
     );
-  
-    const dnsmasqFile = path.join(DNSMASQ_DIR, `${bridgeName}.conf`);
+
+    const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
     let content = await fsPromises.readFile(dnsmasqFile, 'utf8');
     content += `\ndhcp-host=${mac},${ip}`;
     await fsPromises.writeFile(dnsmasqFile, content);
-  
+
     console.log(`Restarting dnsmasq to apply DHCP reservation for ${ip}`);
     await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
     console.log(`✅ DHCP reservation added and activated: ${mac} → ${ip}`);
   }
-  
+
   public async isIpInZoneRange(bridgeName, ip) {
-    const dnsmasqFile = path.join(DNSMASQ_DIR, `${bridgeName}.conf`);
+    const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
     if (!fs.existsSync(dnsmasqFile)) {
-      throw new Error(`Bridge configuration file ${dnsmasqFile} does not exist`);
+      throw new Error(
+        `Bridge configuration file ${dnsmasqFile} does not exist`,
+      );
     }
-  
+
     const content = await fsPromises.readFile(dnsmasqFile, 'utf8');
     const rangeMatch = content.match(/dhcp-range=([0-9.]+),([0-9.]+)/);
     if (!rangeMatch) {
       throw new Error(`Could not find dhcp-range in ${dnsmasqFile}`);
     }
-  
+
     const [_, dhcpStart, dhcpEnd] = rangeMatch;
     return (
       IPHelper.ipToNum(ip) >= IPHelper.ipToNum(dhcpStart) &&
       IPHelper.ipToNum(ip) <= IPHelper.ipToNum(dhcpEnd)
     );
   }
-  
+
   public async checkNodeInZone(bridgeName, ip) {
-    const dnsmasqFile = path.join(DNSMASQ_DIR, `${bridgeName}.conf`);
+    const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
     if (!fs.existsSync(dnsmasqFile)) {
-      throw new Error(`Bridge configuration file ${dnsmasqFile} does not exist`);
+      throw new Error(
+        `Bridge configuration file ${dnsmasqFile} does not exist`,
+      );
     }
-  
+
     let content = await fsPromises.readFile(dnsmasqFile, 'utf8');
-  
+
     const ipRegex = new RegExp(`^dhcp-host=[^,]+,${ip}$`, 'm');
     return ipRegex.test(content);
   }
-  
+
   public async deleteNodeFromZone(bridgeName, mac) {
-    const dnsmasqFile = path.join(DNSMASQ_DIR, `${bridgeName}.conf`);
+    const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
     let content = await fsPromises.readFile(dnsmasqFile, 'utf8');
-  
+
     const lines = content.split('\n');
     const newLines = lines.filter(
       (line) => !line.startsWith(`dhcp-host=${mac},`),
     );
-  
+
     if (lines.length === newLines.length) {
       console.log(`MAC ${mac} not found in ${dnsmasqFile}, nothing to remove`);
       return;
     }
-  
+
     await fsPromises.writeFile(dnsmasqFile, newLines.join('\n'));
     await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
   }
-  
+
   public async linkVnetToBridge(vnetName, bridgeName) {
     try {
       console.log(`Attempting to link ${vnetName} to bridge ${bridgeName}...`);
-  
-      const vnetExists = await Command.runCommand('ip', ['link', 'show', vnetName]);
+
+      const vnetExists = await Command.runCommand('ip', [
+        'link',
+        'show',
+        vnetName,
+      ]);
       console.log(`VNet ${vnetName} exists:`, vnetExists.split('\n')[0]);
-  
-      const bridgeExists = await Command.runCommand('ip', ['link', 'show', bridgeName]);
+
+      const bridgeExists = await Command.runCommand('ip', [
+        'link',
+        'show',
+        bridgeName,
+      ]);
       console.log(`Bridge ${bridgeName} exists:`, bridgeExists.split('\n')[0]);
-  
-      const linkShow = await Command.runCommand('ip', ['link', 'show', vnetName]);
+
+      const linkShow = await Command.runCommand('ip', [
+        'link',
+        'show',
+        vnetName,
+      ]);
       const isAlreadyLinked = linkShow.includes(`master ${bridgeName}`);
-  
+
       console.log(`${vnetName} current status:`, linkShow.split('\n')[0]);
       console.log(`Already linked to ${bridgeName}:`, isAlreadyLinked);
-  
+
       if (!isAlreadyLinked) {
         console.log(`Linking ${vnetName} to ${bridgeName}...`);
-  
+
         await Command.runCommand('sudo', [
           'ip',
           'link',
@@ -397,14 +498,24 @@ iface ${bridgeName} inet static
           bridgeName,
         ]);
         console.log(`✓ Attached ${vnetName} to bridge ${bridgeName}`);
-  
+
         await Command.runCommand('sudo', ['ip', 'link', 'set', vnetName, 'up']);
         console.log(`✓ Set ${vnetName} UP`);
-  
-        await Command.runCommand('sudo', ['ip', 'link', 'set', bridgeName, 'up']);
+
+        await Command.runCommand('sudo', [
+          'ip',
+          'link',
+          'set',
+          bridgeName,
+          'up',
+        ]);
         console.log(`✓ Set ${bridgeName} UP`);
-  
-        const verifyLink = await Command.runCommand('ip', ['link', 'show', vnetName]);
+
+        const verifyLink = await Command.runCommand('ip', [
+          'link',
+          'show',
+          vnetName,
+        ]);
         if (verifyLink.includes(`master ${bridgeName}`)) {
           console.log(
             `✅ Successfully linked ${vnetName} to bridge ${bridgeName}`,
@@ -417,28 +528,49 @@ iface ${bridgeName} inet static
       } else {
         console.log(`✓ ${vnetName} is already attached to ${bridgeName}`);
       }
-  
-      const finalStatus = await Command.runCommand('ip', ['link', 'show', vnetName]);
+
+      const finalStatus = await Command.runCommand('ip', [
+        'link',
+        'show',
+        vnetName,
+      ]);
       console.log(`Final ${vnetName} status:`, finalStatus.split('\n')[0]);
     } catch (e) {
-      console.error(`❌ Error linking ${vnetName} to ${bridgeName}:`, e.message);
-  
+      console.error(
+        `❌ Error linking ${vnetName} to ${bridgeName}:`,
+        e.message,
+      );
+
       try {
-        const vnetStatus = await Command.runCommand('ip', ['link', 'show', vnetName]);
+        const vnetStatus = await Command.runCommand('ip', [
+          'link',
+          'show',
+          vnetName,
+        ]);
         console.log(`VNet status after error:`, vnetStatus.split('\n')[0]);
       } catch (debugError) {
         console.log(`Could not get vnet status: ${debugError.message}`);
       }
-  
+
       throw e;
     }
   }
-  
+
   public async unlinkVnetFromBridge(vnetName, bridgeName) {
     try {
-      const linkShow = await Command.runCommand('ip', ['link', 'show', vnetName]);
+      const linkShow = await Command.runCommand('ip', [
+        'link',
+        'show',
+        vnetName,
+      ]);
       if (linkShow.includes(`master ${bridgeName}`)) {
-        await Command.runCommand('sudo', ['ip', 'link', 'set', vnetName, 'nomaster']);
+        await Command.runCommand('sudo', [
+          'ip',
+          'link',
+          'set',
+          vnetName,
+          'nomaster',
+        ]);
         console.log(`Detached ${vnetName} from bridge ${bridgeName}`);
       } else {
         console.log(`${vnetName} is not attached to ${bridgeName}`);
@@ -448,25 +580,29 @@ iface ${bridgeName} inet static
       throw e;
     }
   }
-  
+
   public async isZoneValid(bridgeName, cidr) {
     try {
-      const bridgeFile = path.join(INTERFACES_DIR, bridgeName);
+      const bridgeFile = path.join(this.interfacesDir, bridgeName);
       await fsPromises.access(bridgeFile);
-  
-      const dnsmasqFile = path.join(DNSMASQ_DIR, `${bridgeName}.conf`);
+
+      const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
       await fsPromises.access(dnsmasqFile);
-  
+
       const netmask = await this.ipcalcField(cidr, 'Netmask');
       if (!netmask) {
         throw new Error(`Invalid CIDR: ${cidr}`);
       }
-  
-      const linkShow = await Command.runCommand('ip', ['link', 'show', bridgeName]);
+
+      const linkShow = await Command.runCommand('ip', [
+        'link',
+        'show',
+        bridgeName,
+      ]);
       if (!linkShow.includes('state UP')) {
         throw new Error(`Bridge ${bridgeName} is not UP`);
       }
-  
+
       const dnsmasqContent = await fsPromises.readFile(dnsmasqFile, 'utf8');
       const dhcpRangeMatch = dnsmasqContent.match(
         /dhcp-range=([0-9.]+),([0-9.]+)/,
@@ -474,7 +610,7 @@ iface ${bridgeName} inet static
       if (!dhcpRangeMatch) {
         throw new Error(`Invalid DHCP range in ${dnsmasqFile}`);
       }
-  
+
       const [_, dhcpStart, dhcpEnd] = dhcpRangeMatch;
       const ipList = await this.getIpList(cidr);
       if (!ipList.includes(dhcpStart) || !ipList.includes(dhcpEnd)) {
@@ -482,7 +618,7 @@ iface ${bridgeName} inet static
           `DHCP range ${dhcpStart} - ${dhcpEnd} is not within CIDR ${cidr}`,
         );
       }
-  
+
       const dhcpHosts = dnsmasqContent
         .split('\n')
         .filter((line) => line.startsWith('dhcp-host='))
@@ -494,13 +630,19 @@ iface ${bridgeName} inet static
           );
         }
       }
-  
-      const nftList = await Command.runCommand('sudo', ['nft', 'list', 'ruleset']);
+
+      const nftList = await Command.runCommand('sudo', [
+        'nft',
+        'list',
+        'ruleset',
+      ]);
       const inputRule = new RegExp(`iifname\\s+"?${bridgeName}"?\\s+accept`);
       const forwardInRule = new RegExp(`iifname\\s+"?${bridgeName}"?.*accept`);
-      const forwardOutRule = new RegExp(`oifname\\s+"?${bridgeName}"?\\s+accept`);
+      const forwardOutRule = new RegExp(
+        `oifname\\s+"?${bridgeName}"?\\s+accept`,
+      );
       const natRule = new RegExp(`ip\\s+saddr\\s+${cidr}\\s+masquerade`);
-  
+
       if (
         !inputRule.test(nftList) ||
         !forwardInRule.test(nftList) ||
@@ -509,33 +651,38 @@ iface ${bridgeName} inet static
       ) {
         throw new Error(`Missing nftables rules for bridge ${bridgeName}`);
       }
-  
+
       return true;
     } catch (err) {
       console.error(`Zone validation failed for ${bridgeName}:`, err);
       return false;
     }
   }
-  
+
   public async addFiber(
     bridgeName,
     protocol,
     externalPort,
     targetIp,
     internalPort,
-    externalInterface = process.env.BRIDGE_NAME,
+    externalInterface = this.bridgeName,
   ) {
-    if (!externalInterface) throw new Error('BRIDGE_NAME environment variable is required');
+    if (!externalInterface)
+      throw new Error('BRIDGE_NAME environment variable is required');
     const portToString = (p) => (Array.isArray(p) ? `${p[0]}-${p[1]}` : p);
-  
+
     const extPortStr = portToString(externalPort);
     const intPortStr = portToString(internalPort);
-  
+
     console.log(
       `Adding port forwarding ${protocol}/${extPortStr} → ${targetIp}:${intPortStr} via ${bridgeName}`,
     );
 
-    const ruleset = await Command.runCommand('sudo', ['nft', 'list', 'ruleset']);
+    const ruleset = await Command.runCommand('sudo', [
+      'nft',
+      'list',
+      'ruleset',
+    ]);
     const alreadyExists = new RegExp(
       `${protocol}\\s+dport\\s+${extPortStr}\\s+dnat\\s+to\\s+${targetIp}:${intPortStr}`,
     ).test(ruleset);
@@ -548,7 +695,9 @@ iface ${bridgeName} inet static
       `${protocol}\\s+dport\\s+${extPortStr}\\s+dnat\\s+to\\s+`,
     ).test(ruleset);
     if (portTaken) {
-      throw new PortConflictError(`Port ${extPortStr}/${protocol} is already mapped to a different target`);
+      throw new PortConflictError(
+        `Port ${extPortStr}/${protocol} is already mapped to a different target`,
+      );
     }
 
     await Command.runCommand('sudo', [
@@ -567,7 +716,7 @@ iface ${bridgeName} inet static
       'to',
       `${targetIp}:${intPortStr}`,
     ]);
-  
+
     await Command.runCommand('sudo', [
       'nft',
       'add',
@@ -588,34 +737,50 @@ iface ${bridgeName} inet static
       intPortStr,
       'accept',
     ]);
-  
+
     await this.saveNftConfiguration();
     console.log('✅ Port forwarding rule added and saved.');
   }
-  
+
   public async removeFiber(
     bridgeName,
     protocol,
     externalPort,
     targetIp,
     internalPort,
-    externalInterface = process.env.BRIDGE_NAME,
+    externalInterface = this.bridgeName,
   ) {
-    if (!externalInterface) throw new Error('BRIDGE_NAME environment variable is required');
+    if (!externalInterface)
+      throw new Error('BRIDGE_NAME environment variable is required');
     console.log(
       `Removing port forwarding for ${protocol}/${externalPort} → ${targetIp}:${internalPort} via ${bridgeName}`,
     );
-  
-    const deleteRuleByHandle = async (tableArgs: string[], chain: string, matchFn: (line: string) => boolean) => {
+
+    const deleteRuleByHandle = async (
+      tableArgs: string[],
+      chain: string,
+      matchFn: (line: string) => boolean,
+    ) => {
       const output = await Command.runCommand('sudo', [
-        'nft', '-a', 'list', 'chain', ...tableArgs, chain,
+        'nft',
+        '-a',
+        'list',
+        'chain',
+        ...tableArgs,
+        chain,
       ]);
       for (const line of output.split('\n')) {
         const trimmed = line.trim();
         const handleMatch = trimmed.match(/handle\s+(\d+)/);
         if (handleMatch && matchFn(trimmed)) {
           await Command.runCommand('sudo', [
-            'nft', 'delete', 'rule', ...tableArgs, chain, 'handle', handleMatch[1],
+            'nft',
+            'delete',
+            'rule',
+            ...tableArgs,
+            chain,
+            'handle',
+            handleMatch[1],
           ]);
         }
       }
@@ -642,40 +807,44 @@ iface ${bridgeName} inet static
     await this.saveNftConfiguration();
     console.log('✅ Port forwarding rule removed and saved.');
   }
-  
+
   public async isPortAvailable(ipAddress, targetPort, protocol) {
     console.log(
       `Checking if port ${targetPort} is available for ${ipAddress} over ${protocol}...`,
     );
-  
+
     try {
       const ruleset = (
         await Command.runCommand('sudo', ['nft', 'list', 'ruleset'])
       ).split('\n');
-  
+
       const portRegex = new RegExp(
         `${protocol}\\s+dport\\s+([0-9]+)\\s+dnat\\s+to\\s+${ipAddress}:${targetPort}`,
       );
-  
+
       return !ruleset.some((line) => portRegex.test(line));
     } catch (err) {
       console.error('Failed to check port availability:', err.message);
       return false;
     }
   }
-  
+
   public async findNextPort(protocol) {
     const { MIN_PORT, MAX_PORT } = process.env;
 
     if (!MIN_PORT || !MAX_PORT) {
-      throw new Error('MIN_PORT and MAX_PORT environment variables are required');
+      throw new Error(
+        'MIN_PORT and MAX_PORT environment variables are required',
+      );
     }
 
     const portRegex = new RegExp(
       `${protocol}\\s+dport\\s+(?<port>[0-9]+)\\s+dnat\\s+to\\s+[0-9.]+:[0-9]+`,
     );
-  
-    const usedPorts = (await Command.runCommand('sudo', ['nft', 'list', 'ruleset']))
+
+    const usedPorts = (
+      await Command.runCommand('sudo', ['nft', 'list', 'ruleset'])
+    )
       .split('\n')
       .reduce((acc, line) => {
         const match = line.match(portRegex);
@@ -685,82 +854,91 @@ iface ${bridgeName} inet static
         }
         return acc;
       }, []);
-  
+
     const min = Number(MIN_PORT);
     const max = Number(MAX_PORT);
-    const candidates = Array.from({ length: max - min + 1 }, (_, i) => min + i).filter(
-      (p) => !usedPorts[p],
-    );
+    const candidates = Array.from(
+      { length: max - min + 1 },
+      (_, i) => min + i,
+    ).filter((p) => !usedPorts[p]);
 
     if (candidates.length === 0) {
-      throw new Error(`No available ${protocol} ports in range ${MIN_PORT}-${MAX_PORT}`);
+      throw new Error(
+        `No available ${protocol} ports in range ${MIN_PORT}-${MAX_PORT}`,
+      );
     }
 
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
-  
+
   public async listActiveZones() {
-    const files = await fsPromises.readdir(DNSMASQ_DIR);
+    const files = await fsPromises.readdir(this.dnsmasqDir);
     const zones = files
       .filter((file) => file.startsWith('z-') && file.endsWith('.conf'))
       .map((file) => file.slice(0, -5));
     return zones;
   }
-  
+
   public async forceResetMesh() {
     console.log('Forcing reset of mesh configuration...');
-  
+
     const activeZones = [];
-  
+
     console.log('Removing all dnsmasq configuration files...');
-    const dnsmasqFiles = await fsPromises.readdir(DNSMASQ_DIR);
+    const dnsmasqFiles = await fsPromises.readdir(this.dnsmasqDir);
     for (const file of dnsmasqFiles) {
       if (file.startsWith('z-') && file.endsWith('.conf')) {
         activeZones.push(file.slice(0, -5));
-  
-        const dnsmasqFile = path.join(DNSMASQ_DIR, file);
+
+        const dnsmasqFile = path.join(this.dnsmasqDir, file);
         await fsPromises.rm(dnsmasqFile, { force: true });
         console.log(`Removed ${dnsmasqFile}`);
       }
     }
-  
+
     console.log('Removing all network interface configuration files...');
-    const interfaceFiles = await fsPromises.readdir(INTERFACES_DIR);
+    const interfaceFiles = await fsPromises.readdir(this.interfacesDir);
     for (const file of interfaceFiles) {
       if (file.startsWith('z-')) {
         activeZones.push(file);
-  
-        const interfaceFile = path.join(INTERFACES_DIR, file);
+
+        const interfaceFile = path.join(this.interfacesDir, file);
         await fsPromises.rm(interfaceFile, { force: true });
         console.log(`Removed ${interfaceFile}`);
       }
     }
-  
+
     await Command.runCommand('sudo', [
       'cp',
       `/home/${process.env.USERNAME}/nftables.conf`,
       '/etc/nftables.conf',
     ]);
-  
+
     for (const zone of new Set(activeZones)) {
       try {
         console.log(`Deleting zone ${zone}...`);
         await Command.runCommand('sudo', ['ip', 'link', 'delete', zone]);
       } catch (err) {}
     }
-  
+
     console.log('Clearing dnsmasq leases and runtime files...');
     await Command.runCommand('sudo', ['systemctl', 'stop', 'dnsmasq']);
     await Command.runCommand('sudo', ['/usr/local/sbin/reset-dnsmasq.sh']);
     await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
-  
+
     await this.restartServices();
   }
-  
+
   public async verifyWorkerConnectivity(ip, timeout = 10) {
     try {
       console.log(`Verifying connectivity to worker at ${ip}...`);
-      await Command.runCommand('ping', ['-c', '3', '-W', timeout.toString(), ip]);
+      await Command.runCommand('ping', [
+        '-c',
+        '3',
+        '-W',
+        timeout.toString(),
+        ip,
+      ]);
       console.log(`✓ Worker at ${ip} is reachable`);
       return true;
     } catch (error) {
@@ -768,7 +946,7 @@ iface ${bridgeName} inet static
       return false;
     }
   }
-  
+
   public async diagnoseBridgeConnectivity(bridgeName, ip) {
     const diagnostics = {
       bridgeExists: false,
@@ -778,33 +956,36 @@ iface ${bridgeName} inet static
       arpEntry: false,
       pingSuccessful: false,
     };
-  
+
     try {
-      const bridgeStatus = await Command.runCommand('ip', ['link', 'show', bridgeName]);
+      const bridgeStatus = await Command.runCommand('ip', [
+        'link',
+        'show',
+        bridgeName,
+      ]);
       diagnostics.bridgeExists = true;
       diagnostics.bridgeUp = bridgeStatus.includes('state UP');
-  
-      const dnsmasqFile = path.join(DNSMASQ_DIR, `${bridgeName}.conf`);
+
+      const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
       diagnostics.dhcpConfigExists = fs.existsSync(dnsmasqFile);
-  
+
       if (diagnostics.dhcpConfigExists) {
         diagnostics.ipInDhcpRange = await this.isIpInZoneRange(bridgeName, ip);
       }
-  
+
       try {
         const arpOutput = await Command.runCommand('arp', ['-n']);
         diagnostics.arpEntry = arpOutput.includes(ip);
-      } catch (e) {
-      }
-  
+      } catch (e) {}
+
       diagnostics.pingSuccessful = await this.verifyWorkerConnectivity(ip, 5);
     } catch (error) {
       console.error(`Error during diagnostics: ${error.message}`);
     }
-  
+
     return diagnostics;
   }
-  
+
   public async forceRenewDhcpLease(bridgeName, mac = null) {
     try {
       console.log(
@@ -812,47 +993,51 @@ iface ${bridgeName} inet static
           mac ? ` (MAC: ${mac})` : ''
         }`,
       );
-  
+
       await Command.runCommand('sudo', ['systemctl', 'stop', 'dnsmasq']);
-  
+
       const leaseFiles = [
         '/var/lib/dnsmasq/dnsmasq.leases',
         '/var/lib/dhcp/dhcpd.leases',
         '/tmp/dnsmasq.leases',
       ];
-  
+
       for (const leaseFile of leaseFiles) {
         try {
           await Command.runCommand('sudo', ['rm', '-f', leaseFile]);
           console.log(`Cleared lease file: ${leaseFile}`);
-        } catch (e) {
-        }
+        } catch (e) {}
       }
-  
+
       await Command.runCommand('sudo', ['systemctl', 'start', 'dnsmasq']);
       console.log(`✅ DHCP service restarted for ${bridgeName}`);
-  
+
       return true;
     } catch (error) {
       console.error(`Error forcing DHCP lease renewal: ${error.message}`);
       return false;
     }
   }
-  
+
   public async fixVnetBridgeConnection(vnetName, bridgeName) {
     try {
       console.log(
         `🔧 Attempting to fix vnet-bridge connection: ${vnetName} -> ${bridgeName}`,
       );
-  
+
       await Command.runCommand('sudo', ['ip', 'link', 'set', bridgeName, 'up']);
-  
+
       try {
-        await Command.runCommand('sudo', ['ip', 'link', 'set', vnetName, 'nomaster']);
+        await Command.runCommand('sudo', [
+          'ip',
+          'link',
+          'set',
+          vnetName,
+          'nomaster',
+        ]);
         console.log(`Removed existing master from ${vnetName}`);
-      } catch (e) {
-      }
-  
+      } catch (e) {}
+
       await Command.runCommand('sudo', ['ip', 'link', 'set', vnetName, 'down']);
       await Command.runCommand('sudo', [
         'ip',
@@ -863,10 +1048,14 @@ iface ${bridgeName} inet static
         bridgeName,
       ]);
       await Command.runCommand('sudo', ['ip', 'link', 'set', vnetName, 'up']);
-  
-      const verifyLink = await Command.runCommand('ip', ['link', 'show', vnetName]);
+
+      const verifyLink = await Command.runCommand('ip', [
+        'link',
+        'show',
+        vnetName,
+      ]);
       const isConnected = verifyLink.includes(`master ${bridgeName}`);
-  
+
       if (isConnected) {
         console.log(`✅ Successfully fixed vnet-bridge connection`);
         return true;
@@ -879,35 +1068,37 @@ iface ${bridgeName} inet static
       return false;
     }
   }
-  
+
   public validateNftables(nftRuleset, zones, nodes, fibers) {
     const missing = { nat: [], fibers: [] };
     const details = [];
-  
+
     const normalized = nftRuleset.replace(/\s+/g, ' ').toLowerCase();
-  
+
     for (const zone of zones) {
       const regex = new RegExp(`ip saddr ${zone.cidr} masquerade`);
       if (!regex.test(normalized)) {
         missing.nat.push({ zoneId: zone.id, cidr: zone.cidr });
-        details.push(`❌ Falta regla NAT para zona ${zone.name} (${zone.cidr})`);
+        details.push(
+          `❌ Falta regla NAT para zona ${zone.name} (${zone.cidr})`,
+        );
       } else {
         details.push(`✅ NAT presente para ${zone.name} (${zone.cidr})`);
       }
     }
-  
+
     for (const pf of fibers) {
       const node = nodes.find((n) => n.id === pf.nodeId);
       if (!node) {
         details.push(`⚠️ Fiber ${pf.id} apunta a Node inexistente`);
         continue;
       }
-  
+
       const rulePattern = new RegExp(
         `${pf.protocol}\\s+dport\\s+${pf.hostPort}\\s+dnat\\s+to\\s+${node.ipAddress}:${pf.targetPort}`,
         'i',
       );
-  
+
       if (!rulePattern.test(normalized)) {
         missing.fibers.push({
           nodeId: node.id,
@@ -927,19 +1118,21 @@ iface ${bridgeName} inet static
         );
       }
     }
-  
+
     const valid = missing.nat.length === 0 && missing.fibers.length === 0;
     return { valid, missing, details };
   }
-  
+
   private latestBackup(): string {
-    const files = fs.readdirSync(NFT_CONF_BACKUP_DIR);
+    const files = fs.readdirSync(this.nftConfBackupDir);
     const backups = files.filter((f) => f.startsWith('nftables-')).sort();
 
     if (!backups.length) {
-      throw new Error(`No nftables backups found in ${NFT_CONF_BACKUP_DIR} — cannot restore`);
+      throw new Error(
+        `No nftables backups found in ${this.nftConfBackupDir} — cannot restore`,
+      );
     }
 
-    return path.join(NFT_CONF_BACKUP_DIR, backups[backups.length - 1]);
+    return path.join(this.nftConfBackupDir, backups[backups.length - 1]);
   }
 }
