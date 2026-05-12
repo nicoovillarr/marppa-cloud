@@ -4,6 +4,8 @@ import { ValkeyCacheService } from '@/shared/infrastructure/services/valkey-cach
 import { InMemoryCacheService } from '@/shared/infrastructure/services/in-memory-cache.service';
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { ValkeyProvider } from './infrastructure/providers/valkey.provider';
+import { RedisQueueProvider } from './infrastructure/providers/redis-queue.provider';
+import { EventQueueService } from './infrastructure/services/event-queue.service';
 
 @Module({
   imports: [],
@@ -11,6 +13,8 @@ import { ValkeyProvider } from './infrastructure/providers/valkey.provider';
   providers: [
     PrismaService,
     ValkeyProvider,
+    RedisQueueProvider,
+    EventQueueService,
 
     {
       provide: CACHE_STORAGE_SYMBOL,
@@ -20,6 +24,6 @@ import { ValkeyProvider } from './infrastructure/providers/valkey.provider';
           : InMemoryCacheService,
     },
   ],
-  exports: [PrismaService, CACHE_STORAGE_SYMBOL],
+  exports: [PrismaService, CACHE_STORAGE_SYMBOL, EventQueueService],
 })
 export class SharedModule { }

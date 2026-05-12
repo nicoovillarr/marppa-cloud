@@ -13,6 +13,7 @@ import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
 import { NodeResponseModel } from '../models/node.response-model';
 import { FiberResponseModel } from '../models/fiber.response-model';
 import { NodeWithFibersResponseModel } from '../models/node-with-fibers.response-model';
+import { EventQueueService } from '@/shared/infrastructure/services/event-queue.service';
 
 @Injectable()
 export class ZoneApiService {
@@ -20,6 +21,7 @@ export class ZoneApiService {
     private readonly zoneService: ZoneService,
     private readonly netmaskService: NetmaskService,
     private readonly eventService: EventService,
+    private readonly eventQueueService: EventQueueService,
   ) { }
 
   public async findById(id: string): Promise<ZoneWithNodesAndFibersResponseModel> {
@@ -65,6 +67,8 @@ export class ZoneApiService {
       'Zone',
       entity.id!.toString(),
     );
+
+    await this.eventQueueService.enqueue(eventId!);
 
     return plainToInstance(ZoneResponseModel, entity, {
       excludeExtraneousValues: true,
