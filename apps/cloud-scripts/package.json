@@ -8,6 +8,7 @@
     "dev:watch": "nodemon --watch src --ext ts --exec \"ts-node -r tsconfig-paths/register src/index.ts\"",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
+    "test": "node -r ../../node_modules/ts-node/register/transpile-only -r ../../node_modules/tsconfig-paths/register --test src/critical-high.test.ts",
     "prisma:generate": "prisma generate",
     "start": "node dist/index.js"
   },

@@ -31,6 +31,11 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
           const { type, data } = parsed;
 
           if (type === 'AUTH') {
+            if (socket.userId) {
+              socket.close(4001, 'Already authenticated');
+              return;
+            }
+
             const accessToken = data.accessToken as string | undefined;
             if (!accessToken) {
               socket.send(
@@ -43,7 +48,9 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
               if (!JWT_SECRET)
                 throw new Error('JWT_SECRET env var is required');
               const secret = new TextEncoder().encode(JWT_SECRET);
-              const { payload } = await jwtVerify(accessToken, secret);
+              const { payload } = await jwtVerify(accessToken, secret, {
+                algorithms: ['HS256'],
+              });
               socket.userId = payload.userId as string;
             } catch {
               socket.send(

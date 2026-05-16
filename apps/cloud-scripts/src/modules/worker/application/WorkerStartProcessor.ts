@@ -5,7 +5,11 @@ import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
-import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
+import {
+  EVENT_REPOSITORY_TOKEN,
+  EventRepository,
+} from '@/event/domain/repositories/EventRepository';
+import { AbortError } from '@/event/domain/errors/AbortError';
 import { MESH_SERVICE_TOKEN, MeshService } from '@/mesh/domain/services/MeshService';
 import { HIVE_SERVICE_TOKEN, HiveService } from '../domain/services/HiveService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
@@ -29,6 +33,7 @@ export class WorkerStartProcessor implements IEventProcessor {
   ) {}
 
   public async handle(event: EventPayload): Promise<void> {
+    let statusFinalized = false;
     let worker: {
       id: string;
       status: string;
@@ -91,7 +96,7 @@ export class WorkerStartProcessor implements IEventProcessor {
       await this.meshService.linkVnetToBridge(vnet, worker.node.zoneId);
       await new Promise<void>((resolve) => setTimeout(resolve, 3000));
 
-      const isConnected = await this.meshService.verifyWorkerConnectivity(
+      let isConnected = await this.meshService.verifyWorkerConnectivity(
         worker.node.ipAddress,
         10,
       );
@@ -125,17 +130,17 @@ export class WorkerStartProcessor implements IEventProcessor {
         );
 
         const canLogin = await this.hiveService.testWorkerLogin(worker.id);
-        this.logger.log(`Login test: ${canLogin ? '✅ Success' : '❌ Failed'}`);
+        this.logger.log(`Login test: ${canLogin ? 'Success' : 'Failed'}`);
 
         if (!workerDiag.vmRunning) {
-          this.logger.error(`❌ Worker VM ${worker.id} is not running!`);
+          this.logger.error(`Worker VM ${worker.id} is not running`);
         } else if (!workerDiag.vmHasInterface) {
           this.logger.error(
-            `❌ Worker VM ${worker.id} has no network interface on bridge ${worker.node.zoneId}`,
+            `Worker VM ${worker.id} has no network interface on bridge ${worker.node.zoneId}`,
           );
         } else if (!workerDiag.vnetConnectedToBridge) {
           this.logger.error(
-            `❌ vnet not connected to bridge ${worker.node.zoneId}; attempting fix...`,
+            `vnet not connected to bridge ${worker.node.zoneId}; attempting fix...`,
           );
           const retestVnet = await this.hiveService.getWorkerVnet(
             worker.id,
@@ -148,19 +153,19 @@ export class WorkerStartProcessor implements IEventProcessor {
             );
             if (fixed) {
               await new Promise<void>((resolve) => setTimeout(resolve, 3000));
-              const retest = await this.meshService.verifyWorkerConnectivity(
+              isConnected = await this.meshService.verifyWorkerConnectivity(
                 worker.node.ipAddress,
                 10,
               );
-              if (retest)
-                this.logger.log(`🎉 Worker ${worker.id} now reachable!`);
-              else this.logger.warn(`⚠️ Fixed bridge but still unreachable.`);
+              if (isConnected) {
+                this.logger.log(`Worker ${worker.id} now reachable`);
+              } else {
+                this.logger.warn('Fixed bridge but worker is still unreachable');
+              }
             }
           }
         } else if (!workerDiag.cloudInitComplete) {
-          this.logger.error(
-            `❌ Cloud-init not complete on worker ${worker.id}`,
-          );
+          this.logger.error(`Cloud-init not complete on worker ${worker.id}`);
         } else if (
           canLogin &&
           workerDiag.vmRunning &&
@@ -175,26 +180,35 @@ export class WorkerStartProcessor implements IEventProcessor {
             await new Promise<void>((resolve) => setTimeout(resolve, 3000));
             await this.hiveService.startWorker(worker.id);
             await new Promise<void>((resolve) => setTimeout(resolve, 8000));
-            const finalTest = await this.meshService.verifyWorkerConnectivity(
+            isConnected = await this.meshService.verifyWorkerConnectivity(
               worker.node.ipAddress,
               15,
             );
-            if (finalTest)
+            if (isConnected) {
               this.logger.log(
-                `🎉 Worker ${worker.id} reachable at correct IP!`,
+                `Worker ${worker.id} reachable at correct IP after DHCP renewal`,
               );
-            else this.logger.warn(`⚠️ May need manual intervention.`);
+            } else {
+              this.logger.warn('Worker may need manual intervention');
+            }
           }
         }
 
         this.logger.warn(`Worker ${worker.id} may have connectivity issues.`);
       } else {
         this.logger.log(
-          `✅ Worker ${worker.id} reachable at ${worker.node.ipAddress}`,
+          `Worker ${worker.id} reachable at ${worker.node.ipAddress}`,
         );
       }
 
+      if (!isConnected) {
+        await updateWorkerStatus(ResourceStatus.FAILED);
+        statusFinalized = true;
+        throw new AbortError(`Worker ${worker.id} unreachable after start`);
+      }
+
       await updateWorkerStatus(ResourceStatus.ACTIVE);
+      statusFinalized = true;
       this.wsServer.sendWorkerMessage(worker, 'WORKER_STARTED', null);
 
       const eventUpdatedId = await this.repository.createEvent(
@@ -216,7 +230,7 @@ export class WorkerStartProcessor implements IEventProcessor {
       this.logger.error(
         `Error processing event ID ${event.id}: ${String(error)}`,
       );
-      if (worker) {
+      if (worker && !statusFinalized) {
         await updateWorkerStatus(
           event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED,
         );

@@ -19,7 +19,7 @@ export class LinuxMeshService extends MeshService {
 
   constructor() {
     super();
-    this.bridgeName = this.bridgeName;
+    this.bridgeName = process.env.BRIDGE_NAME ?? '';
   }
 
   public async getIpList(cidr) {
@@ -191,7 +191,10 @@ iface ${bridgeName} inet static
 
       await this.saveNftConfiguration();
     } catch (err) {
-      console.error('There was an error applying nftables:', err.message);
+      console.error(
+        'There was an error applying nftables:',
+        err instanceof Error ? err.message : String(err),
+      );
       console.log('Restoring last backup...');
       await Command.runCommand('sudo', [
         'cp',
@@ -247,10 +250,8 @@ iface ${bridgeName} inet static
       '/etc/nftables.conf',
     ]);
 
-    await Command.runCommand('sudo', ['nft', '-f', '/etc/nftables.conf']);
-
     await fsPromises.rm(tmpPath, { force: true });
-    console.log('✅ nftables configuration validated, applied, and saved.');
+    console.log('✅ nftables configuration validated and saved.');
   }
 
   public async deleteNftablesConfig(
@@ -339,7 +340,11 @@ iface ${bridgeName} inet static
 
       console.log(`Deleted nftables config for bridge ${bridgeName}`);
     } catch (err) {
-      console.error('Failed to delete nftables config:', err.message);
+      console.error(
+        'Failed to delete nftables config:',
+        err instanceof Error ? err.message : String(err),
+      );
+      throw err;
     }
   }
 

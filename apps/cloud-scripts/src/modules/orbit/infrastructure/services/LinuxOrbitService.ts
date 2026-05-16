@@ -5,8 +5,42 @@ import { ResourceStatus } from '@marppa-cloud/db';
 import { OrbitService } from '../../domain/services/OrbitService';
 import { Injectable } from '@/decorators/Injectable';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
+import { isIPv4 } from 'net';
+import path from 'path';
 
 const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
+
+interface NginxBlock {
+  [key: string]: string | string[] | NginxBlock;
+}
+
+interface PortalConfig {
+  id: string;
+  address: string;
+  defaultServer?: boolean | null;
+  listenHttp?: boolean | null;
+  sslCertificate?: string | null;
+  sslKey?: string | null;
+  enableCompression?: boolean | null;
+  corsEnabled?: boolean | null;
+  transponders?: TransponderConfig[];
+}
+
+interface TransponderConfig {
+  id: string;
+  path: string;
+  port: number;
+  priority: number;
+  status: ResourceStatus;
+  cacheEnabled?: boolean | null;
+  gzipEnabled?: boolean | null;
+  allowCookies?: boolean | null;
+  proxyReadTimeout?: number | null;
+  customIPAddress?: string | null;
+  addHeaders?: Record<string, string> | null;
+  proxyHeaders?: Record<string, string> | null;
+  node?: { ipAddress?: string | null } | null;
+}
 
 @Injectable()
 export class LinuxOrbitService extends OrbitService {
@@ -236,29 +270,34 @@ export class LinuxOrbitService extends OrbitService {
     }
   }
 
-  private renderNginxBlock(obj, indent = 0) {
+  private renderNginxBlock(obj: NginxBlock, indent = 0): string {
     const pad = '  '.repeat(indent);
     let output = '';
 
     for (const [key, value] of Object.entries(obj)) {
+      const safeKey = this.sanitizeNginxKey(key);
       if (Array.isArray(value)) {
         for (const v of value) {
-          output += `${pad}${key} ${v};\n`;
+          output += `${pad}${safeKey} ${v};\n`;
         }
       } else if (typeof value === 'object' && value !== null) {
-        output += `${pad}${key} {\n`;
+        output += `${pad}${safeKey} {\n`;
         output += this.renderNginxBlock(value, indent + 1);
         output += `${pad}}\n`;
       } else {
-        output += `${pad}${key} ${value};\n`;
+        output += `${pad}${safeKey} ${value};\n`;
       }
     }
 
     return output;
   }
 
-  private buildNginxTree(portal, transponders, forceTransponder = null) {
-    const listen = [];
+  private buildNginxTree(
+    portal: PortalConfig,
+    transponders: TransponderConfig[],
+    forceTransponder: string | null = null,
+  ): NginxBlock {
+    const listen: string[] = [];
     if (portal.listenHttp) listen.push('80');
     if (portal.sslCertificate) listen.push('443 ssl');
 
@@ -272,23 +311,32 @@ export class LinuxOrbitService extends OrbitService {
             t.status === ResourceStatus.QUEUED),
       )
       .sort((a, b) => b.priority - a.priority)
-      .flatMap(this.buildLocationBlock)
-      .reduce((acc, loc) => ({ ...acc, ...loc }), {});
+      .map((t) => this.buildLocationBlock(t))
+      .reduce<NginxBlock>((acc, loc) => Object.assign(acc, loc), {});
 
     if (Object.keys(locations).length === 0) {
       console.warn(
         `No enabled transponders with nodes found for portal ${portal.id}`,
       );
     }
+    const serverName = this.sanitizeServerName(portal.address);
     const server = {
       server: {
         listen,
         server_name:
-          portal.address + (portal.defaultServer ? ' default_server' : ''),
+          serverName + (portal.defaultServer ? ' default_server' : ''),
         ...(portal.sslCertificate && {
-          ssl_certificate: portal.sslCertificate,
+          ssl_certificate: this.sanitizeNginxPath(
+            portal.sslCertificate,
+            'ssl_certificate',
+          ),
         }),
-        ...(portal.sslKey && { ssl_certificate_key: portal.sslKey }),
+        ...(portal.sslKey && {
+          ssl_certificate_key: this.sanitizeNginxPath(
+            portal.sslKey,
+            'ssl_certificate_key',
+          ),
+        }),
         ...(portal.enableCompression && { gzip: 'on' }),
         ...(portal.corsEnabled && {
           add_header: ['Access-Control-Allow-Origin *'],
@@ -300,15 +348,15 @@ export class LinuxOrbitService extends OrbitService {
     return server;
   }
 
-  private buildLocationBlock(t) {
+  private buildLocationBlock = (t: TransponderConfig): NginxBlock => {
     const ip = t.node?.ipAddress || t.customIPAddress;
     if (!ip) {
       console.warn(`No IP address found for transponder ${t.id}`);
       return {};
     }
 
-    const inner: any = {
-      proxy_pass: `http://${ip}:${t.port}`,
+    const inner: NginxBlock = {
+      proxy_pass: `http://${this.sanitizeProxyTarget(ip)}:${this.sanitizePort(t.port)}`,
       proxy_http_version: '1.1',
       ...(t.cacheEnabled && { proxy_cache: t.id }),
       ...(t.gzipEnabled && { gzip: 'on' }),
@@ -323,16 +371,96 @@ export class LinuxOrbitService extends OrbitService {
 
     if (t.addHeaders && Object.keys(t.addHeaders).length) {
       inner.add_header = Object.entries(t.addHeaders).map(
-        ([h, v]) => `${h} ${v}`,
+        ([h, v]) =>
+          `${this.sanitizeHeaderName(h)} ${this.sanitizeHeaderValue(v)}`,
       );
     }
 
     if (t.proxyHeaders && Object.keys(t.proxyHeaders).length) {
       inner.proxy_set_header = Object.entries(t.proxyHeaders).map(
-        ([h, v]) => `${h} ${v}`,
+        ([h, v]) =>
+          `${this.sanitizeHeaderName(h)} ${this.sanitizeHeaderValue(v)}`,
       );
     }
 
-    return { [`location ${t.path}`]: inner };
+    return { [`location ${this.sanitizeLocationPath(t.path)}`]: inner };
+  };
+
+  private sanitizeProxyTarget(ip: string): string {
+    const value = this.sanitizeNginxValue(ip, 'proxy target IP');
+    if (!isIPv4(value)) {
+      throw new Error(`Invalid proxy target IP: ${ip}`);
+    }
+    return value;
+  }
+
+  private sanitizePort(port: number): number {
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new Error(`Invalid nginx port: ${port}`);
+    }
+
+    return port;
+  }
+
+  private sanitizeLocationPath(locationPath: string): string {
+    const value = this.sanitizeNginxValue(locationPath, 'location path');
+    if (!/^\/[A-Za-z0-9\-._~\/]*$/.test(value)) {
+      throw new Error(`Invalid nginx location path: ${locationPath}`);
+    }
+
+    return value;
+  }
+
+  private sanitizeServerName(serverName: string): string {
+    const value = this.sanitizeNginxValue(serverName, 'server_name');
+    if (!/^[A-Za-z0-9*._-]+$/.test(value)) {
+      throw new Error(`Invalid nginx server_name: ${serverName}`);
+    }
+
+    return value;
+  }
+
+  private sanitizeHeaderName(headerName: string): string {
+    if (!/^[A-Za-z0-9_-]+$/.test(headerName)) {
+      throw new Error(`Invalid nginx header name: ${headerName}`);
+    }
+
+    return headerName;
+  }
+
+  private sanitizeHeaderValue(headerValue: string): string {
+    return this.sanitizeNginxValue(headerValue, 'header value');
+  }
+
+  private sanitizeNginxPath(filePath: string, label: string): string {
+    const value = this.sanitizeNginxValue(filePath, label);
+    const normalized = path.posix.normalize(value);
+
+    if (
+      !path.posix.isAbsolute(normalized) ||
+      normalized !== value ||
+      !normalized.startsWith('/etc/')
+    ) {
+      throw new Error(`Invalid nginx ${label}: ${filePath}`);
+    }
+
+    return normalized;
+  }
+
+  private sanitizeNginxKey(key: string): string {
+    const value = this.sanitizeNginxValue(key, 'nginx directive');
+    if (!/^[A-Za-z_][A-Za-z0-9_-]*(?: [^;{}\r\n]+)?$/.test(value)) {
+      throw new Error(`Invalid nginx directive: ${key}`);
+    }
+
+    return value;
+  }
+
+  private sanitizeNginxValue(value: string, label: string): string {
+    if (/[\n\r;{}]/.test(value)) {
+      throw new Error(`Invalid ${label}: ${value}`);
+    }
+
+    return value;
   }
 }

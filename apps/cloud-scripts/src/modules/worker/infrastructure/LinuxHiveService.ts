@@ -1,6 +1,7 @@
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
+import { spawn } from 'child_process';
 import { Command } from '@/libs/Command';
 import { sleep } from '@/libs/sleep';
 import {
@@ -347,18 +348,22 @@ ethernets:
   }
 
   public async stopWorker(vmName: string): Promise<void> {
+    this.validateVmName(vmName);
     await Command.runCommand('sudo', ['virsh', 'shutdown', `${vmName}`]);
   }
 
   public async forceStopWorker(vmName: string): Promise<void> {
+    this.validateVmName(vmName);
     await Command.runCommand('sudo', ['virsh', 'destroy', `${vmName}`]);
   }
 
   public async startWorker(vmName: string): Promise<void> {
+    this.validateVmName(vmName);
     await Command.runCommand('sudo', ['virsh', 'start', `${vmName}`]);
   }
 
   public async deleteWorker(vmName: string): Promise<void> {
+    this.validateVmName(vmName);
     console.log(`Deleting worker VM: ${vmName}`);
 
     await Command.runCommand('sudo', [
@@ -381,6 +386,7 @@ ethernets:
     bridgeName?: string | null,
     mac?: string | null,
   ): Promise<void> {
+    this.validateVmName(vmName);
     console.log(
       `Editing worker zone for ${vmName}, bridge: ${bridgeName}, mac: ${mac}`,
     );
@@ -421,6 +427,7 @@ ethernets:
   }
 
   public async editWorkerMemory(vmName: string, newMemoryMb: number): Promise<void> {
+    this.validateVmName(vmName);
     await Command.runCommand('sudo', [
       'virsh',
       'setmem',
@@ -431,6 +438,7 @@ ethernets:
   }
 
   public async editWorkerCpus(vmName: string, newVcpus: number): Promise<void> {
+    this.validateVmName(vmName);
     await Command.runCommand('sudo', [
       'virsh',
       'setvcpus',
@@ -444,6 +452,7 @@ ethernets:
     vmName: string,
     newDiskSizeGb: number,
   ): Promise<void> {
+    this.validateVmName(vmName);
     const diskPath = path.join(IMAGE_DIR, `${vmName}.img`);
 
     const info = await Command.runCommand('qemu-img', [
@@ -486,6 +495,7 @@ ethernets:
   }
 
   public async isWorkerRunning(vmName: string): Promise<boolean> {
+    this.validateVmName(vmName);
     const status = await Command.runCommand('sudo', [
       'virsh',
       'domstate',
@@ -498,6 +508,7 @@ ethernets:
     vmName: string,
     bridgeName?: string | null,
   ): Promise<string | null> {
+    this.validateVmName(vmName);
     const vnetInfo = await Command.runCommand(
       'sudo',
       ['virsh', 'domiflist', vmName],
@@ -565,16 +576,11 @@ ethernets:
     try {
       console.log(`Testing login to worker VM: ${vmName}`);
 
-      const result = await Command.runCommand('timeout', [
-        '10',
-        'bash',
-        '-c',
-        `echo 'ubuntu' | sudo virsh console ${vmName} --force 2>&1 | grep -E "(login|ubuntu@|#|$)"`,
-      ]);
+      const result = await this.readVmConsole(vmName, 10_000, 'ubuntu\n');
 
       return result.includes('ubuntu@') || result.includes('#');
     } catch (error) {
-      console.log(`Login test failed for ${vmName}: ${error.message}`);
+      console.log(`Login test failed for ${vmName}: ${this.getErrorMessage(error)}`);
       return false;
     }
   }
@@ -594,12 +600,7 @@ ethernets:
     };
 
     try {
-      const consoleOutput = await Command.runCommand('timeout', [
-        '15',
-        'bash',
-        '-c',
-        `echo "" | sudo virsh console ${vmName} --force 2>&1 | head -20`,
-      ]);
+      const consoleOutput = await this.readVmConsole(vmName, 15_000);
 
       status.cloudInitExists =
         consoleOutput.includes('cloud-init') ||
@@ -617,7 +618,7 @@ ethernets:
       status.networkConfigured =
         dhcpLogs.includes('DHCP') && dhcpLogs.includes(vmName);
     } catch (error) {
-      console.log(`Could not check cloud-init status: ${error.message}`);
+      console.log(`Could not check cloud-init status: ${this.getErrorMessage(error)}`);
     }
 
     return status;
@@ -662,7 +663,7 @@ ethernets:
         diagnostics.vmHasInterface =
           iflist.includes('bridge') && iflist.includes(bridgeName);
       } catch (e) {
-        console.log('Could not get VM interfaces:', e.message);
+        console.log('Could not get VM interfaces:', this.getErrorMessage(e));
       }
 
       if (diagnostics.vmRunning) {
@@ -688,12 +689,7 @@ ethernets:
 
       try {
         if (diagnostics.vmRunning) {
-          const consoleTest = await Command.runCommand('timeout', [
-            '5',
-            'bash',
-            '-c',
-            `echo "" | sudo virsh console ${vmName} --force 2>&1 | head -10`,
-          ]);
+          const consoleTest = await this.readVmConsole(vmName, 5_000);
           diagnostics.vmConsoleAccessible = !consoleTest.includes('error');
 
           if (
@@ -719,11 +715,11 @@ ethernets:
           logs.includes('DHCP') &&
           (logs.includes(expectedIp) || logs.includes(bridgeName));
       } catch (e) {
-        console.log('Could not check dnsmasq logs:', e.message);
+        console.log('Could not check dnsmasq logs:', this.getErrorMessage(e));
       }
     } catch (error) {
       console.error(
-        `Error during worker network diagnostics: ${error.message}`,
+        `Error during worker network diagnostics: ${this.getErrorMessage(error)}`,
       );
     }
 
@@ -734,6 +730,71 @@ ethernets:
     if (!SAFE_VM_NAME.test(vmName)) {
       throw new Error(`Invalid VM name: ${vmName}`);
     }
+  }
+
+  private async readVmConsole(
+    vmName: string,
+    timeoutMs: number,
+    initialInput = '\n',
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const proc = spawn('sudo', ['virsh', 'console', vmName, '--force']);
+      let output = '';
+      let settled = false;
+
+      const finish = (result: { output?: string; error?: Error }) => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        clearTimeout(timeout);
+
+        if (result.error) {
+          reject(result.error);
+          return;
+        }
+
+        resolve((result.output ?? output).trim());
+      };
+
+      proc.stdout.on('data', (data: Buffer) => {
+        output += data.toString();
+      });
+
+      proc.stderr.on('data', (data: Buffer) => {
+        output += data.toString();
+      });
+
+      proc.on('error', (error) => {
+        finish({ error });
+      });
+
+      proc.on('close', (code) => {
+        if (code !== 0 && output.trim().length === 0) {
+          finish({
+            error: new Error(`virsh console exited with code ${code ?? 'unknown'}`),
+          });
+          return;
+        }
+
+        finish({ output });
+      });
+
+      const timeout = setTimeout(() => {
+        proc.kill('SIGTERM');
+        finish({ output });
+      }, timeoutMs);
+
+      if (initialInput.length > 0) {
+        proc.stdin.write(initialInput);
+      }
+      proc.stdin.end();
+    });
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 
   private workerImagePath(workerImage: WorkerImageSource): string {

@@ -13,6 +13,7 @@ import { Inject } from '@/decorators/Inject';
 import { OnModuleDestroy, OnModuleInit } from '@/libs/Container';
 
 const QUEUE_NAME = 'infrastructure-events';
+const MAX_JOB_ATTEMPTS = 5;
 
 export interface IEventProcessor {
   handle(event: EventPayload): Promise<void>;
@@ -20,7 +21,7 @@ export interface IEventProcessor {
 
 @Injectable()
 export class EventWorker implements OnModuleInit, OnModuleDestroy {
-  private worker: Worker;
+  private worker: Worker | null = null;
 
   constructor(
     private readonly redis: RedisService,
@@ -41,7 +42,20 @@ export class EventWorker implements OnModuleInit, OnModuleDestroy {
       this.logger.info(`[EventWorker] Job ${job.id} completed`);
     });
 
-    this.worker.on('failed', (job, err) => {
+    this.worker.on('failed', async (job, err) => {
+      try {
+        if (job?.attemptsMade >= MAX_JOB_ATTEMPTS) {
+          const { eventId } = job.data as { eventId?: number };
+          if (typeof eventId === 'number') {
+            await this.repository.markFailed(eventId);
+          }
+        }
+      } catch (markFailedError) {
+        this.logger.error(
+          `[EventWorker] Failed to mark event as failed after job ${job?.id ?? 'unknown'} exhausted retries: ${String(markFailedError)}`,
+        );
+      }
+
       this.logger.error(
         `[EventWorker] Job ${job?.id ?? 'unknown'} failed: ${err.message}`,
       );
@@ -50,7 +64,9 @@ export class EventWorker implements OnModuleInit, OnModuleDestroy {
     this.logger.info('[EventWorker] Worker started (concurrency: 1)');
   }
   public async onModuleDestroy(): Promise<void> {
-    await this.worker.close();
+    if (this.worker) {
+      await this.worker.close();
+    }
   }
 
   private async process(job: Job): Promise<void> {
@@ -94,13 +110,13 @@ export class EventWorker implements OnModuleInit, OnModuleDestroy {
           `[EventWorker] Event ${eventId} aborted: ${err.message}`,
         );
 
-        if (err.failureEventType) {
-          try {
+        try {
+          if (err.failureEventType) {
             const failedEventId = await this.repository.createEvent(
               err.failureEventType,
               event.createdBy,
               event.companyId,
-              null,
+              undefined,
               err.message,
             );
             await this.repository.addEventResource(
@@ -108,14 +124,14 @@ export class EventWorker implements OnModuleInit, OnModuleDestroy {
               'Event',
               String(eventId),
             );
-          } catch (innerErr) {
-            this.logger.error(
-              `[EventWorker] Failed to create failure event for ${eventId}: ${String(innerErr)}`,
-            );
           }
-        }
 
-        await this.repository.markFailed(eventId);
+          await this.repository.markFailed(eventId);
+        } catch (innerErr) {
+          this.logger.error(
+            `[EventWorker] Failed to record event failure for ${eventId}: ${String(innerErr)}`,
+          );
+        }
 
         return;
       }
