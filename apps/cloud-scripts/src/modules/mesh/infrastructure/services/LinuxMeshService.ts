@@ -16,10 +16,12 @@ export class LinuxMeshService extends MeshService {
   private readonly nftConfPath: string = '/etc/nftables.conf';
   private readonly nftConfBackupDir: string = '/etc/nft-backups';
   private readonly bridgeName: string;
+  private readonly nftResetSourcePath: string;
 
   constructor() {
     super();
     this.bridgeName = process.env.BRIDGE_NAME ?? '';
+    this.nftResetSourcePath = process.env.NFTABLES_RESET_SOURCE ?? '';
   }
 
   public async getIpList(cidr) {
@@ -325,18 +327,7 @@ iface ${bridgeName} inet static
           line.includes(`iifname "${bridgeName}"`) && line.includes('dnat to'),
       );
 
-      console.log('Saving nftables configuration...');
-      const finalRuleset = await Command.runCommand('sudo', [
-        'nft',
-        'list',
-        'ruleset',
-      ]);
-      await fsPromises.writeFile(`/tmp/nftables.conf`, finalRuleset, 'utf8');
-      await Command.runCommand('sudo', [
-        'mv',
-        '/tmp/nftables.conf',
-        this.nftConfPath,
-      ]);
+      await this.saveNftConfiguration();
 
       console.log(`Deleted nftables config for bridge ${bridgeName}`);
     } catch (err) {
@@ -913,17 +904,18 @@ iface ${bridgeName} inet static
       }
     }
 
-    await Command.runCommand('sudo', [
-      'cp',
-      `/home/${process.env.USERNAME}/nftables.conf`,
-      '/etc/nftables.conf',
-    ]);
+    if (!this.nftResetSourcePath) {
+      throw new Error('NFTABLES_RESET_SOURCE environment variable is required for mesh reset');
+    }
+    await Command.runCommand('sudo', ['cp', this.nftResetSourcePath, this.nftConfPath]);
 
     for (const zone of new Set(activeZones)) {
       try {
         console.log(`Deleting zone ${zone}...`);
         await Command.runCommand('sudo', ['ip', 'link', 'delete', zone]);
-      } catch (err) {}
+      } catch (err) {
+        console.error(`Failed to delete bridge ${zone}: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
 
     console.log('Clearing dnsmasq leases and runtime files...');

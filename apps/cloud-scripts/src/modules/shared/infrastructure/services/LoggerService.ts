@@ -14,7 +14,9 @@ export class LoggerService implements OnModuleInit {
     const { MAX_LOG_SIZE, LOG_BACKUP_COUNT, LOG_DIR } = process.env;
 
     if (MAX_LOG_SIZE) {
-      this.maxLogSize = parseInt(MAX_LOG_SIZE, 10);
+      const parsed = parseInt(MAX_LOG_SIZE, 10);
+      if (isNaN(parsed)) throw new Error(`MAX_LOG_SIZE must be a number, got: "${MAX_LOG_SIZE}"`);
+      this.maxLogSize = parsed;
     }
 
     if (LOG_BACKUP_COUNT) {

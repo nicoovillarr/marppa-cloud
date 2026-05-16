@@ -61,7 +61,7 @@ export class IPChecker implements OnModuleInit, OnModuleDestroy {
       this.timer = setTimeout(loop, remaining > 0 ? remaining : 0);
     };
 
-    loop();
+    loop().catch((err) => this.logger.error(`[IPChecker] Loop crashed: ${String(err)}`));
     this.logger.info('[IPChecker] Started');
   }
 

@@ -126,7 +126,7 @@ These three methods pass `vmName` to `Command.runCommand` as a separate arg (saf
 
 ---
 
-### [MEDIUM] No JWT algorithm pin — WebSocket auth accepts any `alg`
+### [x] [MEDIUM] No JWT algorithm pin — WebSocket auth accepts any `alg`
 
 **File:** `src/modules/shared/infrastructure/http/WebSocketServer.ts`
 
@@ -140,7 +140,7 @@ await jwtVerify(token, secret, { algorithms: ['HS256'] });
 
 ---
 
-### [MEDIUM] `USERNAME` env var flows into `chown` shell arg — LinuxHiveService
+### [x] [MEDIUM] `USERNAME` env var flows into `chown` shell arg — LinuxHiveService
 
 **File:** `src/modules/worker/infrastructure/LinuxHiveService.ts`  
 **Line:** ~130
@@ -155,7 +155,7 @@ await Command.runCommand('chown', ['-R', `${process.env.USERNAME}:...`, path]);
 
 ---
 
-### [LOW] `REDIS_URL` unvalidated — silent fallback to localhost
+### [x] [LOW] `REDIS_URL` unvalidated — silent fallback to localhost
 
 **File:** `src/modules/shared/infrastructure/services/RedisService.ts`  
 **Line:** 12
@@ -269,7 +269,7 @@ if (isConnected) {
 
 ---
 
-### [MEDIUM] Log file never starts on fresh install — LoggerService
+### [x] [MEDIUM] Log file never starts on fresh install — LoggerService
 
 **File:** `src/modules/shared/infrastructure/services/LoggerService.ts`
 
@@ -290,7 +290,7 @@ fs.writeFileSync(this.logFile, '', { flag: 'a' }); // create if not exist
 
 ---
 
-### [LOW] `parseInt(MAX_LOG_SIZE)` returns NaN → log rotation never triggers
+### [x] [LOW] `parseInt(MAX_LOG_SIZE)` returns NaN → log rotation never triggers
 
 **File:** `src/modules/shared/infrastructure/services/LoggerService.ts`
 
@@ -355,7 +355,7 @@ Constructed with `new` before the container resolves dependencies. If `Processor
 
 ## Operational Risks
 
-### [x] [HIGH] nftables rules duplicated on every `saveNftConfiguration` — LinuxMeshService
+### [x] [HIGH] nftables rules duplicated on every `saveNftConfiguration` / `deleteNftablesConfig` saves without validation — LinuxMeshService
 
 **File:** `src/modules/mesh/infrastructure/services/LinuxMeshService.ts`
 
@@ -370,7 +370,7 @@ On a busy node (frequent zone changes), rules accumulate. Firewall behavior beco
 
 ---
 
-### [MEDIUM] Hardcoded `~/nftables.conf` path in `forceResetMesh`
+### [x] [MEDIUM] Hardcoded `~/nftables.conf` path in `forceResetMesh`
 
 **File:** `src/modules/mesh/infrastructure/services/LinuxMeshService.ts`  
 **Line:** ~739
@@ -403,7 +403,7 @@ Safe today because `concurrency=1`, but the function's correctness silently depe
 
 ## Code Quality & Maintainability
 
-### [MEDIUM] WorkerCreateProcessor broadcasts full VM object including MAC address
+### [x] [MEDIUM] WorkerCreateProcessor broadcasts full VM object including MAC address
 
 **File:** `src/modules/worker/application/WorkerCreateProcessor.ts`  
 **Line:** ~99
@@ -423,7 +423,7 @@ sendWorkerMessage(worker, 'CREATED', { id, name, status, zoneId, companyId });
 
 ---
 
-### [LOW] `loop()` called without `await` in multiple processors
+### [x] [LOW] `loop()` called without `await` in multiple processors
 
 **Files:**  
 - `src/modules/system/application/DeleteProcessor.ts` ~65  

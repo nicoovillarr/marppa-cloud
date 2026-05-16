@@ -62,7 +62,7 @@ export class DeleteProcessor implements OnModuleInit, OnModuleDestroy {
       this.timer = setTimeout(loop, remaining > 0 ? remaining : 0);
     };
 
-    loop();
+    loop().catch((err) => this.logger.error(`[DeleteProcessor] Loop crashed: ${String(err)}`));
     this.logger.info('[DeleteProcessor] Started');
   }
 

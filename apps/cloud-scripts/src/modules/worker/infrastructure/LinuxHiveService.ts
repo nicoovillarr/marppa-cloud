@@ -18,42 +18,39 @@ const CLOUD_INIT_DIR_BASE = '/var/lib/libvirt/cloud-init';
 const SAFE_VM_NAME = /^[a-zA-Z0-9_-]+$/;
 const ALLOWED_IMAGE_URL = /^https?:\/\/[a-zA-Z0-9.\-]+(:\d+)?\//;
 const VALID_SSH_KEY = /^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521) [A-Za-z0-9+\/=]+ \S+$/;
+const SAFE_USERNAME = /^[a-z_][a-z0-9_-]{0,31}$/;
 
 @Injectable()
 export class LinuxHiveService extends HiveService {
   public async ensureWorkerImageExists(
     workerImage: WorkerImageSource,
   ): Promise<boolean> {
-    try {
-      const name = this.workerImagePath(workerImage);
-      const url = workerImage.imageUrl;
+    const name = this.workerImagePath(workerImage);
+    const url = workerImage.imageUrl;
 
-      console.log(`Ensuring worker image exists at: ${name}`);
+    console.log(`Ensuring worker image exists at: ${name}`);
 
-      if (!fs.existsSync(name)) {
-        if (!ALLOWED_IMAGE_URL.test(workerImage.imageUrl)) {
-          throw new Error(`Invalid image URL: ${workerImage.imageUrl}`);
-        }
-
-        const allowedImageDomains = process.env.ALLOWED_IMAGE_DOMAINS
-          ?.split(',')
-          .map((domain) => domain.trim().toLowerCase())
-          .filter(Boolean);
-        if (allowedImageDomains?.length) {
-          const imageHost = new URL(workerImage.imageUrl).hostname.toLowerCase();
-          if (!allowedImageDomains.includes(imageHost)) {
-            throw new Error(`Image URL domain not allowed: ${imageHost}`);
-          }
-        }
-
-        console.log(`Downloading worker image from: ${url}`);
-        await Command.runCommand('wget', ['-O', name, '-c', url]);
+    if (!fs.existsSync(name)) {
+      if (!ALLOWED_IMAGE_URL.test(workerImage.imageUrl)) {
+        throw new Error(`Invalid image URL: ${workerImage.imageUrl}`);
       }
 
-      return true;
-    } catch (error) {
-      return false;
+      const allowedImageDomains = process.env.ALLOWED_IMAGE_DOMAINS
+        ?.split(',')
+        .map((domain) => domain.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedImageDomains?.length) {
+        const imageHost = new URL(workerImage.imageUrl).hostname.toLowerCase();
+        if (!allowedImageDomains.includes(imageHost)) {
+          throw new Error(`Image URL domain not allowed: ${imageHost}`);
+        }
+      }
+
+      console.log(`Downloading worker image from: ${url}`);
+      await Command.runCommand('wget', ['-O', name, '-c', url]);
     }
+
+    return true;
   }
 
   public async createWorker(
@@ -128,6 +125,9 @@ export class LinuxHiveService extends HiveService {
 
     const grubPath = path.join(tmpDir, 'grub');
     const userName = process.env.USERNAME ?? process.env.USER;
+    if (!userName || !SAFE_USERNAME.test(userName)) {
+      throw new Error(`Invalid USERNAME env var: "${userName}" — must match /^[a-z_][a-z0-9_-]{0,31}$/`);
+    }
     await Command.runCommand('sudo', [
       'chown',
       `${userName}:${userName}`,

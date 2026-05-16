@@ -8,8 +8,14 @@ export class RedisService
   extends Redis
   implements OnModuleInit, OnModuleDestroy
 {
+  private static requireRedisUrl(): string {
+    const url = process.env.REDIS_URL;
+    if (!url) throw new Error('REDIS_URL environment variable is required');
+    return url;
+  }
+
   constructor(private readonly logger: LoggerService) {
-    super(process.env.REDIS_URL, {
+    super(RedisService.requireRedisUrl(), {
       maxRetriesPerRequest: null,
     });
   }

@@ -91,12 +91,13 @@ export class WorkerCreateProcessor implements IEventProcessor {
         worker.macAddress,
         worker.image,
         worker.flavor,
-        publicSshProp ? [publicSshProp.value] : [],
+        [publicSshProp.value],
       );
 
       await updateWorkerStatus(ResourceStatus.INACTIVE);
 
-      this.wsServer.sendWorkerMessage(worker, 'CREATED', worker);
+      const { id, name, status, ownerId } = worker;
+      this.wsServer.sendWorkerMessage(worker, 'CREATED', { id, name, status, ownerId });
 
       const createdEventId = await this.repository.createEvent(
         EventType.WORKER_CREATED,
