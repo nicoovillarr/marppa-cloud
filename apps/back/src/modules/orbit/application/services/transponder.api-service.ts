@@ -5,14 +5,14 @@ import { CreateTransponderDto } from '../../presentation/dtos/create-transponder
 import { UpdateTransponderDto } from '../../presentation/dtos/update-transponder.dto';
 import { plainToInstance } from 'class-transformer';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
-import { EventService } from '@/event/domain/services/event.service';
+import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 
 @Injectable()
 export class TransponderApiService {
   constructor(
     private readonly service: TransponderService,
-    private readonly eventService: EventService,
+    private readonly eventDispatch: EventDispatchService,
   ) { }
 
   public async findById(
@@ -47,16 +47,11 @@ export class TransponderApiService {
   ): Promise<TransponderResponseModel> {
     const entity = await this.service.create(portalId, dto);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.TRANSPONDER_CREATE,
+      primary: { type: 'Transponder', id: entity.id!.toString() },
+      parent: { type: 'Portal', id: portalId },
     });
-
-    await this.eventService.addEventResource(eventId!, 'Portal', portalId);
-    await this.eventService.addEventResource(
-      eventId!,
-      'Transponder',
-      entity.id!.toString(),
-    );
 
     return plainToInstance(TransponderResponseModel, entity, {
       excludeExtraneousValues: true,
@@ -70,16 +65,11 @@ export class TransponderApiService {
   ): Promise<TransponderResponseModel> {
     const entity = await this.service.update(portalId, transponderId, dto);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.TRANSPONDER_UPDATE,
+      primary: { type: 'Transponder', id: transponderId },
+      parent: { type: 'Portal', id: portalId },
     });
-
-    await this.eventService.addEventResource(eventId!, 'Portal', portalId);
-    await this.eventService.addEventResource(
-      eventId!,
-      'Transponder',
-      transponderId,
-    );
 
     return plainToInstance(TransponderResponseModel, entity, {
       excludeExtraneousValues: true,
@@ -89,15 +79,10 @@ export class TransponderApiService {
   public async delete(portalId: string, transponderId: string): Promise<void> {
     await this.service.delete(portalId, transponderId);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.TRANSPONDER_DELETE,
+      primary: { type: 'Transponder', id: transponderId },
+      parent: { type: 'Portal', id: portalId },
     });
-
-    await this.eventService.addEventResource(eventId!, 'Portal', portalId);
-    await this.eventService.addEventResource(
-      eventId!,
-      'Transponder',
-      transponderId,
-    );
   }
 }

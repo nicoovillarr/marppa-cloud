@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { EventType, ResourceStatus } from '@marppa-cloud/db';
+import { EventResourceRole, EventType, ResourceStatus } from '@marppa-cloud/db';
 import { AbortError } from '@/event/domain/errors/AbortError';
 import { EventWorker } from '@/event/application/EventWorker';
 import { LinuxOrbitService } from '@/orbit/infrastructure/services/LinuxOrbitService';
@@ -21,6 +21,14 @@ test('EventWorker marks aborted events as failed', async () => {
         companyId: 'c-1',
         processedAt: null,
         failedAt: null,
+        resources: [
+          {
+            resourceType: 'Worker',
+            resourceId: 'w-1',
+            role: EventResourceRole.PRIMARY,
+          },
+        ],
+        properties: [],
       }) as any,
     markProcessed: async () => undefined,
     markFailed: async () => {
@@ -48,7 +56,17 @@ test('EventWorker marks aborted events as failed', async () => {
     error: () => undefined,
   };
 
-  const worker = new EventWorker({} as any, registry as any, logger as any, repository as any);
+  const parentState = {
+    classify: async () => ({ kind: 'ready', status: ResourceStatus.ACTIVE }),
+  };
+
+  const worker = new EventWorker(
+    {} as any,
+    registry as any,
+    logger as any,
+    parentState as any,
+    repository as any,
+  );
 
   await (worker as any).process({ data: { eventId: 42 } });
 

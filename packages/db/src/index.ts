@@ -1,4 +1,5 @@
 export {
+  EventResourceRole,
   EventType,
   PortalType,
   Prisma,

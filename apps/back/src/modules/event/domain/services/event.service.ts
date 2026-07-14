@@ -10,6 +10,7 @@ import { EventWithRelationsModel } from '../models/event-with-relations.model';
 import { CreateEventDto } from '@/event/presentation/dtos/create-event.dto';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { EventResourceRole } from '@marppa-cloud/db';
 
 @Injectable()
 export class EventService {
@@ -43,11 +44,13 @@ export class EventService {
     eventId: number,
     resourceType: string,
     resourceId: string,
+    role: EventResourceRole = EventResourceRole.RELATED,
   ): Promise<EventResourceEntity> {
     const eventResource = new EventResourceEntity(
       eventId,
       resourceType,
       resourceId,
+      { role },
     );
     return this.eventRepository.addEventResource(eventId, eventResource);
   }

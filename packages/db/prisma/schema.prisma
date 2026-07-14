@@ -17,12 +17,15 @@ enum EventType {
   WORKER_CREATED
 
   WORKER_UPDATE
+  WORKER_UPDATE_FAILED
   WORKER_UPDATED
 
   WORKER_START
+  WORKER_START_FAILED
   WORKER_STARTED
 
   WORKER_TERMINATE
+  WORKER_TERMINATE_FAILED
   WORKER_TERMINATED
 
   WORKER_DELETE
@@ -34,15 +37,19 @@ enum EventType {
   WORKER_IMAGE_CREATED
 
   ZONE_CREATE
+  ZONE_CREATE_FAILED
   ZONE_CREATED
 
   ZONE_DELETE
+  ZONE_DELETE_FAILED
   ZONE_DELETED
 
   NODE_ASSIGN_WORKER
+  NODE_ASSIGN_WORKER_FAILED
   NODE_ASSIGNED_WORKER
 
   NODE_UNASSIGN_WORKER
+  NODE_UNASSIGN_WORKER_FAILED
   NODE_UNASSIGNED_WORKER
 
   NODE_CREATE_FIBER
@@ -435,12 +442,22 @@ model Event {
 }
 
 model EventResource {
-  id           Int    @id @default(autoincrement())
+  id           Int                @id @default(autoincrement())
   resourceType String
   resourceId   String
+  role         EventResourceRole @default(RELATED)
 
   eventId Int
   event   Event @relation(fields: [eventId], references: [id])
+
+  @@index([resourceType, resourceId, role])
+  @@index([eventId, role])
+}
+
+enum EventResourceRole {
+  PRIMARY
+  PARENT
+  RELATED
 }
 
 model EventProperty {

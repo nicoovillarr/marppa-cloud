@@ -3,6 +3,7 @@ import { EventService } from './domain/services/event.service';
 import { EVENT_REPOSITORY_SYMBOL } from './domain/repositories/event.repository';
 import { EventPrismaRepository } from './infrastructure/repositories/event-prisma.repository';
 import { EventApiService } from './application/services/event-api.service';
+import { EventDispatchService } from './application/services/event-dispatch.service';
 import { EventController } from './presentation/controllers/event.controller';
 import { SharedModule } from '@/shared/shared.module';
 import { AuthModule } from '@/auth/auth.module';
@@ -13,12 +14,13 @@ import { AuthModule } from '@/auth/auth.module';
   providers: [
     EventService,
     EventApiService,
+    EventDispatchService,
 
     {
       provide: EVENT_REPOSITORY_SYMBOL,
       useClass: EventPrismaRepository,
     },
   ],
-  exports: [EventService],
+  exports: [EventService, EventDispatchService],
 })
 export class EventModule {}

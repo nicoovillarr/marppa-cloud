@@ -5,7 +5,7 @@ import { CreateZoneDto } from '../../presentation/dtos/create-zone.dto';
 import { UpdateZoneDto } from '../../presentation/dtos/update-zone.dto';
 import { ZoneResponseModel } from '../models/zone.response-model';
 import { NetmaskService } from '../../domain/services/netmask.service';
-import { EventService } from '@/event/domain/services/event.service';
+import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 import { ZoneWithNodesAndFibersResponseModel } from '../models/zone-with-nodes-and-fibers.response-model';
 import { ZoneWithNodesResponseModel } from '../models/zone-with-nodes.response.model';
@@ -13,15 +13,13 @@ import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
 import { NodeResponseModel } from '../models/node.response-model';
 import { FiberResponseModel } from '../models/fiber.response-model';
 import { NodeWithFibersResponseModel } from '../models/node-with-fibers.response-model';
-import { EventQueueService } from '@/shared/infrastructure/services/event-queue.service';
 
 @Injectable()
 export class ZoneApiService {
   constructor(
     private readonly zoneService: ZoneService,
     private readonly netmaskService: NetmaskService,
-    private readonly eventService: EventService,
-    private readonly eventQueueService: EventQueueService,
+    private readonly eventDispatch: EventDispatchService,
   ) { }
 
   public async findById(id: string): Promise<ZoneWithNodesAndFibersResponseModel> {
@@ -58,17 +56,10 @@ export class ZoneApiService {
 
     const entity = await this.zoneService.create(data, cidr, gateway);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.ZONE_CREATE,
+      primary: { type: 'Zone', id: entity.id!.toString() },
     });
-
-    await this.eventService.addEventResource(
-      eventId!,
-      'Zone',
-      entity.id!.toString(),
-    );
-
-    await this.eventQueueService.enqueue(eventId!);
 
     return plainToInstance(ZoneResponseModel, entity, {
       excludeExtraneousValues: true,
@@ -88,10 +79,9 @@ export class ZoneApiService {
   public async delete(id: string): Promise<void> {
     await this.zoneService.delete(id);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.ZONE_DELETE,
+      primary: { type: 'Zone', id },
     });
-
-    await this.eventService.addEventResource(eventId!, 'Zone', id);
   }
 }

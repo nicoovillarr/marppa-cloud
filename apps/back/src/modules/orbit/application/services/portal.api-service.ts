@@ -7,7 +7,7 @@ import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { CreatePortalDto } from '../../presentation/dtos/create-portal.dto';
 import { UpdatePortalDto } from '../../presentation/dtos/update-portal.dto';
-import { EventService } from '@/event/domain/services/event.service';
+import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 import { PortalWithTranspondersWithNodeResponseModel } from '../models/portal-with-transponders-with-node.response-model';
 import { TransponderResponseModel } from '../models/transponder.response-model';
@@ -19,7 +19,7 @@ import { TransponderWithNodeResponseModel } from '../models/transponder-with-nod
 export class PortalApiService {
   constructor(
     private readonly service: PortalService,
-    private readonly eventService: EventService,
+    private readonly eventDispatch: EventDispatchService,
   ) { }
 
   public getPortalTypes(): string[] {
@@ -91,15 +91,10 @@ export class PortalApiService {
   public async create(data: CreatePortalDto): Promise<PortalResponseModel> {
     const entity = await this.service.create(data);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.PORTAL_CREATE,
+      primary: { type: 'Portal', id: entity.id!.toString() },
     });
-
-    await this.eventService.addEventResource(
-      eventId!,
-      'Portal',
-      entity.id!.toString(),
-    );
 
     return plainToInstance(PortalResponseModel, entity, {
       excludeExtraneousValues: true,
@@ -112,15 +107,10 @@ export class PortalApiService {
   ): Promise<PortalResponseModel> {
     const entity = await this.service.update(id, data);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.PORTAL_UPDATE,
+      primary: { type: 'Portal', id: entity.id!.toString() },
     });
-
-    await this.eventService.addEventResource(
-      eventId!,
-      'Portal',
-      entity.id!.toString(),
-    );
 
     return plainToInstance(PortalResponseModel, entity, {
       excludeExtraneousValues: true,
@@ -130,10 +120,9 @@ export class PortalApiService {
   public async delete(id: string): Promise<void> {
     await this.service.delete(id);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.PORTAL_DELETE,
+      primary: { type: 'Portal', id },
     });
-
-    await this.eventService.addEventResource(eventId!, 'Portal', id);
   }
 }

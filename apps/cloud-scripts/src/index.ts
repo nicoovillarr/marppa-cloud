@@ -16,7 +16,7 @@ const { NODE_ENV } = process.env;
 configDotenv({
   path: [
     `.env.${NODE_ENV}.local`,
-    '.NODE_ENV.local',
+    '.env.local',
     `.env.${NODE_ENV}`,
     '.env',
   ],

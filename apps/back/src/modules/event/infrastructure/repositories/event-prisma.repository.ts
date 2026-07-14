@@ -63,6 +63,7 @@ export class EventPrismaRepository implements EventRepository {
         eventId,
         resourceId: eventResource.resourceId,
         resourceType: eventResource.resourceType,
+        role: eventResource.role,
       },
     });
 

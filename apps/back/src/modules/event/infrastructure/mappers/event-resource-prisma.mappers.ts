@@ -9,6 +9,7 @@ export class EventResourcePrismaMapper {
       raw.resourceId,
       {
         id: raw.id ?? undefined,
+        role: raw.role,
       },
     );
   }

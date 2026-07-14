@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { WorkerResponseModel } from '../models/worker.response-model';
 import { WorkerWithRelationsResponseModel } from '../models/worker-with-relations.response-model';
-import { EventService } from '@/event/domain/services/event.service';
+import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 import { WorkerWithRelationsModel } from '@/hive/domain/models/worker-with-relations.model';
 import { WorkerFlavorResponseModel } from '../models/worker-flavor.response-model';
@@ -18,7 +18,7 @@ import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 export class WorkerApiService {
   constructor(
     private readonly service: WorkerService,
-    private readonly eventService: EventService,
+    private readonly eventDispatch: EventDispatchService,
   ) { }
 
   public async findById(id: string): Promise<WorkerResponseModel> {
@@ -77,12 +77,11 @@ export class WorkerApiService {
   public async create(data: CreateWorkerDto): Promise<WorkerResponseModel> {
     const entity = await this.service.createWorker(data);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.WORKER_CREATE,
+      primary: { type: 'Worker', id: entity.id! },
+      properties: { PublicSSH: data.publicSSH },
     });
-
-    await this.eventService.addEventResource(eventId!, 'Worker', entity.id!);
-    await this.eventService.addEventProperty(eventId!, 'PublicSSH', data.publicSSH);
 
     return plainToInstance(WorkerResponseModel, entity, {
       excludeExtraneousValues: true,
@@ -92,21 +91,19 @@ export class WorkerApiService {
   public async start(id: string): Promise<void> {
     await this.service.startWorker(id);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.WORKER_START,
+      primary: { type: 'Worker', id },
     });
-
-    await this.eventService.addEventResource(eventId!, 'Worker', id);
   }
 
   public async terminate(id: string): Promise<void> {
     await this.service.stopWorker(id);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.WORKER_TERMINATE,
+      primary: { type: 'Worker', id },
     });
-
-    await this.eventService.addEventResource(eventId!, 'Worker', id);
   }
 
   public async update(
@@ -114,6 +111,12 @@ export class WorkerApiService {
     data: UpdateWorkerDto,
   ): Promise<WorkerResponseModel> {
     const entity = await this.service.updateWorker(id, data);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.WORKER_UPDATE,
+      primary: { type: 'Worker', id },
+    });
+
     return plainToInstance(WorkerResponseModel, entity, {
       excludeExtraneousValues: true,
     });
@@ -122,10 +125,9 @@ export class WorkerApiService {
   public async delete(id: string): Promise<void> {
     await this.service.deleteWorker(id);
 
-    const { id: eventId } = await this.eventService.create({
+    await this.eventDispatch.dispatch({
       type: EventTypeKey.WORKER_DELETE,
+      primary: { type: 'Worker', id },
     });
-
-    await this.eventService.addEventResource(eventId!, 'Worker', id);
   }
 }
