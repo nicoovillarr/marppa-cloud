@@ -7,7 +7,7 @@ import { ZoneEntity } from '../entities/zone.entity';
 import { CreateZoneDto } from '../../presentation/dtos/create-zone.dto';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
-import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { EventTypeKey, getEventStateTransition } from '@marppa-cloud/api-types';
 import { UpdateZoneDto } from '../../presentation/dtos/update-zone.dto';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { ZoneWithNodesModel } from '../models/zone-with-nodes.model';
@@ -76,7 +76,7 @@ export class ZoneService {
 
     const zone = new ZoneEntity(
       entity.name,
-      ResourceStatus.QUEUED,
+      getEventStateTransition(EventTypeKey.ZONE_CREATE).entry,
       cidr,
       gateway,
       user.userId,

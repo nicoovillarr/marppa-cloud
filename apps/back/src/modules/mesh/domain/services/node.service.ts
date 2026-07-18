@@ -7,7 +7,7 @@ import { NodeEntity } from '../entities/node.entity';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { CreateNodeDto } from '../../presentation/dtos/create-node.dto';
-import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { EventTypeKey, getEventStateTransition } from '@marppa-cloud/api-types';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 
 @Injectable()
@@ -59,7 +59,7 @@ export class NodeService {
 
     const node = new NodeEntity(
       ipAddress,
-      ResourceStatus.QUEUED,
+      getEventStateTransition(EventTypeKey.NODE_ASSIGN_WORKER).entry,
       zoneId,
       user.userId,
       {

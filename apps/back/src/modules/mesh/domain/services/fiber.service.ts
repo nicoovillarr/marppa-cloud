@@ -6,7 +6,7 @@ import {
 import { CreateFiberDto } from '../../presentation/dtos/create-fiber.dto';
 import { FiberEntity } from '../entities/fiber.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
-import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { EventTypeKey, getEventStateTransition } from '@marppa-cloud/api-types';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 
@@ -46,7 +46,7 @@ export class FiberService {
     const fiber = new FiberEntity(
       data.protocol,
       data.targetPort,
-      ResourceStatus.QUEUED,
+      getEventStateTransition(EventTypeKey.NODE_CREATE_FIBER).entry,
       nodeId,
       user.userId,
       // TODO: Calculate random hostport

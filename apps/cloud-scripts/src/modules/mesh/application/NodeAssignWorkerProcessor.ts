@@ -10,6 +10,9 @@ import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
 import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
 import { Inject } from '@/decorators/Inject';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.NODE_ASSIGN_WORKER);
 
 @EventProcessor(EventType.NODE_ASSIGN_WORKER)
 export class NodeAssignWorkerProcessor implements IEventProcessor {
@@ -50,8 +53,8 @@ export class NodeAssignWorkerProcessor implements IEventProcessor {
       });
 
       if (!node) throw new Error(`Node not found for event ID: ${event.id}`);
-      if (node.status !== ResourceStatus.QUEUED) {
-        throw new Error(`Node is not in QUEUED state for event ID: ${event.id}`);
+      if (node.status !== STATES.entry) {
+        throw new Error(`Node is not in ${STATES.entry} state for event ID: ${event.id}`);
       }
 
       const resourceWorker = event.resources.find((r) => r.resourceType === 'Worker');
@@ -66,7 +69,20 @@ export class NodeAssignWorkerProcessor implements IEventProcessor {
         throw new Error(`Worker is not in INACTIVE state for event ID: ${event.id}`);
       }
 
-      await updateNodeStatus(ResourceStatus.PROVISIONING);
+      await updateNodeStatus(STATES.work);
+
+      // Now that the IP is known, bake it into the cloud-init seed as a static
+      // address (runbook §6.3) before the NIC is attached, so the next boot
+      // configures the network deterministically instead of relying on DHCP.
+      const prefix = Number(node.zone.cidr.split('/')[1]);
+      if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) {
+        throw new Error(`Invalid CIDR prefix on zone ${node.zoneId}: ${node.zone.cidr}`);
+      }
+      await this.hiveService.rearmCloudInitISO(worker.id, worker.name, worker.macAddress, {
+        ipAddress: node.ipAddress,
+        gateway: node.zone.gateway,
+        prefix,
+      });
 
       await this.meshService.addNodeToZone(node.zoneId, worker.macAddress, node.ipAddress);
       try {
@@ -81,7 +97,7 @@ export class NodeAssignWorkerProcessor implements IEventProcessor {
         data: { node: { connect: { id: node.id } }, updatedBy: event.createdBy },
       });
 
-      await updateNodeStatus(ResourceStatus.ACTIVE);
+      await updateNodeStatus(STATES.ok);
 
       this.wsServer.sendWorkerMessage(worker, 'UPDATED', { node });
 
@@ -92,7 +108,7 @@ export class NodeAssignWorkerProcessor implements IEventProcessor {
     } catch (error) {
       this.logger.error(`Error processing event ID ${event.id}: ${String(error)}`);
       if (node) {
-        await updateNodeStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updateNodeStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }

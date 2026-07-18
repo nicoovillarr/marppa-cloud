@@ -8,12 +8,24 @@ import {
   HiveService,
   type WorkerImageSource,
   type WorkerInstanceSource,
+  type WorkerNetworkConfig,
 } from '../domain/services/HiveService';
 import { Utils } from '@/libs/Utils';
 import { Injectable } from '@/decorators/Injectable';
 
 const IMAGE_DIR = '/var/lib/libvirt/images';
 const CLOUD_INIT_DIR_BASE = '/var/lib/libvirt/cloud-init';
+
+// Packages baked into the base image at prep time so the first boot needs no Internet.
+const BASE_IMAGE_PACKAGES = [
+  'cloud-guest-utils',
+  'nginx',
+  'curl',
+  'git',
+  'ufw',
+  'vim',
+  'iputils-ping',
+];
 
 const SAFE_VM_NAME = /^[a-zA-Z0-9_-]+$/;
 const ALLOWED_IMAGE_URL = /^https?:\/\/[a-zA-Z0-9.\-]+(:\d+)?\//;
@@ -50,7 +62,43 @@ export class LinuxHiveService extends HiveService {
       await Command.runCommand('wget', ['-O', name, '-c', url]);
     }
 
+    // Bake packages into the base image once so per-VM first boot needs no Internet.
+    await this.prepareBaseImage(name);
+
     return true;
+  }
+
+  /**
+   * Golden-image prep: installs the packages every worker needs directly into
+   * the base image (one-time, cached via a `.prepared` marker). This removes the
+   * first-boot Internet dependency that `apt`-in-cloud-init otherwise imposes
+   * (which hangs VMs under forward mode=open). Requires Internet at prep time only.
+   */
+  private async prepareBaseImage(imgPath: string): Promise<void> {
+    const marker = `${imgPath}.prepared`;
+    if (fs.existsSync(marker)) {
+      return;
+    }
+
+    console.log(`Preparing base image (installing packages, one-time): ${imgPath}`);
+
+    await Command.runCommand('sudo', [
+      'virt-customize',
+      '-a',
+      imgPath,
+      '--update',
+      '--install',
+      BASE_IMAGE_PACKAGES.join(','),
+      '--run-command',
+      'systemctl enable ssh',
+      '--run-command',
+      'systemctl enable nginx',
+      '--run-command',
+      'setcap cap_net_raw+ep /usr/bin/ping || true',
+    ]);
+
+    await fsPromises.writeFile(marker, new Date().toISOString());
+    console.log(`✅ Base image prepared: ${imgPath}`);
   }
 
   public async createWorker(
@@ -195,6 +243,7 @@ export class LinuxHiveService extends HiveService {
     mac: string,
     destDir: string,
     sshPublicKeys: string[],
+    net?: WorkerNetworkConfig,
   ): Promise<string> {
     console.log(`Creating cloud-init ISO for VM: ${name}`);
 
@@ -230,17 +279,8 @@ users:
   - name: root
     lock_passwd: true
 
-package_update: true
-package_upgrade: true
-
-packages:
-  - cloud-guest-utils
-  - nginx
-  - curl
-  - git
-  - ufw
-  - vim
-  - iputils-ping
+# Packages are baked into the base image (see LinuxHiveService.prepareBaseImage),
+# so the first boot does NOT run apt and needs no Internet.
 
 runcmd:
   - [ cloud-init-per, once, resize-root, resize2fs, /dev/vda1 ]
@@ -255,25 +295,87 @@ runcmd:
 
 final_message: "Cloud-init finished. SSH should be available."`;
 
-    console.log(userData);
+    await fsPromises.writeFile(`${destDir}/user-data`, userData);
 
-    const metaData = `instance-id: ${name}
+    return this.writeSeedIso(id, name, mac, destDir, net);
+  }
+
+  public async rearmCloudInitISO(
+    id: string,
+    name: string,
+    mac: string,
+    net: WorkerNetworkConfig,
+  ): Promise<string> {
+    console.log(`Rearming cloud-init ISO for VM: ${name} with static IP ${net.ipAddress}/${net.prefix}`);
+
+    if (!SAFE_VM_NAME.test(name)) {
+      throw new Error(`Invalid VM hostname: ${name}`);
+    }
+
+    const destDir = path.join(CLOUD_INIT_DIR_BASE, id);
+
+    // user-data (SSH keys, packages) was written at WORKER_CREATE; reuse it as-is.
+    if (!fs.existsSync(`${destDir}/user-data`)) {
+      throw new Error(`Cannot rearm cloud-init: user-data missing at ${destDir}`);
+    }
+
+    return this.writeSeedIso(id, name, mac, destDir, net);
+  }
+
+  private buildNetworkConfig(mac: string, net?: WorkerNetworkConfig): string {
+    if (!net) {
+      // First boot before the worker has a Node/IP: fall back to DHCP.
+      return `network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    id0:
+      match:
+        macaddress: "${mac}"
+      set-name: eth0
+      dhcp4: true
+`;
+    }
+
+    // Static IP per runbook §6.3 — robust against systemd-networkd-wait-online
+    // hangs that DHCP suffers under forward mode=open.
+    return `network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    id0:
+      match:
+        macaddress: "${mac}"
+      set-name: eth0
+      dhcp4: false
+      addresses:
+        - ${net.ipAddress}/${net.prefix}
+      routes:
+        - to: default
+          via: ${net.gateway}
+      nameservers:
+        addresses:
+          - ${net.gateway}
+          - 1.1.1.1
+`;
+  }
+
+  private async writeSeedIso(
+    id: string,
+    name: string,
+    mac: string,
+    destDir: string,
+    net?: WorkerNetworkConfig,
+  ): Promise<string> {
+    // Versioned instance-id: cloud-init ignores network/config changes unless the
+    // instance-id changes, so bump it on every (re)generation of the ISO.
+    const metaData = `instance-id: ${name}-${Date.now()}
 local-hostname: ${name}
 `;
 
-    const networkConfig = `network:
-version: 2
-renderer: networkd
-ethernets:
-  id0:
-    match:
-      macaddress: "${mac}"
-    set-name: eth0
-    dhcp4: true
-`;
+    const networkConfig = this.buildNetworkConfig(mac, net);
 
     await Promise.all([
-      fsPromises.writeFile(`${destDir}/user-data`, userData),
       fsPromises.writeFile(`${destDir}/meta-data`, metaData),
       fsPromises.writeFile(`${destDir}/network-config`, networkConfig),
     ]);

@@ -9,6 +9,7 @@ import { UpdateWorkerDto } from '@/hive/presentation/dtos/update-worker.dto';
 import { CreateWorkerDto } from '@/hive/presentation/dtos/create-worker.dto';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { EventTypeKey, getEventStateTransition } from '@marppa-cloud/api-types';
 import { Inject, Injectable } from '@nestjs/common';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { MacAddressService } from './mac-address.service';
@@ -55,7 +56,7 @@ export class WorkerService {
 
     const entity = new WorkerEntity(
       data.name,
-      ResourceStatus.QUEUED,
+      getEventStateTransition(EventTypeKey.WORKER_CREATE).entry,
       macAddress,
       user.userId,
       data.imageId,
@@ -82,7 +83,7 @@ export class WorkerService {
     }
 
     const updated = entity.clone({
-      status: ResourceStatus.QUEUED,
+      status: getEventStateTransition(EventTypeKey.WORKER_START).entry,
       updatedBy: user.userId,
     });
 

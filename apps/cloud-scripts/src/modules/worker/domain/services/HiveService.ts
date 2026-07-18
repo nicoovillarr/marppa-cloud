@@ -5,6 +5,13 @@ export const HIVE_SERVICE_TOKEN = Symbol('HIVE_SERVICE');
 export type WorkerImageSource = Pick<WorkerImage, 'osType' | 'osFamily' | 'osVersion' | 'imageUrl'>;
 export type WorkerInstanceSource = Pick<WorkerFlavor, 'ramMB' | 'cpuCores' | 'diskGB'>;
 
+/** Static network config baked into cloud-init when the worker's IP is known (at assign). */
+export type WorkerNetworkConfig = {
+  ipAddress: string;
+  gateway: string;
+  prefix: number;
+};
+
 export abstract class HiveService {
   abstract ensureWorkerImageExists(workerImage: WorkerImageSource): Promise<boolean>;
   
@@ -14,7 +21,14 @@ export abstract class HiveService {
   
   abstract addSerialTTYToSecuretty(imgPath: string): Promise<void>;
   
-  abstract createCloudInitISO(id: string, name: string, mac: string, destDir: string, sshPublicKeys: string[]): Promise<string>;
+  abstract createCloudInitISO(id: string, name: string, mac: string, destDir: string, sshPublicKeys: string[], net?: WorkerNetworkConfig): Promise<string>;
+
+  /**
+   * Rebuilds the cloud-init seed ISO in place once the worker's IP is known
+   * (at NODE_ASSIGN_WORKER), baking a static IP and bumping the instance-id so
+   * cloud-init re-runs the network config on the next boot.
+   */
+  abstract rearmCloudInitISO(id: string, name: string, mac: string, net: WorkerNetworkConfig): Promise<string>;
   
   abstract defineVM(name: string, memory: number, cpus: number, size: number, imgPath: string, seedIsoPath: string): Promise<void>;
   

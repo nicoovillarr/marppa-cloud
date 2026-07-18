@@ -4,9 +4,10 @@ import { EventEntity } from '../../domain/entities/event.entity';
 import { EventResourceEntity } from '../../domain/entities/event-resource.entity';
 import { EventPropertyEntity } from '../../domain/entities/event-property.entity';
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
+import { EventTypeKey } from '../../domain/enums/event-type-key.enum';
 
 describe('EventPrismaRepository (Integration)', () => {
-  const eventTypeKey = 'SYSTEM_TEST_EVENT';
+  const eventTypeKey = 'SYSTEM_TEST_EVENT' as EventTypeKey;
   const userId = 'u-000001';
   const companyId = 'c-000001';
   const workerId = 'w-000001';

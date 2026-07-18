@@ -1,7 +1,7 @@
 import { UAParser } from 'ua-parser-js';
 import { Request } from 'express';
 
-interface RequestData {
+export interface RequestData {
   userAgent: string;
   ipAddress: string;
   platform: string;

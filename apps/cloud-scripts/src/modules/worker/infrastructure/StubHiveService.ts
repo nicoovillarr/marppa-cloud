@@ -1,4 +1,4 @@
-import { HiveService, type WorkerImageSource, type WorkerInstanceSource } from '../domain/services/HiveService';
+import { HiveService, type WorkerImageSource, type WorkerInstanceSource, type WorkerNetworkConfig } from '../domain/services/HiveService';
 import { Injectable } from '@/decorators/Injectable';
 
 @Injectable()
@@ -20,9 +20,15 @@ export class StubHiveService extends HiveService {
     console.log(`[STUB] addSerialTTYToSecuretty: ${imgPath}`);
   }
 
-  public async createCloudInitISO(id: string, name: string, _mac: string, destDir: string, _sshPublicKeys: string[]): Promise<string> {
+  public async createCloudInitISO(id: string, name: string, _mac: string, destDir: string, _sshPublicKeys: string[], net?: WorkerNetworkConfig): Promise<string> {
     const isoPath = `/stub/cloud-init/${destDir}/seed-${id}.iso`;
-    console.log(`[STUB] createCloudInitISO: vm=${name} path=${isoPath}`);
+    console.log(`[STUB] createCloudInitISO: vm=${name} path=${isoPath} net=${net ? `${net.ipAddress}/${net.prefix}` : 'dhcp'}`);
+    return isoPath;
+  }
+
+  public async rearmCloudInitISO(id: string, name: string, _mac: string, net: WorkerNetworkConfig): Promise<string> {
+    const isoPath = `/stub/cloud-init/${id}/seed-${id}.iso`;
+    console.log(`[STUB] rearmCloudInitISO: vm=${name} path=${isoPath} net=${net.ipAddress}/${net.prefix}`);
     return isoPath;
   }
 

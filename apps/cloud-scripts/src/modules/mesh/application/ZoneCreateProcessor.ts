@@ -7,6 +7,9 @@ import { EventProcessor } from '@/decorators/EventProcessor';
 import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
 import { Inject } from '@/decorators/Inject';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.ZONE_CREATE);
 
 @EventProcessor(EventType.ZONE_CREATE)
 export class ZoneCreateProcessor implements IEventProcessor {
@@ -40,20 +43,20 @@ export class ZoneCreateProcessor implements IEventProcessor {
       });
 
       if (!zone) throw new Error(`Zone not found for event ID: ${event.id}`);
-      if (zone.status !== ResourceStatus.QUEUED) {
-        throw new Error(`Zone is not in QUEUED state for event ID: ${event.id}`);
+      if (zone.status !== STATES.entry) {
+        throw new Error(`Zone is not in ${STATES.entry} state for event ID: ${event.id}`);
       }
 
-      await updateZoneStatus(ResourceStatus.PROVISIONING);
+      await updateZoneStatus(STATES.work);
       await this.meshService.createZone(zone.cidr, zone.id, null);
-      await updateZoneStatus(ResourceStatus.ACTIVE);
+      await updateZoneStatus(STATES.ok);
 
       const createdEventId = await this.repository.createEvent(EventType.ZONE_CREATED, event.createdBy, event.companyId);
       await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
       await this.repository.addEventResource(createdEventId, 'Zone', zone.id);
     } catch (error) {
       if (zone) {
-        await updateZoneStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updateZoneStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }

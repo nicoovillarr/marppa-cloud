@@ -1,0 +1,76 @@
+import { EventTypeKey, ResourceStatus } from './enums';
+
+/**
+ * Canonical state transition for an infra command event.
+ *
+ * Convention (single rule for every dispatched infra event):
+ *  - `entry`: the backend sets the primary resource to this status *before*
+ *    dispatch; the processor validates it as its precondition.
+ *  - `work`:  the processor moves the resource here while doing the work.
+ *  - `ok`:    terminal status on success.
+ *  - `fail`:  terminal status on definitive failure (after retries are exhausted;
+ *             on a retryable failure the processor re-sets `entry`).
+ *
+ * This map is the single source of truth consumed by BOTH the backend dispatch
+ * path and the cloud-scripts processors, so the two can never desync again.
+ */
+export interface EventStateTransition {
+  entry: ResourceStatus;
+  work: ResourceStatus;
+  ok: ResourceStatus;
+  fail: ResourceStatus;
+}
+
+const {
+  QUEUED,
+  PROVISIONING,
+  UPDATING,
+  ACTIVE,
+  INACTIVE,
+  FAILED,
+  TERMINATING,
+  TERMINATED,
+  DELETING,
+  DELETED,
+} = ResourceStatus;
+
+/**
+ * Rows marked "verified" match the happy-path processors end-to-end
+ * (Zone→Worker→Assign→Start→Fiber). The remaining rows follow the naming
+ * convention and MUST be confirmed against their processor when that transition
+ * is wired to this map (see the "audit other transitions" gap).
+ */
+export const EVENT_STATE_MACHINE: Partial<
+  Record<EventTypeKey, EventStateTransition>
+> = {
+  // --- happy path (verified) ---
+  [EventTypeKey.ZONE_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.WORKER_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.WORKER_START]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.NODE_ASSIGN_WORKER]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.NODE_CREATE_FIBER]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+
+  // --- pending per-processor verification (convention defaults) ---
+  [EventTypeKey.ZONE_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+  [EventTypeKey.WORKER_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.WORKER_TERMINATE]: { entry: QUEUED, work: TERMINATING, ok: TERMINATED, fail: FAILED },
+  [EventTypeKey.WORKER_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+  [EventTypeKey.NODE_UNASSIGN_WORKER]: { entry: QUEUED, work: PROVISIONING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.NODE_UPDATE_FIBER]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.NODE_DELETE_FIBER]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+  [EventTypeKey.PORTAL_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.PORTAL_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.PORTAL_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+  [EventTypeKey.TRANSPONDER_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.TRANSPONDER_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.TRANSPONDER_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+};
+
+/** Returns the canonical transition for a command event, or throws if none is defined. */
+export function getEventStateTransition(type: EventTypeKey): EventStateTransition {
+  const transition = EVENT_STATE_MACHINE[type];
+  if (!transition) {
+    throw new Error(`No state machine transition defined for event type: ${type}`);
+  }
+  return transition;
+}

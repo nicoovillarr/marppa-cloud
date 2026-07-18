@@ -17,6 +17,11 @@ export class LinuxMeshService extends MeshService {
   private readonly nftConfBackupDir: string = '/etc/nft-backups';
   private readonly bridgeName: string;
   private readonly nftResetSourcePath: string;
+  private static readonly RFC1918_RANGES = [
+    '10.0.0.0/8',
+    '172.16.0.0/12',
+    '192.168.0.0/16',
+  ];
 
   constructor() {
     super();
@@ -147,6 +152,27 @@ iface ${bridgeName} inet static
         `"${bridgeName}"`,
         'accept',
       ],
+      // Traffic from this zone towards other RFC1918 destinations (physical LAN,
+      // other zones) must NOT be masqueraded: keep the VM source IP so the client
+      // (with a static route to the host) accepts the reply (runbook §5.2).
+      // These `return` rules precede the masquerade so only Internet-bound
+      // traffic falls through to it.
+      ...LinuxMeshService.RFC1918_RANGES.map((range) => [
+        'add',
+        'rule',
+        'ip',
+        'nat',
+        'postrouting',
+        'oifname',
+        `"${externalInterface}"`,
+        'ip',
+        'saddr',
+        cidr,
+        'ip',
+        'daddr',
+        range,
+        'return',
+      ]),
       [
         'add',
         'rule',
@@ -305,7 +331,7 @@ iface ${bridgeName} inet static
         (line) =>
           line.includes(`oifname "${externalInterface}"`) &&
           line.includes(`ip saddr ${cidr}`) &&
-          line.includes('masquerade'),
+          (line.includes('masquerade') || line.includes('return')),
       );
 
       await deleteMatchingRules(['inet', 'filter'], 'input', (line) =>

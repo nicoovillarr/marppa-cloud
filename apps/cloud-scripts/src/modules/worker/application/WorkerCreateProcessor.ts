@@ -14,6 +14,9 @@ import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/reposito
 import { HIVE_SERVICE_TOKEN, HiveService } from '../domain/services/HiveService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.WORKER_CREATE);
 
 @EventProcessor(EventType.WORKER_CREATE)
 export class WorkerCreateProcessor implements IEventProcessor {
@@ -61,9 +64,9 @@ export class WorkerCreateProcessor implements IEventProcessor {
         );
       }
 
-      if (worker.status !== ResourceStatus.QUEUED) {
+      if (worker.status !== STATES.entry) {
         throw new AbortError(
-          `Worker is not in QUEUED status for event ID: ${event.id}`,
+          `Worker is not in ${STATES.entry} status for event ID: ${event.id}`,
           EventType.WORKER_CREATE_FAILED,
         );
       }
@@ -83,7 +86,7 @@ export class WorkerCreateProcessor implements IEventProcessor {
         );
       }
 
-      await updateWorkerStatus(ResourceStatus.PROVISIONING);
+      await updateWorkerStatus(STATES.work);
 
       await this.hiveService.createWorker(
         worker.id,
@@ -94,7 +97,7 @@ export class WorkerCreateProcessor implements IEventProcessor {
         [publicSshProp.value],
       );
 
-      await updateWorkerStatus(ResourceStatus.INACTIVE);
+      await updateWorkerStatus(STATES.ok);
 
       const { id, name, status, ownerId } = worker;
       this.wsServer.sendWorkerMessage(worker, 'CREATED', { id, name, status, ownerId });
@@ -111,7 +114,7 @@ export class WorkerCreateProcessor implements IEventProcessor {
 
       if (worker) {
         await updateWorkerStatus(
-          event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED,
+          event.retries >= 4 ? STATES.fail : STATES.entry,
         );
       }
       throw error;

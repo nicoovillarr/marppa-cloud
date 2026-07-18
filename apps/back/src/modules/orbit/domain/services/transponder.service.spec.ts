@@ -114,6 +114,7 @@ describe('TransponderService', () => {
       gzipEnabled: false,
       priority: 2,
       nodeId: 'n-000002',
+      portalId: 'p-000001',
     };
 
     it('should create a transponder successfully', async () => {
@@ -146,6 +147,7 @@ describe('TransponderService', () => {
       gzipEnabled: true,
       priority: 3,
       nodeId: 'n-000001',
+      portalId: 'p-000001',
     };
 
     it('should update a transponder successfully', async () => {

@@ -3,7 +3,7 @@ console.log(`Running tests in ${process.env.NODE_ENV} mode`);
 export default {
     preset: 'ts-jest',
     testEnvironment: 'node',
-    setupFiles: ['dotenv/config'],
+    setupFiles: ['<rootDir>/../jest.env.ts'],
     moduleFileExtensions: [
         "js",
         "json",

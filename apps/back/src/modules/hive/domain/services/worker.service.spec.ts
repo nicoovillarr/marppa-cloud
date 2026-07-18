@@ -148,6 +148,7 @@ describe('WorkerService', () => {
         name: 'New Worker',
         imageId: 1,
         flavorId: 1,
+        publicSSH: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest test@test',
       };
 
       jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
@@ -169,6 +170,7 @@ describe('WorkerService', () => {
         imageId: 1,
         flavorId: 1,
         ownerId: 'c-custom',
+        publicSSH: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest test@test',
       };
 
       jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({

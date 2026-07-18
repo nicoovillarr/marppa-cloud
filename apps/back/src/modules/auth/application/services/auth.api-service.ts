@@ -8,7 +8,7 @@ import { LoginUserDto } from '@/auth/presentation/dtos/login-user.dto';
 import { UserService } from '@/user/domain/services/user.service';
 import { CreateUserDto } from '@/auth/presentation/dtos/create-user.dto';
 import { JwtEntity } from '@/auth/domain/entities/jwt.entity';
-import { Utils } from 'src/libs/utils';
+import { Utils } from '../../../../libs/utils';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 

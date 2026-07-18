@@ -14,6 +14,9 @@ import { MESH_SERVICE_TOKEN, MeshService } from '@/mesh/domain/services/MeshServ
 import { HIVE_SERVICE_TOKEN, HiveService } from '../domain/services/HiveService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.WORKER_START);
 
 @EventProcessor(EventType.WORKER_START)
 export class WorkerStartProcessor implements IEventProcessor {
@@ -69,9 +72,9 @@ export class WorkerStartProcessor implements IEventProcessor {
 
       if (!worker)
         throw new Error(`Worker not found for event ID: ${event.id}`);
-      if (worker.status !== ResourceStatus.QUEUED) {
+      if (worker.status !== STATES.entry) {
         throw new Error(
-          `Worker is not in QUEUED state for event ID: ${event.id}`,
+          `Worker is not in ${STATES.entry} state for event ID: ${event.id}`,
         );
       }
       if (!worker.node)
@@ -82,7 +85,7 @@ export class WorkerStartProcessor implements IEventProcessor {
         );
       }
 
-      await updateWorkerStatus(ResourceStatus.PROVISIONING);
+      await updateWorkerStatus(STATES.work);
 
       await this.hiveService.startWorker(worker.id);
       await new Promise<void>((resolve) => setTimeout(resolve, 5000));
@@ -202,12 +205,12 @@ export class WorkerStartProcessor implements IEventProcessor {
       }
 
       if (!isConnected) {
-        await updateWorkerStatus(ResourceStatus.FAILED);
+        await updateWorkerStatus(STATES.fail);
         statusFinalized = true;
         throw new AbortError(`Worker ${worker.id} unreachable after start`);
       }
 
-      await updateWorkerStatus(ResourceStatus.ACTIVE);
+      await updateWorkerStatus(STATES.ok);
       statusFinalized = true;
       this.wsServer.sendWorkerMessage(worker, 'WORKER_STARTED', null);
 
@@ -232,7 +235,7 @@ export class WorkerStartProcessor implements IEventProcessor {
       );
       if (worker && !statusFinalized) {
         await updateWorkerStatus(
-          event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED,
+          event.retries >= 4 ? STATES.fail : STATES.entry,
         );
       }
       throw error;

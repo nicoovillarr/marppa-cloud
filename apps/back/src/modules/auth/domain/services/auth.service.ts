@@ -10,7 +10,7 @@ import { type TokenStorageService } from './token-storage.service';
 
 import { UserEntity } from '@/user/domain/entities/user.entity';
 import { JwtEntity } from '@/auth/domain/entities/jwt.entity';
-import { RequestData } from 'src/types';
+import { RequestData } from '../../../../libs/utils';
 
 @Injectable()
 export class AuthService {

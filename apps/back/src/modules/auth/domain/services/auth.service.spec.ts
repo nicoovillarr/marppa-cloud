@@ -15,7 +15,7 @@ import {
 import { SessionEntity } from '../entities/session.entity';
 import { UserEntity } from '@/user/domain/entities/user.entity';
 import { JwtEntity } from '../entities/jwt.entity';
-import { RequestData } from 'src/types';
+import { RequestData } from '../../../../libs/utils';
 
 describe('AuthService', () => {
   let service: AuthService;

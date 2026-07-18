@@ -10,6 +10,9 @@ import { AbortError } from '@/event/domain/errors/AbortError';
 import { Inject } from '@/decorators/Inject';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { PortConflictError } from '../domain/errors/PortConflictError';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.NODE_CREATE_FIBER);
 
 @EventProcessor(EventType.NODE_CREATE_FIBER)
 export class NodeCreateFiberProcessor implements IEventProcessor {
@@ -46,9 +49,9 @@ export class NodeCreateFiberProcessor implements IEventProcessor {
 
       if (!fiber) throw new Error(`Fiber not found for event ID: ${event.id}`);
 
-      if (fiber.status !== ResourceStatus.QUEUED) {
+      if (fiber.status !== STATES.entry) {
         throw new AbortError(
-          `Fiber is not in QUEUED status for event ID: ${event.id}`,
+          `Fiber is not in ${STATES.entry} status for event ID: ${event.id}`,
           EventType.NODE_CREATE_FIBER_FAILED,
         );
       }
@@ -61,7 +64,7 @@ export class NodeCreateFiberProcessor implements IEventProcessor {
         );
       }
 
-      await updateFiberStatus(ResourceStatus.PROVISIONING);
+      await updateFiberStatus(STATES.work);
 
       let hostPort!: number;
       const maxPortRetries = 5;
@@ -78,7 +81,7 @@ export class NodeCreateFiberProcessor implements IEventProcessor {
 
       await this.prisma.fiber.update({
         where: { id: fiber.id },
-        data: { hostPort, status: ResourceStatus.ACTIVE, updatedBy: event.createdBy },
+        data: { hostPort, status: STATES.ok, updatedBy: event.createdBy },
       });
 
       const createdEventId = await this.repository.createEvent(EventType.NODE_FIBER_CREATED, event.createdBy, event.companyId);
@@ -89,7 +92,7 @@ export class NodeCreateFiberProcessor implements IEventProcessor {
 
       this.logger.error(`Error processing event ID ${event.id}: ${String(error)}`);
       if (fiber) {
-        await updateFiberStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updateFiberStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }
