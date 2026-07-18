@@ -69,9 +69,9 @@ export class WorkerStartProcessor implements IEventProcessor {
 
       if (!worker)
         throw new Error(`Worker not found for event ID: ${event.id}`);
-      if (worker.status !== ResourceStatus.INACTIVE) {
+      if (worker.status !== ResourceStatus.QUEUED) {
         throw new Error(
-          `Worker is not in INACTIVE state for event ID: ${event.id}`,
+          `Worker is not in QUEUED state for event ID: ${event.id}`,
         );
       }
       if (!worker.node)

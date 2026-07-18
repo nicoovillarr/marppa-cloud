@@ -6,6 +6,8 @@ import { CreateNodeDto } from '../../presentation/dtos/create-node.dto';
 import { NodeResponseModel } from '../models/node.response-model';
 import { ZoneService } from '../../domain/services/zone.service';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
+import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 
 @Injectable()
 export class NodeApiService {
@@ -13,6 +15,7 @@ export class NodeApiService {
     private readonly zoneService: ZoneService,
     private readonly nodeService: NodeService,
     private readonly netmaskService: NetmaskService,
+    private readonly eventDispatch: EventDispatchService,
   ) { }
 
   public async findById(
@@ -49,6 +52,18 @@ export class NodeApiService {
     );
 
     const entity = await this.nodeService.create(zoneId, data, ipAddress);
+
+    // Un Node representa la presencia de un Worker (o Atom) dentro de una Zone.
+    // Cuando se crea para un Worker, disparamos NODE_ASSIGN_WORKER para materializar
+    // la reserva DHCP + el adjunto de la NIC en el host. El processor espera el Node
+    // en QUEUED (estado de entrada) y el Worker en INACTIVE (ya creado).
+    if (data.workerId) {
+      await this.eventDispatch.dispatch({
+        type: EventTypeKey.NODE_ASSIGN_WORKER,
+        primary: { type: 'Node', id: entity.id! },
+        related: [{ type: 'Worker', id: data.workerId }],
+      });
+    }
 
     return plainToInstance(NodeResponseModel, entity, {
       excludeExtraneousValues: true,

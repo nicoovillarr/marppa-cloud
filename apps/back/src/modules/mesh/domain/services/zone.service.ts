@@ -76,7 +76,7 @@ export class ZoneService {
 
     const zone = new ZoneEntity(
       entity.name,
-      ResourceStatus.ACTIVE,
+      ResourceStatus.QUEUED,
       cidr,
       gateway,
       user.userId,

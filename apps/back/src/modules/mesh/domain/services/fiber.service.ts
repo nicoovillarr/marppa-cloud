@@ -46,7 +46,7 @@ export class FiberService {
     const fiber = new FiberEntity(
       data.protocol,
       data.targetPort,
-      ResourceStatus.ACTIVE,
+      ResourceStatus.QUEUED,
       nodeId,
       user.userId,
       // TODO: Calculate random hostport

@@ -117,7 +117,7 @@ test('WorkerStartProcessor does not mark unreachable workers as ACTIVE', async (
       findUnique: async () =>
         ({
           id: 'w-1',
-          status: ResourceStatus.INACTIVE,
+          status: ResourceStatus.QUEUED,
           ownerId: 'owner-1',
           macAddress: '00:11:22:33:44:55',
           node: {

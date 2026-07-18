@@ -1,11 +1,11 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class CreateNodeDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  workerId: string;
+  workerId?: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  atomId: string;
+  atomId?: string;
 }

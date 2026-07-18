@@ -55,7 +55,7 @@ export class WorkerService {
 
     const entity = new WorkerEntity(
       data.name,
-      ResourceStatus.PROVISIONING,
+      ResourceStatus.QUEUED,
       macAddress,
       user.userId,
       data.imageId,

@@ -59,7 +59,7 @@ export class NodeService {
 
     const node = new NodeEntity(
       ipAddress,
-      ResourceStatus.ACTIVE,
+      ResourceStatus.QUEUED,
       zoneId,
       user.userId,
       {
