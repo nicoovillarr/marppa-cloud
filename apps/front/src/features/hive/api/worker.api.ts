@@ -19,6 +19,18 @@ const workersApi = {
     updateWorker: (id: string, data: Partial<CreateWorkerDto>): Promise<WorkerWithRelationsResponseDto> => {
         return fetcher<WorkerWithRelationsResponseDto>(`${baseUrl}/${id}`, 'PUT', data);
     },
+
+    startWorker: (id: string): Promise<void> => {
+        return fetcher<void>(`${baseUrl}/${id}/start`, 'POST');
+    },
+
+    terminateWorker: (id: string): Promise<void> => {
+        return fetcher<void>(`${baseUrl}/${id}/terminate`, 'POST');
+    },
+
+    deleteWorker: (id: string): Promise<void> => {
+        return fetcher<void>(`${baseUrl}/${id}`, 'DELETE');
+    },
 };
 
 export default workersApi;

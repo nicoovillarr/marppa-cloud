@@ -76,6 +76,51 @@ export const useWorker = () => {
         }
     }, [workers, setWorkers, setIsLoading, setError])
 
+    const startWorker = useCallback(async (id: string) => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await service.startWorker(id);
+            return true;
+        } catch (error) {
+            setError(error);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setIsLoading, setError]);
+
+    const terminateWorker = useCallback(async (id: string) => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await service.terminateWorker(id);
+            return true;
+        } catch (error) {
+            setError(error);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setIsLoading, setError]);
+
+    const deleteWorker = useCallback(async (id: string) => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await service.deleteWorker(id);
+            return true;
+        } catch (error) {
+            setError(error);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setIsLoading, setError]);
+
     return {
         isLoading,
         error,
@@ -84,5 +129,8 @@ export const useWorker = () => {
         fetchWorkers,
         createWorker,
         updateWorker,
+        startWorker,
+        terminateWorker,
+        deleteWorker,
     };
 }

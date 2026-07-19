@@ -32,4 +32,16 @@ export class WorkerService {
         const dto = await workersApi.updateWorker(id, { name });
         return dto;
     }
+
+    async startWorker(id: string): Promise<void> {
+        await workersApi.startWorker(id);
+    }
+
+    async terminateWorker(id: string): Promise<void> {
+        await workersApi.terminateWorker(id);
+    }
+
+    async deleteWorker(id: string): Promise<void> {
+        await workersApi.deleteWorker(id);
+    }
 }

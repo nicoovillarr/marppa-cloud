@@ -4,10 +4,11 @@ import { ColumnMapping, Table } from "@/core/ui/Table";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/core/ui/Button";
-import { LuListPlus, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
+import { LuListPlus, LuPlay, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
 import { useWorker } from "../models/use-worker";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
+import { useDialog } from "@/core/ui/DialogProvider";
 
 const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
   id: {
@@ -46,7 +47,8 @@ const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
 };
 
 export function WorkersList() {
-  const { workers, fetchWorkers } = useWorker();
+  const { workers, fetchWorkers, startWorker, terminateWorker } = useWorker();
+  const { showDialog } = useDialog();
 
   const [selectedWorkers, setSelectedWorkers] = useState<Set<string>>(
     new Set()
@@ -82,6 +84,40 @@ export function WorkersList() {
       toast.info("This worker has been deleted.");
       return;
     }
+  };
+
+  const selectedWorker =
+    selectedWorkers.size === 1
+      ? workers.find((w) => w.id === Array.from(selectedWorkers)[0]) ?? null
+      : null;
+
+  const onStart = async (worker: WorkerWithRelationsResponseDto) => {
+    const ok = await startWorker(worker.id);
+    if (ok) {
+      toast.success(`Start of ${worker.name} queued`);
+      await fetchWorkers();
+    } else {
+      toast.error(`Failed to start ${worker.name}`);
+    }
+  };
+
+  const onTerminate = (worker: WorkerWithRelationsResponseDto) => {
+    showDialog({
+      type: "confirm",
+      title: "Terminate Worker",
+      description: `This will shut down ${worker.name}. Continue?`,
+      confirmText: "Terminate",
+      confirmButtonStyle: "danger",
+      onConfirm: async () => {
+        const ok = await terminateWorker(worker.id);
+        if (ok) {
+          toast.success(`Termination of ${worker.name} queued`);
+          await fetchWorkers();
+        } else {
+          toast.error(`Failed to terminate ${worker.name}`);
+        }
+      },
+    });
   };
 
   const contextMenuGroups = (rowData: WorkerWithRelationsResponseDto) => [
@@ -131,14 +167,23 @@ export function WorkersList() {
               Selected Workers:
               <span className="font-bold ml-1">{selectedWorkers.size}</span>
             </p>
-            {selectedWorkers.size === 1 && (
+            {selectedWorker && (
               <aside className="flex items-center gap-2">
-                <Button
-                  text="Terminate"
-                  icon={<LuTrash2 />}
-                  style="danger"
-                  onClick={() => console.log('Delete worker')}
-                />
+                {selectedWorker.status === ResourceStatus.INACTIVE && (
+                  <Button
+                    text="Start"
+                    icon={<LuPlay />}
+                    onClick={() => onStart(selectedWorker)}
+                  />
+                )}
+                {selectedWorker.status === ResourceStatus.ACTIVE && (
+                  <Button
+                    text="Terminate"
+                    icon={<LuTrash2 />}
+                    style="danger"
+                    onClick={() => onTerminate(selectedWorker)}
+                  />
+                )}
               </aside>
             )}
           </div>

@@ -31,4 +31,13 @@ export class AuthController {
   async tick(@Req() req: Request) {
     return await this.authApiService.tick(req);
   }
+
+  // The access token lives in an httpOnly cookie, so the browser JS cannot
+  // read it. The WebSocket server authenticates with the same JWT, so expose
+  // it to an already-authenticated session for the WS handshake.
+  @Get('ws-token')
+  @UseGuards(LoggedInGuard)
+  wsToken(@Req() req: Request): { token: string } {
+    return { token: req.cookies?.access_token };
+  }
 }

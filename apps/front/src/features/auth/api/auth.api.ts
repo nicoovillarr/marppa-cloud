@@ -1,5 +1,5 @@
 import { fetcher } from "@/core/api/fetcher";
-import { AuthResponseDto, LoginDto, RegisterDto } from "./auth.api.types";
+import { LoginDto, RegisterDto } from "./auth.api.types";
 
 export const authApi = {
     tick: async () => {

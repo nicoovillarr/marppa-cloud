@@ -1,4 +1,5 @@
 import { useAuth } from "@/auth/models/useAuth";
+import { fetcher } from "@/core/api/fetcher";
 import React, {
   createContext,
   useEffect,
@@ -27,7 +28,8 @@ interface IWebSocketContext {
 const WebSocketContext = createContext<IWebSocketContext | null>(null);
 
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
-  const { isLoading, accessToken } = useAuth();
+  const { isLoading, isLoggedIn } = useAuth();
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const queueRef = useRef<{ type: string; data?: any }[]>([]);
@@ -241,6 +243,18 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       disconnect();
     };
   }, []);
+
+  // The access token is an httpOnly cookie: ask the backend for it once the
+  // session is confirmed, so the WS handshake can present it.
+  useEffect(() => {
+    if (isLoading || !isLoggedIn || accessToken) return;
+
+    fetcher<{ token: string }>("/auth/ws-token")
+      .then(({ token }) => setAccessToken(token ?? null))
+      .catch((e) =>
+        console.error("[WebSocket]: Failed to fetch WS token", e),
+      );
+  }, [isLoading, isLoggedIn, accessToken]);
 
   useEffect(() => {
     if (isLoading || !accessToken || !connected || isAuthenticatedRef.current)

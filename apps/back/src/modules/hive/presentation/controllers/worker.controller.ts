@@ -45,6 +45,18 @@ export class WorkerController {
     return worker;
   }
 
+  @Post(':id/start')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async start(@Param('id') id: string): Promise<void> {
+    await this.service.start(id);
+  }
+
+  @Post(':id/terminate')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async terminate(@Param('id') id: string): Promise<void> {
+    await this.service.terminate(id);
+  }
+
   @Put(':id')
   async update(
     @Param('id') id: string,

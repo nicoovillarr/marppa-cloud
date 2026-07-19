@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FormLabel } from "@/core/ui/inputs/form/FormLabel";
 import { ColumnMapping, Table } from "@/core/ui/Table";
 import { redirect } from "next/navigation";
+import { LuListPlus, LuRefreshCcw } from "react-icons/lu";
+import { Button } from "@/core/ui/Button";
 import { NodeWithFibers } from "../api/node.api.types";
 import { useZone } from "../models/use-zone";
 import { ZoneWithNodesAndFibers } from "../api/zone.api.types";
 import { TableSkeleton } from "@/core/ui/AsyncTable";
-import { closeCurrentDialog } from "@/core/ui/DialogProvider";
+import { closeCurrentDialog, useDialog } from "@/core/ui/DialogProvider";
+import { AssignWorkerDialog } from "./AssignWorkerDialog";
+import { FiberCreateDialog } from "./FiberCreateDialog";
 
 const getPointsToInfo = (node: NodeWithFibers) => {
   let pointsTo = "N/A";
@@ -16,7 +20,7 @@ const getPointsToInfo = (node: NodeWithFibers) => {
 
   if (!!node.workerId) {
     pointsTo = `${node.workerId}`;
-    link = `/dashboard/hive`;
+    link = `/dashboard/hive/workers`;
   } else if (!!node.atomId) {
     pointsTo = `Atom ${node.atomId}`;
     link = `/dashboard/hive/atoms/${node.atomId}`;
@@ -60,11 +64,10 @@ const COLUMNS: ColumnMapping<NodeWithFibers> = {
 export function NodesList({ zoneId }: { zoneId: string }) {
   const [zone, setZone] = useState<ZoneWithNodesAndFibers | null>(null);
 
-  const {
-    fetchZone,
-  } = useZone();
+  const { fetchZone } = useZone();
+  const { showDialog } = useDialog();
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     fetchZone(zoneId).then((zone) => {
       if (zone) {
         setZone(zone);
@@ -72,20 +75,72 @@ export function NodesList({ zoneId }: { zoneId: string }) {
     });
   }, [zoneId, fetchZone]);
 
+  const openAssignWorkerDialog = () => {
+    showDialog({
+      title: "Assign Worker",
+      description: "Reserve an IP in this zone and attach the worker to it.",
+      content: <AssignWorkerDialog zoneId={zoneId} onAssigned={refresh} />,
+    });
+  };
+
+  const openCreateFiberDialog = (node: NodeWithFibers) => {
+    showDialog({
+      title: `Create Fiber on ${node.ipAddress}`,
+      content: (
+        <FiberCreateDialog zoneId={zoneId} nodeId={node.id} onCreated={refresh} />
+      ),
+    });
+  };
+
+  const contextMenuGroups = (node: NodeWithFibers) => [
+    {
+      label: "Create Fiber",
+      action: () => openCreateFiberDialog(node),
+    },
+  ];
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
   if (!zone) {
     return <TableSkeleton />;
   }
 
   return (
     <section className="w-full space-y-2">
-      <FormLabel text="Nodes" className="flex-1" />
+      <header className="flex justify-between items-center">
+        <FormLabel text="Nodes" className="flex-1" />
 
-      <Table
-        data={zone?.nodes}
-        columns={COLUMNS}
-        select="multiple"
-        getKey={(node: NodeWithFibers) => node.id}
-      />
+        <Button
+          type="button"
+          icon={<LuRefreshCcw />}
+          style="secondary"
+          onClick={refresh}
+        />
+
+        <Button
+          type="button"
+          className="ml-2"
+          text="Assign Worker"
+          icon={<LuListPlus />}
+          onClick={openAssignWorkerDialog}
+        />
+      </header>
+
+      {zone.nodes.length > 0 ? (
+        <Table
+          data={zone.nodes}
+          columns={COLUMNS}
+          select="multiple"
+          contextMenuGroups={contextMenuGroups}
+          getKey={(node: NodeWithFibers) => node.id}
+        />
+      ) : (
+        <p className="text-sm text-gray-500">
+          No nodes yet. Assign a worker to reserve its IP in this zone.
+        </p>
+      )}
     </section>
   );
 }
