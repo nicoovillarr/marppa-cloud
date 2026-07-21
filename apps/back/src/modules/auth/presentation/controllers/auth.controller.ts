@@ -6,16 +6,19 @@ import { LoginUserDto } from '@/auth/presentation/dtos/login-user.dto';
 
 import { CreateUserDto } from '@/auth/presentation/dtos/create-user.dto';
 import { LoggedInGuard } from '../guards/logged-in.guard';
+import { Public } from '../decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authApiService: AuthApiService) { }
 
+  @Public()
   @Post('register')
   async register(@Body() data: CreateUserDto, @Req() req: Request) {
     return await this.authApiService.register(data, req);
   }
 
+  @Public()
   @Post('login')
   async login(@Body() data: LoginUserDto, @Req() req: Request) {
     return await this.authApiService.login(data, req);
@@ -27,6 +30,9 @@ export class AuthController {
     return await this.authApiService.logout(req);
   }
 
+  // Public: tick refreshes the session from the refresh-token cookie, so it
+  // must be reachable when the access token has already expired.
+  @Public()
   @Get('tick')
   async tick(@Req() req: Request) {
     return await this.authApiService.tick(req);

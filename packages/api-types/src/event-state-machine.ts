@@ -49,15 +49,19 @@ export const EVENT_STATE_MACHINE: Partial<
   [EventTypeKey.WORKER_START]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
   [EventTypeKey.NODE_ASSIGN_WORKER]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
   [EventTypeKey.NODE_CREATE_FIBER]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+  // Terminate ends at INACTIVE (not TERMINATED) so the worker can be started
+  // again or deleted — both of those transitions require INACTIVE.
+  [EventTypeKey.WORKER_TERMINATE]: { entry: QUEUED, work: TERMINATING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.ZONE_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+  [EventTypeKey.NODE_DELETE_FIBER]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+  // Unassign starts from the node's live ACTIVE state (the backend does not
+  // pre-set a status before dispatch for this transition).
+  [EventTypeKey.NODE_UNASSIGN_WORKER]: { entry: ACTIVE, work: TERMINATING, ok: INACTIVE, fail: FAILED },
 
   // --- pending per-processor verification (convention defaults) ---
-  [EventTypeKey.ZONE_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
   [EventTypeKey.WORKER_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
-  [EventTypeKey.WORKER_TERMINATE]: { entry: QUEUED, work: TERMINATING, ok: TERMINATED, fail: FAILED },
   [EventTypeKey.WORKER_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
-  [EventTypeKey.NODE_UNASSIGN_WORKER]: { entry: QUEUED, work: PROVISIONING, ok: INACTIVE, fail: FAILED },
   [EventTypeKey.NODE_UPDATE_FIBER]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
-  [EventTypeKey.NODE_DELETE_FIBER]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
   [EventTypeKey.PORTAL_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
   [EventTypeKey.PORTAL_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
   [EventTypeKey.PORTAL_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },

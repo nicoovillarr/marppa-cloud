@@ -10,6 +10,7 @@ export abstract class FiberRepository {
   ): Promise<FiberEntity | null>;
   abstract findByNodeId(zoneId: string, nodeId: string): Promise<FiberEntity[]>;
   abstract create(fiber: FiberEntity): Promise<FiberEntity>;
+  abstract update(fiber: FiberEntity): Promise<FiberEntity>;
   abstract delete(
     zoneId: string,
     nodeId: string,

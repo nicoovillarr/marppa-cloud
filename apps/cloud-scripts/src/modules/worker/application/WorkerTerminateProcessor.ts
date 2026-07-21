@@ -10,6 +10,9 @@ import { MESH_SERVICE_TOKEN, MeshService } from '@/mesh/domain/services/MeshServ
 import { HIVE_SERVICE_TOKEN, HiveService } from '../domain/services/HiveService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.WORKER_TERMINATE);
 
 @EventProcessor(EventType.WORKER_TERMINATE)
 export class WorkerTerminateProcessor implements IEventProcessor {
@@ -50,19 +53,19 @@ export class WorkerTerminateProcessor implements IEventProcessor {
       });
 
       if (!worker) throw new Error(`Worker not found for event ID: ${event.id}`);
-      if (worker.status !== ResourceStatus.ACTIVE) {
-        throw new Error(`Worker is not in ACTIVE state for event ID: ${event.id}`);
+      if (worker.status !== STATES.entry) {
+        throw new Error(`Worker is not in ${STATES.entry} state for event ID: ${event.id}`);
       }
 
       const vnet = await this.hiveService.getWorkerVnet(worker.id, worker.node?.zoneId);
       if (!vnet) throw new Error(`VNet not found for worker ID: ${worker.id}`);
 
-      await updateWorkerStatus(ResourceStatus.TERMINATING);
+      await updateWorkerStatus(STATES.work);
 
       await this.meshService.unlinkVnetFromBridge(vnet, worker.node!.zoneId);
       await this.hiveService.stopWorker(worker.id);
 
-      await updateWorkerStatus(ResourceStatus.INACTIVE);
+      await updateWorkerStatus(STATES.ok);
 
       this.wsServer.sendWorkerMessage({ id: worker.id }, 'WORKER_TERMINATED', null);
 
@@ -76,7 +79,7 @@ export class WorkerTerminateProcessor implements IEventProcessor {
         await this.prisma.worker.update({
           where: { id: worker.id },
           data: {
-            status: event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED,
+            status: event.retries >= 4 ? STATES.fail : STATES.entry,
             updatedBy: event.createdBy,
           },
         });

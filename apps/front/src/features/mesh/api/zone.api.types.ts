@@ -3,6 +3,7 @@ import { NodeResponseDto, NodeWithFibers } from "./node.api.types";
 export type CreateZoneDto = {
     name: string;
     description: string;
+    cidr?: string;
 }
 
 export type ZoneResponseDto = {

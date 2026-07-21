@@ -10,6 +10,9 @@ import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
 import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
 import { Inject } from '@/decorators/Inject';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.NODE_UNASSIGN_WORKER);
 
 @EventProcessor(EventType.NODE_UNASSIGN_WORKER)
 export class NodeUnassignWorkerProcessor implements IEventProcessor {
@@ -49,8 +52,8 @@ export class NodeUnassignWorkerProcessor implements IEventProcessor {
       });
 
       if (!node) throw new Error(`Node not found for event ID: ${event.id}`);
-      if (node.status !== ResourceStatus.ACTIVE) {
-        throw new Error(`Node is not in ACTIVE state for event ID: ${event.id}`);
+      if (node.status !== STATES.entry) {
+        throw new Error(`Node is not in ${STATES.entry} state for event ID: ${event.id}`);
       }
 
       const resourceWorker = event.resources.find((r) => r.resourceType === 'Worker');
@@ -65,7 +68,7 @@ export class NodeUnassignWorkerProcessor implements IEventProcessor {
         throw new Error(`Worker is not in INACTIVE state for event ID: ${event.id}`);
       }
 
-      await updateNodeStatus(ResourceStatus.TERMINATING);
+      await updateNodeStatus(STATES.work);
 
       await this.meshService.deleteNodeFromZone(node.zoneId, worker.macAddress);
       await this.hiveService.editWorkerZone(worker.id, null);
@@ -75,7 +78,7 @@ export class NodeUnassignWorkerProcessor implements IEventProcessor {
         data: { node: { disconnect: true }, updatedBy: event.createdBy },
       });
 
-      await updateNodeStatus(ResourceStatus.INACTIVE);
+      await updateNodeStatus(STATES.ok);
 
       this.wsServer.sendWorkerMessage(worker, 'UPDATED', { node: null });
 
@@ -91,7 +94,7 @@ export class NodeUnassignWorkerProcessor implements IEventProcessor {
     } catch (error) {
       this.logger.error(`Error processing event ID ${event.id}: ${String(error)}`);
       if (node) {
-        await updateNodeStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updateNodeStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }

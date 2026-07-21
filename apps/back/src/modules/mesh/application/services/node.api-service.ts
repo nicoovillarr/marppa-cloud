@@ -8,6 +8,10 @@ import { ZoneService } from '../../domain/services/zone.service';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
+import {
+  EventTypeKey as SharedEventTypeKey,
+  getEventStateTransition,
+} from '@marppa-cloud/api-types';
 
 @Injectable()
 export class NodeApiService {
@@ -22,6 +26,7 @@ export class NodeApiService {
     zoneId: string,
     id: string,
   ): Promise<NodeResponseModel> {
+    await this.zoneService.findById(zoneId);
     const entity = await this.nodeService.findById(zoneId, id);
     return plainToInstance(NodeResponseModel, entity, {
       excludeExtraneousValues: true,
@@ -29,6 +34,7 @@ export class NodeApiService {
   }
 
   public async findByZoneId(zoneId: string): Promise<NodeResponseModel[]> {
+    await this.zoneService.findById(zoneId);
     const entities = await this.nodeService.findByZoneId(zoneId);
     return plainToInstance(NodeResponseModel, entities, {
       excludeExtraneousValues: true,
@@ -70,7 +76,34 @@ export class NodeApiService {
     });
   }
 
-  public delete(zoneId: string, id: string): Promise<void> {
-    return this.nodeService.delete(zoneId, id);
+  /**
+   * "Deleting" a worker-backed node means unassigning the worker: the
+   * NODE_UNASSIGN_WORKER processor removes the DHCP reservation and the VM's
+   * NIC on the host, then leaves the node INACTIVE. Hard-deleting the row here
+   * would orphan both. The worker must already be terminated (INACTIVE).
+   */
+  public async delete(zoneId: string, id: string): Promise<void> {
+    await this.zoneService.findById(zoneId);
+    const node = await this.nodeService.findById(zoneId, id);
+
+    if (node.workerId == null) {
+      // No worker attached (atom or never-assigned node): nothing exists on
+      // the host for it, a plain row delete is safe.
+      await this.nodeService.delete(zoneId, id);
+      return;
+    }
+
+    const entry = getEventStateTransition(SharedEventTypeKey.NODE_UNASSIGN_WORKER).entry;
+    if (node.status !== entry) {
+      throw new Error(
+        `Node must be ${entry} to unassign its worker (is ${node.status})`,
+      );
+    }
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.NODE_UNASSIGN_WORKER,
+      primary: { type: 'Node', id },
+      related: [{ type: 'Worker', id: node.workerId }],
+    });
   }
 }

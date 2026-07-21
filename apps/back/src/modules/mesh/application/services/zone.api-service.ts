@@ -47,12 +47,42 @@ export class ZoneApiService {
   }
 
   public async create(data: CreateZoneDto): Promise<ZoneResponseModel> {
-    const lastZone = await this.zoneService.findLastZone();
+    const existing = await this.zoneService.findAllActive();
 
-    const { cidr, gateway } = this.netmaskService.getNextCidr(
-      lastZone?.zone.cidr,
-      8,
-    );
+    let cidr: string;
+    let gateway: string;
+
+    if (data.cidr) {
+      ({ cidr, gateway } = this.netmaskService.parseCidr(data.cidr));
+
+      const conflict = existing.find((z) =>
+        this.netmaskService.overlaps(z.cidr, cidr),
+      );
+      if (conflict) {
+        throw new Error(
+          `CIDR ${cidr} overlaps existing zone ${conflict.name} (${conflict.cidr})`,
+        );
+      }
+    } else {
+      const lastZone = await this.zoneService.findLastZone();
+      let candidate = this.netmaskService.getNextCidr(lastZone?.zone.cidr, 8);
+
+      // Walk forward past any manually-assigned blocks.
+      for (
+        let i = 0;
+        i < 1024 &&
+        existing.some((z) => this.netmaskService.overlaps(z.cidr, candidate.cidr));
+        i++
+      ) {
+        candidate = this.netmaskService.getNextCidr(candidate.cidr, 8);
+      }
+
+      if (existing.some((z) => this.netmaskService.overlaps(z.cidr, candidate.cidr))) {
+        throw new Error('No free CIDR block found for a new zone');
+      }
+
+      ({ cidr, gateway } = candidate);
+    }
 
     const entity = await this.zoneService.create(data, cidr, gateway);
 

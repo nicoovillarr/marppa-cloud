@@ -33,7 +33,18 @@ export class ResourceQueueService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   public onModuleInit(): void {
-    this.queue = new Queue(QUEUE_NAME, { connection: this.redis as never });
+    // Same retry policy as the backend's EventQueueService: jobs added when the
+    // resource FIFO advances must retry too, or a transient failure on a
+    // follow-up event permanently jams that resource's lane.
+    this.queue = new Queue(QUEUE_NAME, {
+      connection: this.redis as never,
+      defaultJobOptions: {
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: { count: 100 },
+        removeOnFail: { count: 200 },
+      },
+    });
   }
 
   public async onModuleDestroy(): Promise<void> {

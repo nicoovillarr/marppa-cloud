@@ -9,6 +9,7 @@ import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { EventTypeKey, getEventStateTransition } from '@marppa-cloud/api-types';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 @Injectable()
 export class FiberService {
@@ -55,11 +56,35 @@ export class FiberService {
     return this.repository.create(fiber);
   }
 
-  public delete(
+  /**
+   * Queue the fiber for deletion: set the NODE_DELETE_FIBER entry status so the
+   * cloud-scripts processor can remove the DNAT rules before marking it DELETED.
+   * Hard-deleting the row here would orphan the nftables rules on the host.
+   */
+  public async delete(
     zoneId: string,
     nodeId: string,
     fiberId: number,
   ): Promise<void> {
-    return this.repository.delete(zoneId, nodeId, fiberId);
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const fiber = await this.findById(zoneId, nodeId, fiberId);
+
+    const deletable: string[] = [ResourceStatus.ACTIVE, ResourceStatus.FAILED];
+    if (!deletable.includes(fiber.status)) {
+      throw new Error(
+        `Fiber must be ${deletable.join(' or ')} to be deleted (is ${fiber.status})`,
+      );
+    }
+
+    const updated = fiber.clone({
+      status: getEventStateTransition(EventTypeKey.NODE_DELETE_FIBER).entry,
+      updatedBy: user.userId,
+    });
+
+    await this.repository.update(updated);
   }
 }

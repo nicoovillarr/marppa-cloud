@@ -32,7 +32,7 @@ describe('ZoneService', () => {
   );
 
   const mockZoneWithNodesModel: ZoneWithNodesModel = {
-    ...mockZoneEntity,
+    zone: mockZoneEntity,
     nodes: [],
   } as unknown as ZoneWithNodesModel;
 
@@ -40,6 +40,7 @@ describe('ZoneService', () => {
     findById: jest.fn(),
     findByIdWithNodes: jest.fn(),
     findByOwnerId: jest.fn(),
+    findAllActive: jest.fn(),
     findLastZone: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -111,13 +112,19 @@ describe('ZoneService', () => {
   });
 
   describe('findByOwnerId', () => {
-    it('should return zones by owner id from argument', async () => {
+    it('should return zones by owner id from argument when it matches the session company', async () => {
       mockZoneRepository.findByOwnerId.mockResolvedValue([mockZoneEntity]);
 
-      const result = await service.findByOwnerId('c-000002');
+      const result = await service.findByOwnerId('c-000001');
 
-      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000002');
+      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000001');
       expect(result).toEqual([mockZoneEntity]);
+    });
+
+    it('should throw UnauthorizedError when ownerId belongs to another company', () => {
+      expect(() => service.findByOwnerId('c-000002')).toThrow(
+        UnauthorizedError,
+      );
     });
 
     it('should return zones by owner id from session if argument is null', async () => {
@@ -208,12 +215,42 @@ describe('ZoneService', () => {
   });
 
   describe('delete', () => {
-    it('should delete a zone', async () => {
-      mockZoneRepository.delete.mockResolvedValue(undefined);
+    it('should queue the zone for deletion instead of hard-deleting it', async () => {
+      mockZoneRepository.findByIdWithNodes.mockResolvedValue(
+        mockZoneWithNodesModel,
+      );
+      mockZoneRepository.update.mockResolvedValue(mockZoneEntity);
 
       await service.delete('z-000001');
 
-      expect(repository.delete).toHaveBeenCalledWith('z-000001');
+      expect(repository.delete).not.toHaveBeenCalled();
+      expect(repository.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ResourceStatus.QUEUED }),
+      );
+    });
+
+    it('should refuse to delete a zone that still has nodes', async () => {
+      mockZoneRepository.findByIdWithNodes.mockResolvedValue({
+        zone: mockZoneEntity,
+        nodes: [{ id: 'n-000001' }],
+      } as unknown as ZoneWithNodesModel);
+
+      await expect(service.delete('z-000001')).rejects.toThrow(
+        'Zone has assigned nodes',
+      );
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('should refuse to delete a zone that is not ACTIVE or FAILED', async () => {
+      mockZoneRepository.findByIdWithNodes.mockResolvedValue({
+        zone: mockZoneEntity.clone({ status: ResourceStatus.PROVISIONING }),
+        nodes: [],
+      } as unknown as ZoneWithNodesModel);
+
+      await expect(service.delete('z-000001')).rejects.toThrow(
+        'Zone must be',
+      );
+      expect(repository.update).not.toHaveBeenCalled();
     });
   });
 });

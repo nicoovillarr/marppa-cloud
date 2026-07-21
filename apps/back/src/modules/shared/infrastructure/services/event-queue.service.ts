@@ -38,7 +38,18 @@ export class EventQueueService implements OnModuleDestroy {
     this.redis = redis;
 
     if (redis) {
-      this.queue = new Queue(QUEUE_NAME, { connection: redis as never });
+      // Retry/backoff must live here: jobs only get the options of the Queue
+      // instance that adds them, and the EventWorker failed-handler marks the
+      // event failed (and advances the resource FIFO) only after attempt 5.
+      this.queue = new Queue(QUEUE_NAME, {
+        connection: redis as never,
+        defaultJobOptions: {
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 5000 },
+          removeOnComplete: { count: 100 },
+          removeOnFail: { count: 200 },
+        },
+      });
     }
   }
 

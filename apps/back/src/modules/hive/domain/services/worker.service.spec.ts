@@ -82,6 +82,13 @@ describe('WorkerService', () => {
 
     service = module.get<WorkerService>(WorkerService);
     repository = module.get<WorkerRepository>(WORKER_REPOSITORY_SYMBOL);
+
+    jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+      userId: 'u-000001',
+      companyId: 'c-000001',
+      email: 'test@test.com',
+      type: 'access',
+    } as any);
   });
 
   afterEach(() => {
@@ -135,10 +142,14 @@ describe('WorkerService', () => {
     it('should return empty array if no workers found', async () => {
       mockWorkerRepository.findByOwnerId.mockResolvedValue([]);
 
-      const result = await service.findByOwnerId('c-999999');
+      const result = await service.findByOwnerId('c-000001');
 
-      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-999999');
+      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000001');
       expect(result).toEqual([]);
+    });
+
+    it('should throw UnauthorizedError when ownerId belongs to another company', () => {
+      expect(() => service.findByOwnerId('c-999999')).toThrow();
     });
   });
 

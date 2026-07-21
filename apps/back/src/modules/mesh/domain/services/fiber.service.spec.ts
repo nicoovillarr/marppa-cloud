@@ -30,6 +30,7 @@ describe('FiberService', () => {
     findById: jest.fn(),
     findByNodeId: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
     delete: jest.fn(),
   };
 
@@ -121,12 +122,35 @@ describe('FiberService', () => {
   });
 
   describe('delete', () => {
-    it('should delete a fiber', async () => {
-      mockFiberRepository.delete.mockResolvedValue(undefined);
+    it('should queue the fiber for deletion instead of hard-deleting it', async () => {
+      mockFiberRepository.findById.mockResolvedValue(mockFiberEntity);
+      mockFiberRepository.update.mockResolvedValue(mockFiberEntity);
 
       await service.delete('z-000001', 'n-000001', 1);
 
-      expect(repository.delete).toHaveBeenCalledWith('z-000001', 'n-000001', 1);
+      expect(repository.delete).not.toHaveBeenCalled();
+      expect(repository.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ResourceStatus.QUEUED }),
+      );
+    });
+
+    it('should refuse to delete a fiber that is not ACTIVE or FAILED', async () => {
+      mockFiberRepository.findById.mockResolvedValue(
+        mockFiberEntity.clone({ status: ResourceStatus.PROVISIONING }),
+      );
+
+      await expect(service.delete('z-000001', 'n-000001', 1)).rejects.toThrow(
+        'Fiber must be',
+      );
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundError if the fiber does not exist', async () => {
+      mockFiberRepository.findById.mockResolvedValue(null);
+
+      await expect(service.delete('z-000001', 'n-000001', 1)).rejects.toThrow(
+        NotFoundError,
+      );
     });
   });
 });

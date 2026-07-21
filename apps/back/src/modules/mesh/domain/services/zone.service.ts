@@ -12,6 +12,7 @@ import { UpdateZoneDto } from '../../presentation/dtos/update-zone.dto';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { ZoneWithNodesModel } from '../models/zone-with-nodes.model';
 import { ZoneWithNodesAndFibersModel } from '../models/zone-with-nodes-and-fibers.model';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 @Injectable()
 export class ZoneService {
@@ -26,6 +27,7 @@ export class ZoneService {
       throw new NotFoundError();
     }
 
+    this.assertOwnership(entity.ownerId);
     return entity;
   }
 
@@ -35,6 +37,7 @@ export class ZoneService {
       throw new NotFoundError();
     }
 
+    this.assertOwnership(entity.zone.ownerId);
     return entity;
   }
 
@@ -44,20 +47,26 @@ export class ZoneService {
       throw new NotFoundError();
     }
 
+    this.assertOwnership(entity.zone.ownerId);
     return entity;
   }
 
   public findByOwnerId(ownerId?: string): Promise<ZoneWithNodesAndFibersModel[]> {
-    if (ownerId == null) {
-      const user = getCurrentUser();
-      if (!user) {
-        throw new UnauthorizedError();
-      }
-
-      ownerId = user.companyId;
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
     }
 
-    return this.repository.findByOwnerId(ownerId);
+    // No cross-company reads: an explicit ownerId must match the caller's company.
+    if (ownerId != null && ownerId !== user.companyId) {
+      throw new UnauthorizedError();
+    }
+
+    return this.repository.findByOwnerId(user.companyId);
+  }
+
+  public findAllActive(): Promise<ZoneEntity[]> {
+    return this.repository.findAllActive();
   }
 
   public findLastZone(): Promise<ZoneWithNodesModel | null> {
@@ -106,8 +115,36 @@ export class ZoneService {
     return this.save(updated);
   }
 
-  public delete(id: string): Promise<void> {
-    return this.repository.delete(id);
+  /**
+   * Queue the zone for deletion: validate, set the ZONE_DELETE entry status and
+   * let the cloud-scripts processor tear down host config and mark it DELETED.
+   * The DB row is never hard-deleted here — the processor needs it.
+   */
+  public async delete(id: string): Promise<void> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const data = await this.findByIdWithNodes(id);
+
+    if (data.nodes.length > 0) {
+      throw new Error('Zone has assigned nodes and cannot be deleted');
+    }
+
+    const deletable = [ResourceStatus.ACTIVE, ResourceStatus.FAILED];
+    if (!deletable.includes(data.zone.status)) {
+      throw new Error(
+        `Zone must be ${deletable.join(' or ')} to be deleted (is ${data.zone.status})`,
+      );
+    }
+
+    const updated = data.zone.clone({
+      status: getEventStateTransition(EventTypeKey.ZONE_DELETE).entry,
+      updatedBy: user.userId,
+    });
+
+    await this.repository.update(updated);
   }
 
   private save(entity: ZoneEntity): Promise<ZoneEntity> {
@@ -116,5 +153,17 @@ export class ZoneService {
     }
 
     return this.repository.update(entity);
+  }
+
+  private assertOwnership(ownerId: string): void {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    // Hide other companies' resources entirely rather than revealing they exist.
+    if (ownerId !== user.companyId) {
+      throw new NotFoundError();
+    }
   }
 }

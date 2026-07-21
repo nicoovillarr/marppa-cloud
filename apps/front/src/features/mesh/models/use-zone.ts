@@ -71,14 +71,15 @@ export const useZone = () => {
         return validationErrors;
     }, [fetchZones])
 
-    const createZone = useCallback(async (name: string, description?: string) => {
+    const createZone = useCallback(async (name: string, description?: string, cidr?: string) => {
         setIsLoading(true);
         setError(null);
 
         try {
             const zone = await zoneApi.create({
                 name,
-                description
+                description,
+                cidr: cidr?.trim() || undefined,
             });
 
             setZones([...zones, zone]);

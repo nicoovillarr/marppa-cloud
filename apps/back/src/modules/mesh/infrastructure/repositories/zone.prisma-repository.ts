@@ -50,7 +50,7 @@ export class ZonePrismaRepository implements ZoneRepository {
       include: {
         nodes: {
           include: {
-            fibers: true,
+            fibers: { where: { status: { not: 'DELETED' } } },
           },
         },
       },
@@ -71,11 +71,11 @@ export class ZonePrismaRepository implements ZoneRepository {
 
   async findByOwnerId(ownerId: string): Promise<ZoneWithNodesAndFibersModel[]> {
     const models = await this.prisma.zone.findMany({
-      where: { ownerId },
+      where: { ownerId, status: { not: 'DELETED' } },
       include: {
         nodes: {
           include: {
-            fibers: true,
+            fibers: { where: { status: { not: 'DELETED' } } },
           },
         },
       },
@@ -90,8 +90,17 @@ export class ZonePrismaRepository implements ZoneRepository {
     ));
   }
 
+  async findAllActive(): Promise<ZoneEntity[]> {
+    const models = await this.prisma.zone.findMany({
+      where: { status: { not: 'DELETED' } },
+    });
+
+    return models.map(ZonePrismaMapper.toEntity);
+  }
+
   async findLastZone(): Promise<ZoneWithNodesModel | null> {
     const model = await this.prisma.zone.findFirst({
+      where: { status: { not: 'DELETED' } },
       orderBy: { createdAt: 'desc' },
       include: {
         nodes: true,
@@ -126,6 +135,7 @@ export class ZonePrismaRepository implements ZoneRepository {
       data: {
         name: sanitized.name,
         description: sanitized.description,
+        status: sanitized.status,
         updatedBy: sanitized.updatedBy,
       },
     });

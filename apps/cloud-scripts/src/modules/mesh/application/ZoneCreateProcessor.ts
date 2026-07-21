@@ -25,7 +25,7 @@ export class ZoneCreateProcessor implements IEventProcessor {
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {
-    let zone: { id: string; status: string; cidr: string; [k: string]: unknown } | null = null;
+    let zone: { id: string; status: string; cidr: string; gateway?: string | null; [k: string]: unknown } | null = null;
 
     const updateZoneStatus = async (status: ResourceStatus) => {
       await this.prisma.zone.update({
@@ -48,7 +48,9 @@ export class ZoneCreateProcessor implements IEventProcessor {
       }
 
       await updateZoneStatus(STATES.work);
-      await this.meshService.createZone(zone.cidr, zone.id, null);
+      // Use the gateway persisted by the backend so DB and host config can
+      // never diverge (it falls back to first-usable only if unset).
+      await this.meshService.createZone(zone.cidr, zone.id, zone.gateway ?? null);
       await updateZoneStatus(STATES.ok);
 
       const createdEventId = await this.repository.createEvent(EventType.ZONE_CREATED, event.createdBy, event.companyId);

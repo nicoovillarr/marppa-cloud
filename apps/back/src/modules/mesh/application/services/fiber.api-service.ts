@@ -4,6 +4,7 @@ import { CreateFiberDto } from '../../presentation/dtos/create-fiber.dto';
 import { plainToInstance } from 'class-transformer';
 import { FiberResponseModel } from '../models/fiber.response-model';
 import { NodeService } from '../../domain/services/node.service';
+import { ZoneService } from '../../domain/services/zone.service';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
@@ -11,6 +12,7 @@ import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 @Injectable()
 export class FiberApiService {
   constructor(
+    private readonly zoneService: ZoneService,
     private readonly nodeService: NodeService,
     private readonly fiberService: FiberService,
     private readonly eventDispatch: EventDispatchService,
@@ -21,6 +23,7 @@ export class FiberApiService {
     nodeId: string,
     fiberId: number,
   ): Promise<FiberResponseModel> {
+    await this.zoneService.findById(zoneId);
     const entity = await this.fiberService.findById(zoneId, nodeId, fiberId);
     return plainToInstance(FiberResponseModel, entity, {
       excludeExtraneousValues: true,
@@ -31,6 +34,7 @@ export class FiberApiService {
     zoneId: string,
     nodeId: string,
   ): Promise<FiberResponseModel[]> {
+    await this.zoneService.findById(zoneId);
     const entities = await this.fiberService.findByNodeId(zoneId, nodeId);
     return plainToInstance(FiberResponseModel, entities, {
       excludeExtraneousValues: true,
@@ -42,6 +46,7 @@ export class FiberApiService {
     nodeId: string,
     data: CreateFiberDto,
   ): Promise<FiberResponseModel> {
+    await this.zoneService.findById(zoneId);
     const node = await this.nodeService.findById(zoneId, nodeId);
     if (node == null) {
       throw new NotFoundError();
@@ -65,6 +70,7 @@ export class FiberApiService {
     nodeId: string,
     fiberId: number,
   ): Promise<void> {
+    await this.zoneService.findById(zoneId);
     await this.fiberService.delete(zoneId, nodeId, fiberId);
 
     await this.eventDispatch.dispatch({

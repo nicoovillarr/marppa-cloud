@@ -5,28 +5,74 @@ import { Netmask } from 'netmask';
 export class NetmaskService {
   /**
    * Get the next available subnet.
+   * @param lastCidr - CIDR of the most recent zone (with /prefix); omit for the very first zone.
    * @param size - The size of the subnet to create.
    * @returns The details of the new subnet.
    */
   public getNextCidr(
-    lastCidr: string = '10.0.1.0',
+    lastCidr?: string | null,
     size: number = 8,
   ): {
     cidr: string;
     gateway: string;
   } {
-    const nextIpNum =
-      this.ipToNumber(lastCidr) +
-      Math.pow(2, 32 - Number(lastCidr.split('/')[1]));
-
-    const nextIp = this.numberToIp(nextIpNum);
-    const gateway = this.numberToIp(nextIpNum + 1);
     const prefix = 32 - Math.ceil(Math.log2(size));
 
+    if (lastCidr == null) {
+      return this.parseCidr(`10.0.0.0/${prefix}`);
+    }
+
+    const lastPrefix = Number(lastCidr.split('/')[1]);
+    if (!Number.isInteger(lastPrefix) || lastPrefix < 0 || lastPrefix > 32) {
+      throw new Error(`Invalid CIDR (missing or bad prefix): ${lastCidr}`);
+    }
+
+    const nextIpNum =
+      this.ipToNumber(lastCidr) + Math.pow(2, 32 - lastPrefix);
+
+    return this.parseCidr(`${this.numberToIp(nextIpNum)}/${prefix}`);
+  }
+
+  /**
+   * Validate and normalize a CIDR: returns the network address form and the
+   * gateway (first usable host). Throws on malformed, non-private, or
+   * too-small ranges (the DHCP layout needs at least a /29).
+   */
+  public parseCidr(cidr: string): { cidr: string; gateway: string } {
+    let block: Netmask;
+    try {
+      block = new Netmask(cidr);
+    } catch {
+      throw new Error(`Invalid CIDR: ${cidr}`);
+    }
+
+    if (block.bitmask > 29 || block.bitmask < 8) {
+      throw new Error(
+        `CIDR prefix must be between /8 and /29 (got /${block.bitmask})`,
+      );
+    }
+
+    const isPrivate =
+      new Netmask('10.0.0.0/8').contains(block.base) ||
+      new Netmask('172.16.0.0/12').contains(block.base) ||
+      new Netmask('192.168.0.0/16').contains(block.base);
+    if (!isPrivate) {
+      throw new Error(`CIDR must be inside a private (RFC1918) range: ${cidr}`);
+    }
+
     return {
-      cidr: `${nextIp}/${prefix}`,
-      gateway,
+      cidr: `${block.base}/${block.bitmask}`,
+      gateway: block.first,
     };
+  }
+
+  /**
+   * Whether two CIDR blocks share any address.
+   */
+  public overlaps(cidrA: string, cidrB: string): boolean {
+    const a = new Netmask(cidrA);
+    const b = new Netmask(cidrB);
+    return a.contains(b.base) || b.contains(a.base);
   }
 
   /**

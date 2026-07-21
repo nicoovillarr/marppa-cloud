@@ -39,6 +39,7 @@ export class FiberPrismaRepository implements FiberRepository {
   ): Promise<FiberEntity[]> {
     const models = await this.prisma.fiber.findMany({
       where: {
+        status: { not: 'DELETED' },
         node: {
           id: nodeId,
           zone: {
@@ -49,6 +50,20 @@ export class FiberPrismaRepository implements FiberRepository {
     });
 
     return models.map(FiberPrismaMapper.toEntity);
+  }
+
+  public async update(fiber: FiberEntity): Promise<FiberEntity> {
+    const sanitized = PrismaMapper.toCreate(fiber);
+
+    const model = await this.prisma.fiber.update({
+      where: { id: fiber.id },
+      data: {
+        status: sanitized.status,
+        updatedBy: sanitized.updatedBy,
+      },
+    });
+
+    return FiberPrismaMapper.toEntity(model);
   }
 
   public async create(fiber: FiberEntity): Promise<FiberEntity> {

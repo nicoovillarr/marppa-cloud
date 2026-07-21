@@ -7,7 +7,8 @@ import { redirect } from "next/navigation";
 import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { toast } from "sonner";
 import { useZone } from "../models/use-zone";
-import { ZoneWithNodes } from "../api/zone.api.types";
+
+const CIDR_PATTERN = /^(?:\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/;
 
 export function ZoneCreateForm() {
   const {
@@ -19,34 +20,24 @@ export function ZoneCreateForm() {
 
   const methods = useForm<any>({
     defaultValues: {
-      nodeName: "",
+      name: "",
+      description: "",
+      cidr: "",
     },
   });
 
   const { handleSubmit, setError, control } = methods;
 
-  const createNewNode = async (
-    name: string,
-    description?: string
-  ): Promise<ZoneWithNodes | null> => {
-    console.log("Create New Node");
-
-    try {
-      const newNode = await createZone(
-        name,
-        description
-      );
-      return newNode;
-    } catch (error) {
-      console.error("Error creating new node:", error);
-      return null;
-    }
-  };
-
   const onSubmit = async (data: any) => {
     buttonRef.current?.setIsLoading(true);
 
     const validationErrors = await validateZone(data);
+
+    const cidr = (data.cidr ?? "").trim();
+    if (cidr && !CIDR_PATTERN.test(cidr)) {
+      validationErrors.cidr = "CIDR must look like 10.10.0.0/24";
+    }
+
     if (Object.keys(validationErrors).length > 0) {
       for (const [field, message] of Object.entries(validationErrors)) {
         setError(field, {
@@ -61,14 +52,20 @@ export function ZoneCreateForm() {
     }
 
     const { name, description } = data;
-    const newNode = await createNewNode(name, description);
 
-    if (newNode) {
+    let newZone = null;
+    try {
+      newZone = await createZone(name, description, cidr || undefined);
+    } catch (error) {
+      console.error("Error creating zone:", error);
+    }
+
+    if (newZone) {
       await buttonRef.current?.setIsLoading(false);
       redirect(`/dashboard/mesh/zones`);
     } else {
-      toast.error("Failed to create node");
-      buttonRef.current?.setError("Failed to create node");
+      toast.error("Failed to create zone");
+      buttonRef.current?.setError("Failed to create zone");
     }
   };
 
@@ -78,7 +75,7 @@ export function ZoneCreateForm() {
         <FormInput
           controlName="name"
           control={control}
-          label="Node Name"
+          label="Zone Name"
           className="w-full"
           required
         />
@@ -90,7 +87,14 @@ export function ZoneCreateForm() {
           className="w-full"
         />
 
-        <Button ref={buttonRef} text="Save Node" type="submit" />
+        <FormInput
+          controlName="cidr"
+          control={control}
+          label="CIDR (optional, e.g. 10.10.0.0/24 — auto-assigned if empty)"
+          className="w-full"
+        />
+
+        <Button ref={buttonRef} text="Save Zone" type="submit" />
       </form>
     </FormProvider>
   );

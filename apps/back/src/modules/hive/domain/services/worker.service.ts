@@ -30,6 +30,7 @@ export class WorkerService {
       throw new NotFoundError();
     }
 
+    this.assertOwnership(worker.ownerId);
     return worker;
   }
 
@@ -39,11 +40,22 @@ export class WorkerService {
       throw new NotFoundError();
     }
 
+    this.assertOwnership(worker.worker.ownerId);
     return worker;
   }
 
-  async findByOwnerId(ownerId: string): Promise<WorkerWithRelationsModel[]> {
-    return this.workerRepository.findByOwnerId(ownerId);
+  async findByOwnerId(ownerId?: string): Promise<WorkerWithRelationsModel[]> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    // No cross-company reads: an explicit ownerId must match the caller's company.
+    if (ownerId != null && ownerId !== user.companyId) {
+      throw new UnauthorizedError();
+    }
+
+    return this.workerRepository.findByOwnerId(user.companyId);
   }
 
   async createWorker(data: CreateWorkerDto): Promise<WorkerEntity> {
@@ -103,7 +115,7 @@ export class WorkerService {
     }
 
     const updated = entity.clone({
-      status: ResourceStatus.TERMINATING,
+      status: getEventStateTransition(EventTypeKey.WORKER_TERMINATE).entry,
       updatedBy: user.userId,
     });
 
@@ -146,6 +158,18 @@ export class WorkerService {
     });
 
     await this.save(updated);
+  }
+
+  private assertOwnership(ownerId: string): void {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    // Hide other companies' resources entirely rather than revealing they exist.
+    if (ownerId !== user.companyId) {
+      throw new NotFoundError();
+    }
   }
 
   private save(data: WorkerEntity): Promise<WorkerEntity> {
