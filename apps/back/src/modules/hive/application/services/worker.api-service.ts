@@ -13,6 +13,7 @@ import { NodeResponseModel } from '@/mesh/application/models/node.response-model
 import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 @Injectable()
 export class WorkerApiService {
@@ -88,12 +89,34 @@ export class WorkerApiService {
     });
   }
 
+  /**
+   * A worker can only boot once it has a Node in a Zone: the processor needs the
+   * node's IP/bridge to attach the NIC, so both preconditions are checked here
+   * (a clear API error) instead of failing five times inside the processor.
+   * The node also travels as PARENT, so a still-provisioning node defers the job
+   * rather than burning retries.
+   */
   public async start(id: string): Promise<void> {
+    const { node } = await this.service.findByIdWithRelations(id);
+
+    if (node == null) {
+      throw new Error(
+        'Worker has no node assigned: create a node for it in a zone before starting it',
+      );
+    }
+
+    if (node.status !== ResourceStatus.ACTIVE) {
+      throw new Error(
+        `Worker node must be ACTIVE to start the worker (is ${node.status})`,
+      );
+    }
+
     await this.service.startWorker(id);
 
     await this.eventDispatch.dispatch({
       type: EventTypeKey.WORKER_START,
       primary: { type: 'Worker', id },
+      parent: { type: 'Node', id: node.id! },
     });
   }
 

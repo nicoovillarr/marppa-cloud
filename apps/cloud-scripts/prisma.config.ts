@@ -17,4 +17,10 @@ export default defineConfig({
   datasource: {
     url: process.env.DATABASE_URL,
   },
+  // Same migration history as the backend: without this path a
+  // `prisma migrate deploy` run from here would find no migrations and exit
+  // successfully against an un-migrated database.
+  migrations: {
+    path: "../../packages/db/prisma/migrations",
+  },
 });

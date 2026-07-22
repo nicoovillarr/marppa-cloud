@@ -110,6 +110,9 @@ test('LinuxOrbitService rejects injected nginx values', () => {
 });
 
 test('WorkerStartProcessor does not mark unreachable workers as ACTIVE', async () => {
+  // No boot budget: one connectivity attempt, then straight to diagnostics.
+  process.env.WORKER_BOOT_TIMEOUT_MS = '0';
+
   const statusUpdates: string[] = [];
 
   const prisma = {

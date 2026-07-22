@@ -10,6 +10,9 @@ import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/reposito
 import { HIVE_SERVICE_TOKEN, HiveService } from '../domain/services/HiveService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.WORKER_DELETE);
 
 @EventProcessor(EventType.WORKER_DELETE)
 export class WorkerDeleteProcessor implements IEventProcessor {
@@ -58,9 +61,9 @@ export class WorkerDeleteProcessor implements IEventProcessor {
         );
       }
 
-      if (worker.status !== ResourceStatus.QUEUED) {
+      if (worker.status !== STATES.entry) {
         throw new AbortError(
-          `Worker is not in QUEUED state for event ID: ${event.id}`,
+          `Worker is not in ${STATES.entry} state for event ID: ${event.id}`,
           EventType.WORKER_DELETE_FAILED,
         );
       }
@@ -79,11 +82,11 @@ export class WorkerDeleteProcessor implements IEventProcessor {
         );
       }
 
-      await updateWorkerStatus(ResourceStatus.DELETING);
+      await updateWorkerStatus(STATES.work);
 
       await this.hiveService.deleteWorker(worker.id);
 
-      await updateWorkerStatus(ResourceStatus.DELETED);
+      await updateWorkerStatus(STATES.ok);
 
       this.wsServer.sendWorkerMessage(worker, 'DELETED', null);
 
@@ -96,7 +99,7 @@ export class WorkerDeleteProcessor implements IEventProcessor {
       this.logger.error(`Error processing event ID ${event.id}: ${String(error)}`);
 
       if (worker) {
-        await updateWorkerStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updateWorkerStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }

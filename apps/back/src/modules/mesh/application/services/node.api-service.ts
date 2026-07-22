@@ -8,6 +8,7 @@ import { ZoneService } from '../../domain/services/zone.service';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import {
   EventTypeKey as SharedEventTypeKey,
   getEventStateTransition,
@@ -51,6 +52,16 @@ export class NodeApiService {
     }
 
     const { zone, nodes } = zonePayload;
+
+    // The processor writes a DHCP reservation into the zone's dnsmasq config and
+    // attaches the VM NIC to its bridge: neither exists until ZONE_CREATE has
+    // finished, so reject early instead of failing inside the processor.
+    if (zone.status !== ResourceStatus.ACTIVE) {
+      throw new Error(
+        `Zone must be ACTIVE to add nodes to it (is ${zone.status})`,
+      );
+    }
+
     const ipAddress = this.netmaskService.getNextIp(
       zone.cidr,
       zone.gateway,
@@ -63,11 +74,14 @@ export class NodeApiService {
     // Cuando se crea para un Worker, disparamos NODE_ASSIGN_WORKER para materializar
     // la reserva DHCP + el adjunto de la NIC en el host. El processor espera el Node
     // en QUEUED (estado de entrada) y el Worker en INACTIVE (ya creado).
+    // El Worker viaja como PARENT: si todavía está creándose (QUEUED/PROVISIONING)
+    // el EventWorker difiere el job en vez de gastar reintentos, y si su creación
+    // falló, el assign aborta con NODE_ASSIGN_WORKER_FAILED en vez de reintentar.
     if (data.workerId) {
       await this.eventDispatch.dispatch({
         type: EventTypeKey.NODE_ASSIGN_WORKER,
         primary: { type: 'Node', id: entity.id! },
-        related: [{ type: 'Worker', id: data.workerId }],
+        parent: { type: 'Worker', id: data.workerId },
       });
     }
 

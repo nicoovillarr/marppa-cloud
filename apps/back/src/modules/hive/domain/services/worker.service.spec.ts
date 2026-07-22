@@ -7,6 +7,7 @@ import {
 } from '../repositories/worker.repository';
 import { WorkerEntity } from '../entities/worker.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { CreateWorkerDto } from '@/hive/presentation/dtos/create-worker.dto';
 import { UpdateWorkerDto } from '@/hive/presentation/dtos/update-worker.dto';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
@@ -148,8 +149,11 @@ describe('WorkerService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should throw UnauthorizedError when ownerId belongs to another company', () => {
-      expect(() => service.findByOwnerId('c-999999')).toThrow();
+    it('should throw UnauthorizedError when ownerId belongs to another company', async () => {
+      // findByOwnerId is async: it rejects, it never throws synchronously.
+      await expect(service.findByOwnerId('c-999999')).rejects.toThrow(
+        UnauthorizedError,
+      );
     });
   });
 
@@ -240,9 +244,11 @@ describe('WorkerService', () => {
       await service.deleteWorker('w-000001');
 
       expect(repository.findById).toHaveBeenCalledWith('w-000001');
+      // Entry status per the shared state machine: the WORKER_DELETE processor
+      // validates QUEUED and applies DELETING itself while it works.
       expect(repository.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: ResourceStatus.DELETING,
+          status: ResourceStatus.QUEUED,
         }) as WorkerEntity,
       );
     });

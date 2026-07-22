@@ -20,7 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:prod": "NODE_ENV=production jest --detectOpenHandles --runInBand",
     "prisma:generate": "prisma generate",
-    "prisma:migrate:prod": "NODE_ENV=production prisma migrate dev",
+    "prisma:migrate:prod": "NODE_ENV=production prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:seed:prod": "NODE_ENV=production npx tsx prisma/seed.ts",
     "prisma:studio": "npx prisma studio",

@@ -4,6 +4,7 @@ import {
   isOnModuleInit,
 } from '@/libs/Container';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
+import { HostPreflightService } from '@/system/infrastructure/services/HostPreflightService';
 import { configDotenv } from 'dotenv';
 
 interface LifecycleModule {
@@ -28,6 +29,13 @@ async function main(): Promise<void> {
     AppContainer.tokenKey(LoggerService),
   );
   const lifecycle = modules as LifecycleModule[];
+
+  // The host must be ready before any event is consumed: a half-configured host
+  // would otherwise fail mid-way through a zone/VM creation and leave state
+  // behind. Throwing here aborts startup with the remediation list.
+  await container
+    .resolve<HostPreflightService>(AppContainer.tokenKey(HostPreflightService))
+    .run();
 
   for (const provider of lifecycleProviders) {
     if (isOnModuleInit(provider)) await provider.onModuleInit();

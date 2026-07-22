@@ -27,6 +27,10 @@ const BASE_IMAGE_PACKAGES = [
   'iputils-ping',
 ];
 
+/** Budget for a guest to honour the ACPI shutdown before it is powered off. */
+const SHUTDOWN_TIMEOUT_MS = 60_000;
+const SHUTDOWN_POLL_MS = 2_000;
+
 const SAFE_VM_NAME = /^[a-zA-Z0-9_-]+$/;
 const ALLOWED_IMAGE_URL = /^https?:\/\/[a-zA-Z0-9.\-]+(:\d+)?\//;
 const VALID_SSH_KEY = /^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521) [A-Za-z0-9+\/=]+ \S+$/;
@@ -132,14 +136,23 @@ export class LinuxHiveService extends HiveService {
     }
 
     const imgPath = path.join(IMAGE_DIR, `${id}.img`);
-    if (fs.existsSync(imgPath)) {
-      throw new Error(`Worker disk image already exists at ${imgPath}`);
-    }
+
+    // WORKER_CREATE is retried on failure, and a half-finished attempt leaves a
+    // disk (and possibly a defined domain) behind. Clearing them makes the retry
+    // work instead of failing forever on "already exists". Safe by construction:
+    // this event only runs while the worker is QUEUED, i.e. never started.
+    await this.discardPartialWorker(id, imgPath);
 
     const cloudInitPath = path.join(CLOUD_INIT_DIR_BASE, id);
     await fsPromises.mkdir(cloudInitPath, { recursive: true });
 
     await Command.runCommand('cp', [baseImgPath, imgPath]);
+
+    // The copy inherits the base image's virtual size (~3.5GB), and passing
+    // `size=` to virt-install is ignored for an existing file — so the flavor's
+    // disk would be silently dropped and the cloud-init `resize2fs` would be a
+    // no-op. Grow the disk here, before the VM is defined.
+    await this.resizeDiskImage(imgPath, size);
 
     await this.addSerialConsoleToGrub(imgPath);
 
@@ -154,6 +167,59 @@ export class LinuxHiveService extends HiveService {
     );
 
     await this.defineVM(id, memory, cpus, size, imgPath, isoPath);
+  }
+
+  /** Removes leftovers of a previous failed WORKER_CREATE attempt. */
+  private async discardPartialWorker(id: string, imgPath: string): Promise<void> {
+    let defined = true;
+    try {
+      await Command.runCommand('sudo', ['virsh', 'dominfo', id]);
+    } catch {
+      defined = false;
+    }
+
+    if (defined) {
+      if (await this.isWorkerRunning(id)) {
+        throw new Error(
+          `Refusing to recreate worker ${id}: a domain with that name is running`,
+        );
+      }
+
+      console.log(`Undefining leftover domain from a previous attempt: ${id}`);
+      await Command.runCommand('sudo', ['virsh', 'undefine', id]);
+    }
+
+    if (fs.existsSync(imgPath)) {
+      console.log(`Removing leftover disk from a previous attempt: ${imgPath}`);
+      await Command.runCommand('sudo', ['rm', '-f', imgPath]);
+    }
+  }
+
+  /**
+   * Grows a copied base image to the flavor's disk size. Shrinking is not
+   * possible with qcow2, so a flavor smaller than the base image is an error
+   * rather than a silently ignored setting.
+   */
+  private async resizeDiskImage(imgPath: string, sizeGb: number): Promise<void> {
+    const info = await Command.runCommand('qemu-img', [
+      'info',
+      '--output=json',
+      imgPath,
+    ]);
+    const currentGb = JSON.parse(info)['virtual-size'] / 1024 ** 3;
+
+    if (sizeGb < currentGb) {
+      throw new Error(
+        `Flavor disk (${sizeGb}GB) is smaller than the base image (${currentGb.toFixed(1)}GB); qcow2 cannot shrink`,
+      );
+    }
+
+    if (sizeGb === currentGb) {
+      return;
+    }
+
+    console.log(`Resizing ${imgPath}: ${currentGb.toFixed(1)}GB → ${sizeGb}GB`);
+    await Command.runCommand('qemu-img', ['resize', imgPath, `${sizeGb}G`]);
   }
 
   public async addSerialConsoleToGrub(imgPath: string): Promise<void> {
@@ -209,6 +275,20 @@ export class LinuxHiveService extends HiveService {
 
   public async addSerialTTYToSecuretty(imgPath: string): Promise<void> {
     console.log(`Adding serial TTY to securetty for image: ${imgPath}`);
+
+    // /etc/securetty is gone in current Ubuntu cloud images. Appending to a
+    // missing file makes guestfish fail and takes WORKER_CREATE down with it,
+    // so skip when the image does not use it.
+    const exists = (
+      await Command.runCommand('sudo', [
+        'guestfish', '--ro', '-a', imgPath, '-i', 'exists', '/etc/securetty',
+      ]).catch(() => 'false')
+    ).trim();
+
+    if (exists !== 'true') {
+      console.log('/etc/securetty not present in this image, skipping');
+      return;
+    }
 
     const existing = await Command.runCommand('sudo', [
       'guestfish',
@@ -411,8 +491,12 @@ local-hostname: ${name}
     imgPath: string,
     seedIsoPath: string,
   ): Promise<void> {
+    // Flavors express fractional cores (0.25, 0.5) as a share of a CPU, but a
+    // domain can only be given whole vCPUs — `--vcpus 0.5` is a hard error.
+    const vcpus = Math.max(1, Math.ceil(cpus));
+
     console.log(
-      `Defining VM: ${name} with memory: ${memory}MB, cpus: ${cpus}, size: ${size}GB`,
+      `Defining VM: ${name} with memory: ${memory}MB, cpus: ${vcpus} (flavor: ${cpus}), size: ${size}GB`,
     );
 
     const xml = await Command.runCommand('sudo', [
@@ -422,9 +506,11 @@ local-hostname: ${name}
       '--memory',
       String(memory),
       '--vcpus',
-      String(cpus),
+      String(vcpus),
+      // No `size=`: the disk was already grown to the flavor size by
+      // resizeDiskImage (virt-install ignores size= on an existing file).
       '--disk',
-      `path=${imgPath},format=qcow2,size=${size}`,
+      `path=${imgPath},format=qcow2`,
       '--disk',
       `path=${seedIsoPath},device=cdrom`,
       '--os-variant',
@@ -449,9 +535,34 @@ local-hostname: ${name}
     await fsPromises.rm(xmlPath, { force: true });
   }
 
+  /**
+   * Graceful ACPI shutdown, then a forced destroy if the guest ignores it.
+   * Returning while the VM is still running would leave the DB saying INACTIVE
+   * with a live VM — and WORKER_DELETE would then refuse to delete it forever.
+   */
   public async stopWorker(vmName: string): Promise<void> {
     this.validateVmName(vmName);
-    await Command.runCommand('sudo', ['virsh', 'shutdown', `${vmName}`]);
+
+    if (!(await this.isWorkerRunning(vmName))) {
+      console.log(`VM ${vmName} is already stopped`);
+      return;
+    }
+
+    await Command.runCommand('sudo', ['virsh', 'shutdown', vmName]);
+
+    const deadline = Date.now() + SHUTDOWN_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      await sleep(SHUTDOWN_POLL_MS);
+      if (!(await this.isWorkerRunning(vmName))) {
+        console.log(`✓ VM ${vmName} shut down cleanly`);
+        return;
+      }
+    }
+
+    console.warn(
+      `VM ${vmName} ignored the ACPI shutdown after ${SHUTDOWN_TIMEOUT_MS}ms; forcing power off`,
+    );
+    await this.forceStopWorker(vmName);
   }
 
   public async forceStopWorker(vmName: string): Promise<void> {
@@ -461,7 +572,15 @@ local-hostname: ${name}
 
   public async startWorker(vmName: string): Promise<void> {
     this.validateVmName(vmName);
-    await Command.runCommand('sudo', ['virsh', 'start', `${vmName}`]);
+
+    // `virsh start` errors on an already-running domain, which would make every
+    // retry of WORKER_START fail even when the VM is up.
+    if (await this.isWorkerRunning(vmName)) {
+      console.log(`VM ${vmName} is already running`);
+      return;
+    }
+
+    await Command.runCommand('sudo', ['virsh', 'start', vmName]);
   }
 
   public async deleteWorker(vmName: string): Promise<void> {

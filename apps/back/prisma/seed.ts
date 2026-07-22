@@ -198,15 +198,19 @@ const createWorkerImages = async () => {
   console.log('Creating worker images...');
 
   const images = [
+    // Cloud image (qcow2), NOT the live-server installer ISO: workers are booted
+    // with `virt-install --import` + a NoCloud seed, so the base disk must be a
+    // pre-installed, cloud-init-enabled image.
     {
       name: 'ubuntu-24.04',
-      description: 'Ubuntu 24.04 LTS',
+      description: 'Ubuntu 24.04 LTS (cloud image)',
       osType: 'linux',
       osFamily: 'ubuntu',
       osVersion: '24.04',
-      imageUrl: 'https://releases.ubuntu.com/jammy/ubuntu-22.04.5-live-server-amd64.iso',
+      imageUrl:
+        'https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img',
       architecture: 'amd64',
-      virtualizationType: 'iso',
+      virtualizationType: 'qcow2',
     },
   ];
 

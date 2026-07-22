@@ -153,7 +153,10 @@ export class WorkerService {
     }
 
     const updated = entity.clone({
-      status: ResourceStatus.DELETING,
+      // Entry status comes from the shared state machine (QUEUED): the
+      // WORKER_DELETE processor validates exactly that, and DELETING is the
+      // status it applies itself while working.
+      status: getEventStateTransition(EventTypeKey.WORKER_DELETE).entry,
       updatedBy: user.userId,
     });
 

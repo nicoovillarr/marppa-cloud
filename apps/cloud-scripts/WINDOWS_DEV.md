@@ -122,18 +122,23 @@ sudo tee /etc/sudoers.d/cloud-scripts > /dev/null <<EOF
 $USER ALL=(ALL) NOPASSWD: \
   /usr/bin/virsh, \
   /usr/bin/virt-install, \
+  /usr/bin/virt-customize, \
   /usr/bin/guestfish, \
   /usr/bin/genisoimage, \
   /usr/bin/qemu-img, \
   /usr/sbin/ip, \
+  /usr/bin/networkctl, \
   /usr/sbin/iptables, \
   /usr/sbin/nft, \
+  /usr/sbin/sysctl, \
   /usr/bin/systemctl, \
   /usr/sbin/nginx, \
   /usr/bin/pkill, \
+  /bin/cat, \
   /bin/cp, \
   /bin/mv, \
   /bin/rm, \
+  /bin/mkdir, \
   /usr/bin/install, \
   /bin/chown, \
   /bin/chmod, \
@@ -145,6 +150,14 @@ sudo visudo -c -f /etc/sudoers.d/cloud-scripts
 ```
 
 Expected: `parsed OK`.
+
+On usr-merged systems (Ubuntu 22.04+), `cat`/`cp`/`rm`/`mkdir`/`chown`/`chmod` resolve to
+`/usr/bin/...`. If sudo still prompts, add the `/usr/bin/` variants too — the app runs every
+privileged command through `sudo -n`, so a single missing entry blocks it. Verify with:
+
+```bash
+sudo -n true && echo "passwordless sudo OK"
+```
 
 ---
 
@@ -186,16 +199,19 @@ fi
 cp /etc/nftables.conf ~/nftables.conf
 ```
 
-Enable IP forwarding:
+Bridge netfilter (optional, only if bridged traffic is being filtered):
 
 ```bash
-sudo tee /etc/sysctl.d/99-cloud-scripts.conf > /dev/null <<'EOF'
-net.ipv4.ip_forward=1
+sudo tee /etc/sysctl.d/99-cloud-scripts-bridge.conf > /dev/null <<'EOF'
 net.bridge.bridge-nf-call-iptables=0
 EOF
 
 sudo sysctl --system
 ```
+
+`net.ipv4.ip_forward` is **not** configured by hand: cloud-scripts enables it at startup
+(`sudo sysctl -w`) and persists it in `/etc/sysctl.d/99-cloud-scripts.conf`. That is why
+`/usr/sbin/sysctl` is in the sudoers list above.
 
 ---
 
@@ -213,6 +229,27 @@ rm -f /tmp/dnsmasq.leases
 EOF
 
 sudo chmod +x /usr/local/sbin/reset-dnsmasq.sh
+```
+
+Zone DHCP/DNS is written as drop-ins in `/etc/dnsmasq.d`, so the main config must include that
+directory (Ubuntu ships it enabled; the startup preflight fails if it is not):
+
+```bash
+grep -q '^conf-dir=/etc/dnsmasq.d' /etc/dnsmasq.conf \
+  || echo 'conf-dir=/etc/dnsmasq.d/,*.conf' | sudo tee -a /etc/dnsmasq.conf
+```
+
+---
+
+## 8b. Enable systemd-networkd
+
+Zone bridges are created live with `ip link` and persisted as systemd-networkd units in
+`/etc/systemd/network` (`10-z-xxxxxx.netdev` + `.network`). `ifupdown` is **not** used: it is
+absent on modern Ubuntu, and restarting `networking` would drop the host uplink.
+
+```bash
+sudo systemctl enable --now systemd-networkd
+sudo mkdir -p /etc/systemd/network
 ```
 
 ---

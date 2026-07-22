@@ -11,7 +11,10 @@ import { PortConflictError } from '../../domain/errors/PortConflictError';
 
 @Injectable()
 export class LinuxMeshService extends MeshService {
-  private readonly interfacesDir: string = '/etc/network/interfaces.d';
+  // Zone bridges are persisted as systemd-networkd units (Ubuntu's default
+  // renderer). ifupdown / `/etc/network/interfaces.d` is not installed on modern
+  // Ubuntu, and `systemctl restart networking` would bounce the host uplink.
+  private readonly networkDir: string = '/etc/systemd/network';
   private readonly dnsmasqDir: string = '/etc/dnsmasq.d';
   private readonly nftConfPath: string = '/etc/nftables.conf';
   private readonly nftConfBackupDir: string = '/etc/nft-backups';
@@ -29,6 +32,78 @@ export class LinuxMeshService extends MeshService {
     this.nftResetSourcePath = process.env.NFTABLES_RESET_SOURCE ?? '';
   }
 
+  /** systemd-networkd unit paths for a zone bridge. */
+  private netdevPath(bridgeName: string): string {
+    return path.join(this.networkDir, `10-${bridgeName}.netdev`);
+  }
+
+  private networkPath(bridgeName: string): string {
+    return path.join(this.networkDir, `10-${bridgeName}.network`);
+  }
+
+  /**
+   * Write a file under /etc as root. The process runs unprivileged, so every
+   * config file goes through a temp file + `sudo install`.
+   */
+  private async writeRootFile(
+    destPath: string,
+    content: string,
+    mode = '644',
+  ): Promise<void> {
+    const tmpPath = path.join(
+      os.tmpdir(),
+      `mesh-${path.basename(destPath)}-${Date.now()}`,
+    );
+
+    await fsPromises.writeFile(tmpPath, content, { encoding: 'utf8' });
+
+    try {
+      await Command.runCommand('sudo', [
+        'install',
+        '-m',
+        mode,
+        tmpPath,
+        destPath,
+      ]);
+    } finally {
+      await fsPromises.rm(tmpPath, { force: true });
+    }
+  }
+
+  private async readRootFile(filePath: string): Promise<string> {
+    return Command.runCommand('sudo', ['cat', filePath]);
+  }
+
+  private async removeRootFile(filePath: string): Promise<void> {
+    await Command.runCommand('sudo', ['rm', '-f', filePath]);
+  }
+
+  private async deviceExists(name: string): Promise<boolean> {
+    try {
+      await Command.runCommand('ip', ['link', 'show', name]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Reload systemd-networkd so the persisted units are picked up. The bridge is
+   * already live via `ip link` at this point, so a failure here only costs
+   * persistence across reboots — never the current operation.
+   */
+  private async reloadNetworkd(): Promise<void> {
+    try {
+      await Command.runCommand('sudo', ['networkctl', 'reload']);
+    } catch (err) {
+      console.warn(
+        `networkctl reload failed (zone stays up but may not survive a reboot): ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+
   public async getIpList(cidr) {
     console.log(`Getting IP list for CIDR: ${cidr}`);
 
@@ -44,60 +119,157 @@ export class LinuxMeshService extends MeshService {
       .map((l) => l.substring('Nmap scan report for'.length).trim());
   }
 
+  /**
+   * Only the services this app owns are restarted. The host uplink is never
+   * touched: restarting `networking` on a real server drops SSH, and the
+   * nftables ruleset is applied live (and persisted) by the nft helpers.
+   */
   public async restartServices() {
-    await Command.runCommand('sudo', ['systemctl', 'restart', 'networking']);
     await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
-    await Command.runCommand('sudo', ['systemctl', 'restart', 'nftables']);
   }
 
   public async createZone(cidr, bridgeName, gatewayIp) {
     const ipList = await this.getIpList(cidr);
     const gateway = gatewayIp || ipList[1];
 
+    // ZONE_CREATE is retried on failure; a partial attempt leaves units, a
+    // dnsmasq drop-in or nft rules behind, and every retry would then die on
+    // "already exists". Start from a clean slate for this zone only.
+    await this.discardPartialZone(bridgeName, cidr);
+
+    // Bridge first and already UP: dnsmasq binds to it (`bind-interfaces`) and
+    // would fail to start if the device did not exist yet.
     await this.createInterface(bridgeName, cidr, gateway);
 
     try {
       await this.createDnsmasqConfig(bridgeName, gateway, ipList);
+      await this.restartServices();
     } catch (err) {
-      await fsPromises.rm(path.join(this.interfacesDir, bridgeName), {
-        force: true,
-      });
+      await this.destroyInterface(bridgeName);
       throw err;
     }
 
     try {
       await this.createNftablesConfig(bridgeName, cidr);
     } catch (err) {
-      await fsPromises.rm(path.join(this.interfacesDir, bridgeName), {
-        force: true,
-      });
-      await fsPromises.rm(path.join(this.dnsmasqDir, `${bridgeName}.conf`), {
-        force: true,
-      });
+      await this.removeRootFile(path.join(this.dnsmasqDir, `${bridgeName}.conf`));
+      await this.destroyInterface(bridgeName);
+      await this.restartServices();
       throw err;
     }
-
-    await this.restartServices();
   }
 
+  /**
+   * Creates the zone bridge as a real device and persists it as a
+   * systemd-networkd unit. Writing a config file alone never created the
+   * interface — the device is brought up here explicitly and idempotently.
+   */
   public async createInterface(bridgeName, cidr, gateway) {
-    const bridgeFile = path.join(this.interfacesDir, bridgeName);
-    if (fs.existsSync(bridgeFile)) {
-      throw new Error(`${bridgeFile} already exists`);
+    const netdevFile = this.netdevPath(bridgeName);
+    if (fs.existsSync(netdevFile)) {
+      throw new Error(`${netdevFile} already exists`);
     }
 
-    console.log(`Creating interface for bridge: ${bridgeName}`);
+    const prefix = Number(String(cidr).split('/')[1]);
+    if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) {
+      throw new Error(`Invalid CIDR (missing or bad prefix): ${cidr}`);
+    }
 
-    const netmask = await this.ipcalcField(cidr, 'Netmask');
+    console.log(`Creating bridge device: ${bridgeName} (${gateway}/${prefix})`);
 
-    const ifaceConf = `auto ${bridgeName}
-iface ${bridgeName} inet static
-  address ${gateway}
-  netmask ${netmask}
-  bridge_ports none
-`;
+    if (!(await this.deviceExists(bridgeName))) {
+      await Command.runCommand('sudo', [
+        'ip', 'link', 'add', 'name', bridgeName, 'type', 'bridge',
+      ]);
+    }
 
-    await fsPromises.writeFile(bridgeFile, ifaceConf);
+    const addrs = await Command.runCommand('ip', [
+      '-o', 'addr', 'show', 'dev', bridgeName,
+    ]);
+    if (!addrs.includes(`${gateway}/${prefix}`)) {
+      await Command.runCommand('sudo', [
+        'ip', 'addr', 'add', `${gateway}/${prefix}`, 'dev', bridgeName,
+      ]);
+    }
+
+    await Command.runCommand('sudo', ['ip', 'link', 'set', bridgeName, 'up']);
+
+    // `ConfigureWithoutCarrier` is required: a bridge with no member port has no
+    // carrier until the first VM vnet is attached, and networkd would otherwise
+    // leave it unconfigured after a reboot.
+    await this.writeRootFile(
+      netdevFile,
+      `[NetDev]
+Name=${bridgeName}
+Kind=bridge
+`,
+    );
+
+    await this.writeRootFile(
+      this.networkPath(bridgeName),
+      `[Match]
+Name=${bridgeName}
+
+[Network]
+Address=${gateway}/${prefix}
+ConfigureWithoutCarrier=yes
+LinkLocalAddressing=no
+IPv6AcceptRA=no
+`,
+    );
+
+    await this.reloadNetworkd();
+  }
+
+  /**
+   * Wipes any leftover host config for this zone (and only this one — every
+   * artifact is keyed by the zone id used as bridge name).
+   */
+  private async discardPartialZone(
+    bridgeName: string,
+    cidr: string,
+  ): Promise<void> {
+    const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
+    const hasLeftovers =
+      fs.existsSync(this.netdevPath(bridgeName)) ||
+      fs.existsSync(this.networkPath(bridgeName)) ||
+      fs.existsSync(dnsmasqFile) ||
+      (await this.deviceExists(bridgeName));
+
+    if (!hasLeftovers) return;
+
+    console.log(
+      `Zone ${bridgeName} has leftovers from a previous attempt; cleaning up first`,
+    );
+
+    await this.removeRootFile(dnsmasqFile);
+    await this.destroyInterface(bridgeName);
+
+    try {
+      await this.deleteNftablesConfig(bridgeName, cidr);
+    } catch (err) {
+      console.warn(
+        `Could not clean leftover nftables rules for ${bridgeName}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+
+  /** Tears the bridge device down and drops its persisted units. */
+  private async destroyInterface(bridgeName: string): Promise<void> {
+    await this.removeRootFile(this.netdevPath(bridgeName));
+    await this.removeRootFile(this.networkPath(bridgeName));
+
+    if (await this.deviceExists(bridgeName)) {
+      try {
+        await Command.runCommand('sudo', ['ip', 'link', 'delete', bridgeName]);
+      } catch (err) {
+        if (!String(err).includes('Cannot find device')) throw err;
+      }
+    }
+
+    await this.reloadNetworkd();
   }
 
   public async ipcalcField(cidr, field) {
@@ -124,12 +296,12 @@ iface ${bridgeName} inet static
     const dhcpEnd = ipList[ipList.length - 2];
 
     const dnsmasqConf = `interface=${bridgeName}
-  bind-interfaces
-  dhcp-option=3,${gateway}
-  dhcp-range=${dhcpStart},${dhcpEnd},12h
-  `;
+bind-interfaces
+dhcp-option=3,${gateway}
+dhcp-range=${dhcpStart},${dhcpEnd},12h
+`;
 
-    await fsPromises.writeFile(dnsmasqFile, dnsmasqConf);
+    await this.writeRootFile(dnsmasqFile, dnsmasqConf);
   }
 
   public async createNftablesConfig(
@@ -245,6 +417,7 @@ iface ${bridgeName} inet static
       `nftables-${timestamp}.conf`,
     );
 
+    await Command.runCommand('sudo', ['mkdir', '-p', this.nftConfBackupDir]);
     await Command.runCommand('sudo', ['cp', this.nftConfPath, backupFile]);
 
     console.log(`Backup created at ${backupFile}`);
@@ -366,7 +539,6 @@ iface ${bridgeName} inet static
   }
 
   public async deleteZone(bridgeName, cidr) {
-    const bridgeFile = path.join(this.interfacesDir, bridgeName);
     const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
 
     try {
@@ -381,23 +553,18 @@ iface ${bridgeName} inet static
       if (err.code !== 'ENOENT') throw err;
     }
 
-    let confText = await fsPromises.readFile(this.nftConfPath, 'utf8');
+    let confText = await this.readRootFile(this.nftConfPath);
     const nftFilePath = `/etc/nftables.d/${bridgeName}.conf`;
     const includeLine = `include "${nftFilePath}"`;
     if (confText.includes(includeLine)) {
       confText = confText.replace(includeLine, '');
-      await fsPromises.writeFile(this.nftConfPath, confText);
+      await this.writeRootFile(this.nftConfPath, confText, '600');
     }
 
-    await fsPromises.rm(bridgeFile, { force: true });
-    await fsPromises.rm(dnsmasqFile, { force: true });
-    await fsPromises.rm(nftFilePath, { force: true });
+    await this.removeRootFile(dnsmasqFile);
+    await this.removeRootFile(nftFilePath);
 
-    try {
-      await Command.runCommand('sudo', ['ip', 'link', 'delete', bridgeName]);
-    } catch (err) {
-      if (!err.message?.includes('Cannot find device')) throw err;
-    }
+    await this.destroyInterface(bridgeName);
 
     await this.deleteNftablesConfig(bridgeName, cidr);
 
@@ -409,7 +576,16 @@ iface ${bridgeName} inet static
       throw new Error(`IP ${ip} is not in the DHCP range for ${bridgeName}`);
     }
 
+    // Idempotent on retry: the same mac→ip reservation is a no-op, but the same
+    // IP claimed by a different MAC is a real conflict.
+    const dnsmasqPath = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
     if (await this.checkNodeInZone(bridgeName, ip)) {
+      const conf = await fsPromises.readFile(dnsmasqPath, 'utf8');
+      if (new RegExp(`^dhcp-host=${mac},${ip}$`, 'm').test(conf)) {
+        console.log(`DHCP reservation ${mac} → ${ip} already present, skipping`);
+        return;
+      }
+
       throw new Error(`Node with IP ${ip} already exists in ${bridgeName}`);
     }
 
@@ -419,8 +595,8 @@ iface ${bridgeName} inet static
 
     const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
     let content = await fsPromises.readFile(dnsmasqFile, 'utf8');
-    content += `\ndhcp-host=${mac},${ip}`;
-    await fsPromises.writeFile(dnsmasqFile, content);
+    content += `\ndhcp-host=${mac},${ip}\n`;
+    await this.writeRootFile(dnsmasqFile, content);
 
     console.log(`Restarting dnsmasq to apply DHCP reservation for ${ip}`);
     await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
@@ -476,7 +652,7 @@ iface ${bridgeName} inet static
       return;
     }
 
-    await fsPromises.writeFile(dnsmasqFile, newLines.join('\n'));
+    await this.writeRootFile(dnsmasqFile, newLines.join('\n'));
     await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
   }
 
@@ -605,8 +781,8 @@ iface ${bridgeName} inet static
 
   public async isZoneValid(bridgeName, cidr) {
     try {
-      const bridgeFile = path.join(this.interfacesDir, bridgeName);
-      await fsPromises.access(bridgeFile);
+      await fsPromises.access(this.netdevPath(bridgeName));
+      await fsPromises.access(this.networkPath(bridgeName));
 
       const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
       await fsPromises.access(dnsmasqFile);
@@ -691,7 +867,9 @@ iface ${bridgeName} inet static
   ) {
     if (!externalInterface)
       throw new Error('BRIDGE_NAME environment variable is required');
-    const portToString = (p) => (Array.isArray(p) ? `${p[0]}-${p[1]}` : p);
+    // Always strings: these go straight into `nft` argv.
+    const portToString = (p) =>
+      Array.isArray(p) ? `${p[0]}-${p[1]}` : String(p);
 
     const extPortStr = portToString(externalPort);
     const intPortStr = portToString(internalPort);
@@ -913,20 +1091,21 @@ iface ${bridgeName} inet static
         activeZones.push(file.slice(0, -5));
 
         const dnsmasqFile = path.join(this.dnsmasqDir, file);
-        await fsPromises.rm(dnsmasqFile, { force: true });
+        await this.removeRootFile(dnsmasqFile);
         console.log(`Removed ${dnsmasqFile}`);
       }
     }
 
-    console.log('Removing all network interface configuration files...');
-    const interfaceFiles = await fsPromises.readdir(this.interfacesDir);
-    for (const file of interfaceFiles) {
-      if (file.startsWith('z-')) {
-        activeZones.push(file);
+    console.log('Removing all zone bridge units...');
+    const networkFiles = await fsPromises.readdir(this.networkDir);
+    for (const file of networkFiles) {
+      const match = file.match(/^10-(z-[a-z0-9]+)\.(netdev|network)$/);
+      if (match) {
+        activeZones.push(match[1]);
 
-        const interfaceFile = path.join(this.interfacesDir, file);
-        await fsPromises.rm(interfaceFile, { force: true });
-        console.log(`Removed ${interfaceFile}`);
+        const unitFile = path.join(this.networkDir, file);
+        await this.removeRootFile(unitFile);
+        console.log(`Removed ${unitFile}`);
       }
     }
 
@@ -934,8 +1113,13 @@ iface ${bridgeName} inet static
       throw new Error('NFTABLES_RESET_SOURCE environment variable is required for mesh reset');
     }
     await Command.runCommand('sudo', ['cp', this.nftResetSourcePath, this.nftConfPath]);
+    // The base ruleset must also be applied live: nothing else reloads nftables
+    // (restarting the service is avoided so live rules are never lost silently).
+    await Command.runCommand('sudo', ['nft', '-f', this.nftConfPath]);
 
     for (const zone of new Set(activeZones)) {
+      if (!(await this.deviceExists(zone))) continue;
+
       try {
         console.log(`Deleting zone ${zone}...`);
         await Command.runCommand('sudo', ['ip', 'link', 'delete', zone]);
@@ -943,6 +1127,8 @@ iface ${bridgeName} inet static
         console.error(`Failed to delete bridge ${zone}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
+
+    await this.reloadNetworkd();
 
     console.log('Clearing dnsmasq leases and runtime files...');
     await Command.runCommand('sudo', ['systemctl', 'stop', 'dnsmasq']);

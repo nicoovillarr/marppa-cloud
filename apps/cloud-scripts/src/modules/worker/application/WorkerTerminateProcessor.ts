@@ -57,12 +57,25 @@ export class WorkerTerminateProcessor implements IEventProcessor {
         throw new Error(`Worker is not in ${STATES.entry} state for event ID: ${event.id}`);
       }
 
-      const vnet = await this.hiveService.getWorkerVnet(worker.id, worker.node?.zoneId);
-      if (!vnet) throw new Error(`VNet not found for worker ID: ${worker.id}`);
-
       await updateWorkerStatus(STATES.work);
 
-      await this.meshService.unlinkVnetFromBridge(vnet, worker.node!.zoneId);
+      // The vnet only exists while the VM runs and has a node attached. If it is
+      // already gone (crashed VM, unassigned worker) there is nothing to detach:
+      // stopping the VM is what actually matters, and failing here used to leave
+      // the worker stuck in FAILED with no way back.
+      const zoneId = worker.node?.zoneId;
+      const vnet = zoneId
+        ? await this.hiveService.getWorkerVnet(worker.id, zoneId)
+        : null;
+
+      if (vnet && zoneId) {
+        await this.meshService.unlinkVnetFromBridge(vnet, zoneId);
+      } else {
+        this.logger.warn(
+          `No vnet to detach for worker ${worker.id}; stopping it anyway`,
+        );
+      }
+
       await this.hiveService.stopWorker(worker.id);
 
       await updateWorkerStatus(STATES.ok);

@@ -18,6 +18,15 @@ import { getEventStates } from '@/shared/domain/EventStateMachine';
 
 const STATES = getEventStates(EventType.WORKER_START);
 
+/** Poll cadence while waiting for the VM's first boot. */
+const CONNECTIVITY_POLL_MS = 5_000;
+/** How long a vnet may take to appear after `virsh start`. */
+const VNET_TIMEOUT_MS = 30_000;
+const VNET_POLL_MS = 2_000;
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 @EventProcessor(EventType.WORKER_START)
 export class WorkerStartProcessor implements IEventProcessor {
   constructor(
@@ -34,6 +43,46 @@ export class WorkerStartProcessor implements IEventProcessor {
     @Inject(MESH_SERVICE_TOKEN)
     private readonly meshService: MeshService,
   ) {}
+
+  /** Boot budget for a worker's first boot, in ms. */
+  private get bootTimeoutMs(): number {
+    const configured = Number(process.env.WORKER_BOOT_TIMEOUT_MS);
+    return Number.isFinite(configured) && configured >= 0 ? configured : 180_000;
+  }
+
+  /**
+   * The vnet only exists once QEMU has attached the tap device, which lags
+   * `virsh start` slightly.
+   */
+  private async waitForVnet(
+    workerId: string,
+    zoneId: string,
+  ): Promise<string | null> {
+    const deadline = Date.now() + VNET_TIMEOUT_MS;
+
+    for (;;) {
+      const vnet = await this.hiveService.getWorkerVnet(workerId, zoneId);
+      if (vnet) return vnet;
+      if (Date.now() >= deadline) return null;
+
+      await sleep(VNET_POLL_MS);
+    }
+  }
+
+  private async waitForConnectivity(ip: string): Promise<boolean> {
+    const deadline = Date.now() + this.bootTimeoutMs;
+
+    for (;;) {
+      if (await this.meshService.verifyWorkerConnectivity(ip, 5)) {
+        return true;
+      }
+
+      if (Date.now() >= deadline) return false;
+
+      this.logger.log(`Waiting for worker at ${ip} to finish booting...`);
+      await sleep(CONNECTIVITY_POLL_MS);
+    }
+  }
 
   public async handle(event: EventPayload): Promise<void> {
     let statusFinalized = false;
@@ -88,21 +137,16 @@ export class WorkerStartProcessor implements IEventProcessor {
       await updateWorkerStatus(STATES.work);
 
       await this.hiveService.startWorker(worker.id);
-      await new Promise<void>((resolve) => setTimeout(resolve, 5000));
 
-      const vnet = await this.hiveService.getWorkerVnet(
-        worker.id,
-        worker.node.zoneId,
-      );
+      const vnet = await this.waitForVnet(worker.id, worker.node.zoneId);
       if (!vnet) throw new Error(`VNet not found for worker ID: ${worker.id}`);
 
       await this.meshService.linkVnetToBridge(vnet, worker.node.zoneId);
-      await new Promise<void>((resolve) => setTimeout(resolve, 3000));
 
-      let isConnected = await this.meshService.verifyWorkerConnectivity(
-        worker.node.ipAddress,
-        10,
-      );
+      // A cloud image needs 30-60s to finish its first boot, so a single check a
+      // few seconds after `virsh start` always failed. Poll until the boot
+      // budget is spent before treating the worker as unreachable.
+      let isConnected = await this.waitForConnectivity(worker.node.ipAddress);
       if (!isConnected) {
         this.logger.warn(
           `Worker ${worker.id} not immediately reachable; running diagnostics...`,
@@ -155,7 +199,7 @@ export class WorkerStartProcessor implements IEventProcessor {
               worker.node.zoneId,
             );
             if (fixed) {
-              await new Promise<void>((resolve) => setTimeout(resolve, 3000));
+              await sleep(3000);
               isConnected = await this.meshService.verifyWorkerConnectivity(
                 worker.node.ipAddress,
                 10,
@@ -180,13 +224,9 @@ export class WorkerStartProcessor implements IEventProcessor {
           );
           if (dhcpFixed) {
             await this.hiveService.forceStopWorker(worker.id);
-            await new Promise<void>((resolve) => setTimeout(resolve, 3000));
+            await sleep(3000);
             await this.hiveService.startWorker(worker.id);
-            await new Promise<void>((resolve) => setTimeout(resolve, 8000));
-            isConnected = await this.meshService.verifyWorkerConnectivity(
-              worker.node.ipAddress,
-              15,
-            );
+            isConnected = await this.waitForConnectivity(worker.node.ipAddress);
             if (isConnected) {
               this.logger.log(
                 `Worker ${worker.id} reachable at correct IP after DHCP renewal`,
