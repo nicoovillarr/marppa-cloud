@@ -150,7 +150,7 @@ export class LinuxMeshService extends MeshService {
     }
 
     try {
-      await this.createNftablesConfig(bridgeName, cidr);
+      await this.createNftablesConfig(bridgeName, cidr, gateway);
     } catch (err) {
       await this.removeRootFile(path.join(this.dnsmasqDir, `${bridgeName}.conf`));
       await this.destroyInterface(bridgeName);
@@ -307,77 +307,38 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
   public async createNftablesConfig(
     bridgeName,
     cidr,
+    gateway,
     externalInterface = this.bridgeName,
   ) {
     if (!externalInterface)
       throw new Error('BRIDGE_NAME environment variable is required');
     console.log(`Configuring nftables for bridge: ${bridgeName}`);
 
+    const inet = ['add', 'rule', 'inet', 'filter'];
     const commands: string[][] = [
-      [
-        'add',
-        'rule',
-        'inet',
-        'filter',
-        'input',
-        'iifname',
-        `"${bridgeName}"`,
-        'accept',
-      ],
+      [...inet, 'input', 'iifname', `"${bridgeName}"`, 'ct', 'state', 'established,related', 'accept'],
+      [...inet, 'input', 'iifname', `"${bridgeName}"`, 'udp', 'dport', '67', 'accept'],
+      [...inet, 'input', 'iifname', `"${bridgeName}"`, 'ip', 'daddr', gateway, 'udp', 'dport', '53', 'accept'],
+      [...inet, 'input', 'iifname', `"${bridgeName}"`, 'ip', 'daddr', gateway, 'tcp', 'dport', '53', 'accept'],
+      [...inet, 'input', 'iifname', `"${bridgeName}"`, 'drop'],
       // Traffic from this zone towards other RFC1918 destinations (physical LAN,
       // other zones) must NOT be masqueraded: keep the VM source IP so the client
       // (with a static route to the host) accepts the reply (runbook §5.2).
       // These `return` rules precede the masquerade so only Internet-bound
       // traffic falls through to it.
       ...LinuxMeshService.RFC1918_RANGES.map((range) => [
-        'add',
-        'rule',
-        'ip',
-        'nat',
-        'postrouting',
-        'oifname',
-        `"${externalInterface}"`,
-        'ip',
-        'saddr',
-        cidr,
-        'ip',
-        'daddr',
-        range,
-        'return',
+        'add', 'rule', 'ip', 'nat', 'postrouting', 'oifname', `"${externalInterface}"`,
+        'ip', 'saddr', cidr, 'ip', 'daddr', range, 'return',
       ]),
-      [
-        'add',
-        'rule',
-        'ip',
-        'nat',
-        'postrouting',
-        'oifname',
-        `"${externalInterface}"`,
-        'ip',
-        'saddr',
-        cidr,
-        'masquerade',
-      ],
-      [
-        'add',
-        'rule',
-        'inet',
-        'filter',
-        'forward',
-        'iifname',
-        `"${bridgeName}"`,
-        'accept',
-      ],
-      [
-        'add',
-        'rule',
-        'inet',
-        'filter',
-        'forward',
-        'oifname',
-        `"${bridgeName}"`,
-        'accept',
-      ],
+      ['add', 'rule', 'ip', 'nat', 'postrouting', 'oifname', `"${externalInterface}"`, 'ip', 'saddr', cidr, 'masquerade'],
+      [...inet, 'forward', 'iifname', `"${bridgeName}"`, 'ct', 'state', 'established,related', 'accept'],
+      ...LinuxMeshService.RFC1918_RANGES.map((range) => [
+        ...inet, 'forward', 'iifname', `"${bridgeName}"`, 'ip', 'daddr', range, 'drop',
+      ]),
+      [...inet, 'forward', 'iifname', `"${bridgeName}"`, 'accept'],
+      [...inet, 'forward', 'oifname', `"${bridgeName}"`, 'ct', 'state', 'established,related', 'accept'],
+      [...inet, 'forward', 'oifname', `"${bridgeName}"`, 'iifname', `"${externalInterface}"`, 'accept'],
+      [...inet, 'forward', 'oifname', `"${bridgeName}"`, 'drop'],
     ];
 
     console.log(`Adding nftables rules for bridge: ${bridgeName}`);
