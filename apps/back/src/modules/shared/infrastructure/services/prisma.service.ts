@@ -3,8 +3,6 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { ConnectionOptions } from 'tls';
-import * as fs from 'fs';
-import * as path from 'path';
 import { Utils } from '../../../../libs/utils';
 
 @Injectable()
@@ -15,7 +13,6 @@ export class PrismaService
 
   constructor() {
     const dbCA = process.env.DB_CA;
-    const dbCARoute = process.env.DB_CA_ROUTE;
     let ssl: ConnectionOptions | undefined;
 
     if (dbCA) {
@@ -23,14 +20,6 @@ export class PrismaService
         ca: dbCA,
         rejectUnauthorized: true,
       };
-    } else if (dbCARoute) {
-      const caPath = path.resolve(process.cwd(), dbCARoute);
-      if (fs.existsSync(caPath)) {
-        ssl = {
-          ca: fs.readFileSync(caPath).toString(),
-          rejectUnauthorized: true,
-        };
-      }
     }
 
     const pool = new Pool({

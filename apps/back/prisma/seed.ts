@@ -4,8 +4,6 @@ import { NestFactory } from "@nestjs/core";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
-import * as fs from "fs";
-import * as path from "path";
 
 import * as dotenv from 'dotenv';
 import { ConnectionOptions } from "tls";
@@ -19,23 +17,11 @@ const envFilePath =
 dotenv.config({ path: envFilePath });
 
 const dbCA = process.env.DB_CA;
-const dbCARoute = process.env.DB_CA_ROUTE;
 let ssl: ConnectionOptions | undefined;
 
 if (dbCA) {
   ssl = {
     ca: dbCA,
-    rejectUnauthorized: true,
-  };
-} else if (dbCARoute) {
-  const caPath = path.resolve(process.cwd(), dbCARoute);
-
-  if (!fs.existsSync(caPath)) {
-    throw new Error(`CA file not found at ${caPath}`);
-  }
-
-  ssl = {
-    ca: fs.readFileSync(caPath).toString(),
     rejectUnauthorized: true,
   };
 }
