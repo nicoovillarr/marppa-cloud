@@ -12,7 +12,7 @@ interface LifecycleModule {
   stop?(): Promise<void> | void;
 }
 
-const { NODE_ENV } = process.env;
+const NODE_ENV = process.env.NODE_ENV ?? 'development';
 
 configDotenv({
   path: [
