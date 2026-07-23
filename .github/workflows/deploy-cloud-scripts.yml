@@ -1,0 +1,66 @@
+name: Deploy cloud-scripts
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "apps/cloud-scripts/**"
+      - "packages/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-cloud-scripts.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cloud-scripts
+  cancel-in-progress: false
+
+env:
+  DEPLOY_DIR: /opt/cloud-script/marppa-cloud
+  SERVICE_NAME: cloud-script
+
+jobs:
+  deploy:
+    runs-on: [self-hosted]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared packages
+        run: npm run build:shared
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate -w marppa-cloud-scripts
+
+      - name: Typecheck
+        run: npm run typecheck -w marppa-cloud-scripts
+
+      - name: Test
+        run: npm test -w marppa-cloud-scripts
+
+      - name: Build cloud-scripts
+        run: npm run build -w marppa-cloud-scripts
+
+      - name: Sync build to ${{ env.DEPLOY_DIR }}
+        run: |
+          sudo mkdir -p "$DEPLOY_DIR"
+          sudo rsync -a --delete \
+            --chown=cloud-script:cloud-script \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='**/.env' \
+            --exclude='**/.env.*' \
+            --exclude='**/.logs' \
+            ./ "$DEPLOY_DIR/"
+
+      - name: Restart service
+        run: sudo systemctl restart "$SERVICE_NAME"
+
+      - name: Report status
+        run: |
+          sleep 3
+          sudo systemctl is-active "$SERVICE_NAME"

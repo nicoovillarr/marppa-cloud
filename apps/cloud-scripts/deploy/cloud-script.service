@@ -1,0 +1,20 @@
+[Unit]
+Description=Marppa Cloud Scripts (infrastructure event worker + WS server)
+After=network-online.target libvirtd.service systemd-networkd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cloud-script
+Group=cloud-script
+WorkingDirectory=/opt/cloud-script/marppa-cloud/apps/cloud-scripts
+Environment=HOME=/opt/cloud-script
+Environment=PATH=/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/node -r ./scripts/register-aliases.js dist/index.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target
