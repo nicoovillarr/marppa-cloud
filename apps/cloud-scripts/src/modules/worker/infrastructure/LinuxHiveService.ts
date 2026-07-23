@@ -533,6 +533,21 @@ local-hostname: ${name}
     await fsPromises.writeFile(xmlPath, xml);
     await Command.runCommand('sudo', ['virsh', 'define', xmlPath]);
     await fsPromises.rm(xmlPath, { force: true });
+
+    if (cpus < vcpus) {
+      const period = 100000;
+      const quota = Math.max(1000, Math.round((cpus / vcpus) * period));
+      await Command.runCommand('sudo', [
+        'virsh',
+        'schedinfo',
+        name,
+        '--config',
+        '--set',
+        `vcpu_period=${period}`,
+        '--set',
+        `vcpu_quota=${quota}`,
+      ]);
+    }
   }
 
   /**
