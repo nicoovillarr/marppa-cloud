@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/core/ui/Button";
 import { LuListPlus, LuPlay, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
 import { useWorker } from "../models/use-worker";
+import { useHiveRealtime } from "../models/use-hive-realtime";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
 import { useDialog } from "@/core/ui/DialogProvider";
@@ -49,6 +50,8 @@ const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
 export function WorkersList() {
   const { workers, fetchWorkers, startWorker, terminateWorker } = useWorker();
   const { showDialog } = useDialog();
+
+  useHiveRealtime();
 
   const [selectedWorkers, setSelectedWorkers] = useState<Set<string>>(
     new Set()

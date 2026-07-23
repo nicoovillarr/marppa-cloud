@@ -13,6 +13,7 @@ import { useWorker } from "../models/use-worker";
 import { useZone } from "src/features/mesh/models/use-zone";
 import { useNode } from "src/features/mesh/models/use-node";
 import { useDialog } from "@/core/ui/DialogProvider";
+import { useWebSocket } from "@/core/ui/WebsocketProvider";
 
 interface WorkerDetailsProps {
   workerId: string;
@@ -35,6 +36,7 @@ export function WorkerDetails({ workerId }: WorkerDetailsProps) {
 
   const { deleteNode } = useNode();
   const { showDialog } = useDialog();
+  const { subscribe } = useWebSocket();
 
   const methods = useForm();
   const { handleSubmit, control } = methods;
@@ -108,6 +110,23 @@ export function WorkerDetails({ workerId }: WorkerDetailsProps) {
       ipAddress: worker?.node?.ipAddress || "N/A",
     });
   }, [worker]);
+
+  useEffect(() => {
+    if (!workerId) return;
+
+    const unsubscribe = subscribe(`hive:worker:${workerId}`, (message) => {
+      const status: string | undefined = message?.data?.status;
+
+      if (message?.type === "UPDATED" && status) {
+        setWorker((prev) => (prev ? { ...prev, status } : prev));
+        return;
+      }
+
+      fetchWorker(workerId).then((w) => setWorker(w));
+    });
+
+    return unsubscribe;
+  }, [workerId, subscribe]);
 
   if (!worker) {
     return <div>Worker not found</div>;

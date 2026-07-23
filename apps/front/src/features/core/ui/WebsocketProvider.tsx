@@ -35,7 +35,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const queueRef = useRef<{ type: string; data?: any }[]>([]);
-  const subsRef = useRef<Record<string, MessageHandler>>({});
+  const subsRef = useRef<Record<string, Set<MessageHandler>>>({});
   const reconnectAttemptsRef = useRef(0);
   const pingRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectRef = useRef<NodeJS.Timeout | null>(null);
@@ -68,6 +68,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       if (!error.current) toast.error("The connection to the server was lost.");
       error.current = true;
       socketRef.current = null;
+      isAuthenticatedRef.current = false;
       setConnected(false);
       stopPing();
       abortReconnect();
@@ -135,12 +136,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     if (!accessToken) return;
     sendMessage("AUTH", { accessToken });
 
-    if (subsRef.current) {
-      Object.keys(subsRef.current).forEach((channel) => {
-        sendMessage("SUBSCRIBE_CHANNEL", { channel });
-      });
-    }
-
     const timeout = setTimeout(() => {
       if (socketRef.current && !isAuthenticatedRef.current) {
         console.warn("[WebSocket]: Retrying AUTH after timeout...");
@@ -198,17 +193,32 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const subscribe = useCallback((channel: string, cb: MessageHandler) => {
-    console.log(`[WebSocket]: Subscribing to channel: ${channel}`);
+    const handlers = subsRef.current[channel] ?? new Set<MessageHandler>();
+    const isFirst = handlers.size === 0;
+    handlers.add(cb);
+    subsRef.current[channel] = handlers;
 
-    subsRef.current[channel] = cb;
-    sendMessage("SUBSCRIBE_CHANNEL", { channel });
-    return () => unsubscribe(channel);
+    if (isFirst) {
+      console.log(`[WebSocket]: Subscribing to channel: ${channel}`);
+      sendMessage("SUBSCRIBE_CHANNEL", { channel });
+    }
+
+    return () => {
+      const current = subsRef.current[channel];
+      if (!current) return;
+
+      current.delete(cb);
+      if (current.size === 0) {
+        delete subsRef.current[channel];
+        console.log(`[WebSocket]: Unsubscribing from channel: ${channel}`);
+        sendMessage("UNSUBSCRIBE_CHANNEL", { channel });
+      }
+    };
   }, []);
 
   const unsubscribe = useCallback((channel: string) => {
-    console.log(`[WebSocket]: Unsubscribing from channel: ${channel}`);
-
     delete subsRef.current[channel];
+    console.log(`[WebSocket]: Unsubscribing from channel: ${channel}`);
     sendMessage("UNSUBSCRIBE_CHANNEL", { channel });
   }, []);
 
@@ -218,24 +228,27 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     switch (message.type) {
       case "AUTH_SUCCESS":
         isAuthenticatedRef.current = true;
+        Object.keys(subsRef.current).forEach((channel) => {
+          sendMessage("SUBSCRIBE_CHANNEL", { channel });
+        });
         flushQueue();
         return;
       case "PONG":
         console.debug("[WebSocket]: PONG received");
         return;
       default:
-        const handler = message.channel
+        const handlers = message.channel
           ? subsRef.current[message.channel]
           : undefined;
 
-        if (!handler) {
+        if (!handlers || handlers.size === 0) {
           console.warn(
             `[WebSocket]: No handler for message type: ${message.type}, channel: ${message.channel}`
           );
           return;
         }
 
-        handler(message);
+        handlers.forEach((handler) => handler(message));
     }
   };
 

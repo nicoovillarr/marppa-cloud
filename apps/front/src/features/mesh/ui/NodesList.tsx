@@ -13,6 +13,8 @@ import { useNode } from "../models/use-node";
 import { ZoneWithNodesAndFibers } from "../api/zone.api.types";
 import { TableSkeleton } from "@/core/ui/AsyncTable";
 import { closeCurrentDialog, useDialog } from "@/core/ui/DialogProvider";
+import { useWebSocket } from "@/core/ui/WebsocketProvider";
+import { useUser } from "src/features/users/model/useUser";
 import { AssignWorkerDialog } from "./AssignWorkerDialog";
 import { FiberCreateDialog } from "./FiberCreateDialog";
 import { FibersDialog } from "./FibersDialog";
@@ -38,6 +40,8 @@ export function NodesList({ zoneId }: { zoneId: string }) {
   const { fetchZone } = useZone();
   const { deleteNode } = useNode();
   const { showDialog } = useDialog();
+  const { subscribe } = useWebSocket();
+  const { user } = useUser();
 
   const refresh = useCallback(() => {
     fetchZone(zoneId).then((zone) => {
@@ -155,6 +159,21 @@ export function NodesList({ zoneId }: { zoneId: string }) {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const companyId = user?.companyId;
+    if (!companyId) return;
+
+    const unsubscribe = subscribe(`company:${companyId}:mesh`, (message) => {
+      const payload = message?.data ?? {};
+
+      if (payload.zoneId === zoneId || payload.nodeId) {
+        refresh();
+      }
+    });
+
+    return unsubscribe;
+  }, [user?.companyId, subscribe, zoneId, refresh]);
 
   if (!zone) {
     return <TableSkeleton />;
