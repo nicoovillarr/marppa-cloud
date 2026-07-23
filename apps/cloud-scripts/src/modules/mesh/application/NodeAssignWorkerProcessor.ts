@@ -40,7 +40,11 @@ export class NodeAssignWorkerProcessor implements IEventProcessor {
         where: { id: node!.id },
         data: { status, updatedBy: event.createdBy },
       });
-      this.wsServer.sendNodeMessage(node!, 'UPDATED', { status });
+      this.wsServer.sendNodeMessage(
+        { id: node!.id, ownerId: node!.zone.ownerId },
+        'UPDATED',
+        { status },
+      );
     };
 
     try {

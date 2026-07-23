@@ -24,6 +24,7 @@
       "@/auth/*": ["./src/modules/auth/*"],
       "@/shared/*": ["./src/modules/shared/*"],
       "@/user/*": ["./src/modules/user/*"],
+      "@/tokens/*": ["./src/modules/tokens/*"],
       "@/company/*": ["./src/modules/company/*"],
       "@/event/*": ["./src/modules/event/*"],
       "@/hive/*": ["./src/modules/hive/*"],

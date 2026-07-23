@@ -5,6 +5,8 @@ import { AuthApiService } from '@/auth/application/services/auth.api-service';
 import { LoginUserDto } from '@/auth/presentation/dtos/login-user.dto';
 
 import { CreateUserDto } from '@/auth/presentation/dtos/create-user.dto';
+import { ResetPasswordDto } from '@/auth/presentation/dtos/reset-password.dto';
+import { ConfirmNewPasswordDto } from '@/auth/presentation/dtos/confirm-new-password.dto';
 import { LoggedInGuard } from '../guards/logged-in.guard';
 import { Public } from '../decorators/public.decorator';
 
@@ -36,6 +38,21 @@ export class AuthController {
   @Get('tick')
   async tick(@Req() req: Request) {
     return await this.authApiService.tick(req);
+  }
+
+  @Public()
+  @Post('reset-password')
+  async requestPasswordReset(
+    @Body() data: ResetPasswordDto,
+    @Req() req: Request,
+  ) {
+    return await this.authApiService.requestPasswordReset(data, req);
+  }
+
+  @Public()
+  @Post('reset-password/confirm')
+  async confirmNewPassword(@Body() data: ConfirmNewPasswordDto) {
+    return await this.authApiService.confirmNewPassword(data);
   }
 
   // The access token lives in an httpOnly cookie, so the browser JS cannot

@@ -5,6 +5,7 @@ import { Table } from "@/core/ui/Table";
 import { useEffect } from "react";
 import { LuListPlus } from "react-icons/lu";
 import { useZone } from "../models/use-zone";
+import { useMeshRealtime } from "../models/use-mesh-realtime";
 import { ZoneWithNodes } from "../api/zone.api.types";
 
 const COLUMNS = {
@@ -52,6 +53,8 @@ export function ZonesList() {
     zones,
     fetchZones,
   } = useZone();
+
+  useMeshRealtime();
 
   useEffect(() => {
     fetchZones();

@@ -1,3 +1,5 @@
+"use client";
+
 import { useAuth } from "@/auth/models/useAuth";
 import { fetcher } from "@/core/api/fetcher";
 import React, {

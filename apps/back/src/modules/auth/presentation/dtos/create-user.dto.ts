@@ -15,4 +15,8 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   companyId: string;
+
+  @IsString()
+  @IsOptional()
+  captchaToken?: string;
 }

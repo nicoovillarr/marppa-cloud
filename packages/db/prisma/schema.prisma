@@ -402,6 +402,23 @@ model User {
   company   Company @relation(fields: [companyId], references: [id])
 
   sessions Session[]
+  tokens   Token[]
+}
+
+enum TokenType {
+  UserRestore
+  PasswordReset
+}
+
+model Token {
+  token     String   @id
+  expiresAt DateTime
+  type      TokenType
+
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model Session {

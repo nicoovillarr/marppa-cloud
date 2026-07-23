@@ -2,7 +2,7 @@ import { TokenStorageService } from '@/auth/domain/services/token-storage.servic
 import { Inject, Injectable } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { type Request, Response } from 'express';
-import { AuthCookiePolicy } from '../policies/auth-cookie.policie';
+import { AuthCookiePolicy } from '../policies/auth-cookie.policy';
 
 @Injectable()
 export class CookiesTokenStorageService implements TokenStorageService {
@@ -21,7 +21,7 @@ export class CookiesTokenStorageService implements TokenStorageService {
   }
 
   clear(): void {
-    this.res.clearCookie('access_token');
-    this.res.clearCookie('refresh_token');
+    this.res.clearCookie('access_token', AuthCookiePolicy.clear.access);
+    this.res.clearCookie('refresh_token', AuthCookiePolicy.clear.refresh);
   }
 }

@@ -31,7 +31,7 @@ export const useAuth = () => {
         return result;
     }, []);
 
-    const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    const login = useCallback(async (email: string, password: string, captchaToken?: string): Promise<boolean> => {
         setIsLoading(true);
         setError(null);
         setIsLoggedIn(false);
@@ -39,7 +39,7 @@ export const useAuth = () => {
         let result = false;
 
         try {
-            result = await authService.login({ email, password });
+            result = await authService.login({ email, password, captchaToken });
         } catch (e) {
             setError(e.message ?? "Unknown error");
             throw e;
@@ -51,7 +51,7 @@ export const useAuth = () => {
         return result;
     }, []);
 
-    const register = useCallback(async (email: string, password: string, firstName: string, lastName?: string): Promise<boolean> => {
+    const register = useCallback(async (email: string, password: string, name: string, captchaToken?: string): Promise<boolean> => {
         setIsLoading(true);
         setError(null);
         setIsLoggedIn(false);
@@ -62,8 +62,8 @@ export const useAuth = () => {
             result = await authService.register({
                 email,
                 password,
-                firstName,
-                lastName,
+                name,
+                captchaToken,
             });
         } catch (e) {
             setError(e.message ?? "Unknown error");
@@ -74,6 +74,34 @@ export const useAuth = () => {
         }
 
         return result;
+    }, []);
+
+    const requestPasswordReset = useCallback(async (email: string, captchaToken?: string): Promise<void> => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await authService.requestPasswordReset({ email, captchaToken });
+        } catch (e) {
+            setError(e.message ?? "Unknown error");
+            throw e;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const confirmPasswordReset = useCallback(async (token: string, newPassword: string): Promise<void> => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await authService.confirmPasswordReset({ token, newPassword });
+        } catch (e) {
+            setError(e.message ?? "Unknown error");
+            throw e;
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
     const clear = useCallback(() => {
@@ -102,6 +130,8 @@ export const useAuth = () => {
         tick,
         login,
         register,
+        requestPasswordReset,
+        confirmPasswordReset,
         logout,
         clear,
     };

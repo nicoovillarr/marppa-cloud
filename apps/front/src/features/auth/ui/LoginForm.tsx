@@ -1,8 +1,13 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useAuth } from "../models/useAuth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import type { TurnstileInstance } from "@marsidev/react-turnstile";
+
+import { useAuth } from "../models/useAuth";
+import { CaptchaWidget } from "./CaptchaWidget";
 
 interface FormValues {
   email: string;
@@ -10,7 +15,10 @@ interface FormValues {
 }
 
 export function LoginForm() {
-  const { login } = useAuth();
+  const { login, error } = useAuth();
+
+  const captchaRef = useRef<TurnstileInstance>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const methods = useForm<FormValues>({
     defaultValues: {
@@ -23,9 +31,14 @@ export function LoginForm() {
 
   const onSubmit = async (data: FormValues) => {
     const { email, password } = data;
-    await login(email, password);
 
-    redirect("/dashboard");
+    try {
+      await login(email, password, captchaToken ?? undefined);
+      redirect("/dashboard");
+    } catch {
+      captchaRef.current?.reset();
+      setCaptchaToken(null);
+    }
   };
 
   return (
@@ -44,9 +57,20 @@ export function LoginForm() {
         {...methods.register("password")}
       />
 
+      <CaptchaWidget ref={captchaRef} onToken={setCaptchaToken} />
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
       <button type="submit" className="bg-blue-500 text-black p-2">
         Login
       </button>
+
+      <Link
+        href="/reset-password"
+        className="text-blue-500 text-sm text-center"
+      >
+        Forgot your password?
+      </Link>
     </form>
   );
 }

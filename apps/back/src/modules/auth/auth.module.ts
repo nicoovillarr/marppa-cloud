@@ -15,14 +15,17 @@ import { LoggedInGuard } from '@/auth/presentation/guards/logged-in.guard';
 import { AuthMiddleware } from '@/auth/presentation/middlewares/auth.middleware';
 
 import { UserModule } from '@/user/user.module';
+import { TokensModule } from '@/tokens/tokens.module';
 import { TOKEN_STORAGE_SERVICE_SYMBOL } from './domain/services/token-storage.service';
 import { CookiesTokenStorageService } from './infrastructure/services/cookies-token-storage.service';
+import { SessionCleanupService } from './domain/services/session-cleanup.service';
 
 @Module({
-  imports: [SharedModule, forwardRef(() => UserModule)],
+  imports: [SharedModule, TokensModule, forwardRef(() => UserModule)],
   controllers: [AuthController],
   providers: [
     LoggedInGuard,
+    SessionCleanupService,
     // Every route requires authentication unless explicitly marked @Public().
     {
       provide: APP_GUARD,

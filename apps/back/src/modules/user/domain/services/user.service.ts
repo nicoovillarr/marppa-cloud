@@ -82,8 +82,24 @@ export class UserService {
     return user;
   }
 
+  async findUserByEmailOrNull(email: string): Promise<UserEntity | null> {
+    return await this.userRepository.findUserByEmail(email);
+  }
+
   async comparePassword(plain: string, hashed: string): Promise<boolean> {
     const isPasswordValid = await this.passwordHasher.verify(plain, hashed);
     return isPasswordValid;
+  }
+
+  async updateUserPassword(userId: string, newPassword: string): Promise<void> {
+    const user = await this.userRepository.findUserById(userId);
+    if (!user) {
+      throw new InvalidCredentialsError();
+    }
+
+    const hash = await this.passwordHasher.hash(newPassword);
+    const updated = user.clone({ password: hash });
+
+    await this.userRepository.updateUser(updated);
   }
 }

@@ -2,6 +2,7 @@ import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import { IEventProcessor } from '@/event/application/EventWorker';
 import type { EventPayload } from '@/event/domain/models/EventPayload';
 import { MESH_SERVICE_TOKEN, MeshService } from '../domain/services/MeshService';
+import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
 import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
@@ -16,6 +17,7 @@ export class ZoneDeleteProcessor implements IEventProcessor {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly wsServer: WebSocketServer,
 
     @Inject(EVENT_REPOSITORY_TOKEN)
     private readonly repository: EventRepository,
@@ -25,13 +27,18 @@ export class ZoneDeleteProcessor implements IEventProcessor {
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {
-    let zone: { id: string; status: string; cidr: string; nodes: unknown[]; [k: string]: unknown } | null = null;
+    let zone: { id: string; ownerId: string; status: string; cidr: string; nodes: unknown[]; [k: string]: unknown } | null = null;
 
     const updateZoneStatus = async (status: ResourceStatus) => {
       await this.prisma.zone.update({
         where: { id: zone!.id },
         data: { status, updatedBy: event.createdBy },
       });
+      this.wsServer.sendZoneMessage(
+        { id: zone!.id, ownerId: zone!.ownerId },
+        'UPDATED',
+        { status },
+      );
     };
 
     try {

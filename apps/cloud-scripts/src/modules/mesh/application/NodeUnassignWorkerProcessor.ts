@@ -33,14 +33,18 @@ export class NodeUnassignWorkerProcessor implements IEventProcessor {
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {
-    let node: { id: string; status: string; zoneId: string; [k: string]: unknown } | null = null;
+    let node: { id: string; status: string; zoneId: string; zone: { ownerId: string }; [k: string]: unknown } | null = null;
 
     const updateNodeStatus = async (status: ResourceStatus) => {
       await this.prisma.node.update({
         where: { id: node!.id },
         data: { status, updatedBy: event.createdBy },
       });
-      this.wsServer.sendNodeMessage(node!, 'UPDATED', { status });
+      this.wsServer.sendNodeMessage(
+        { id: node!.id, ownerId: node!.zone.ownerId },
+        'UPDATED',
+        { status },
+      );
     };
 
     try {
@@ -49,6 +53,7 @@ export class NodeUnassignWorkerProcessor implements IEventProcessor {
 
       node = await this.prisma.node.findUnique({
         where: { id: resourceNode.resourceId, status: { not: ResourceStatus.DELETED } },
+        include: { zone: true },
       });
 
       if (!node) throw new Error(`Node not found for event ID: ${event.id}`);
