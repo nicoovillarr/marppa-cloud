@@ -47,7 +47,11 @@ async function main(): Promise<void> {
 
   logger.info('[Main] Infrastructure event worker is running.');
 
+  let shuttingDown = false;
   const shutdown = async (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+
     logger.info(`[Main] Received ${signal}. Shutting down...`);
 
     for (const mod of [...lifecycle].reverse()) {

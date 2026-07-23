@@ -254,6 +254,10 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    for (const client of this.wss.clients) {
+      client.terminate();
+    }
+
     await new Promise<void>((resolve, reject) => {
       this.wss!.close((err) => {
         if (err) {
