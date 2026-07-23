@@ -11,8 +11,9 @@ Triggered on push to `master` (paths under `apps/cloud-scripts/**`,
 `packages/**`, or the lockfile) and via **Run workflow**:
 
 1. `npm ci`
-2. `npm run build:shared` — `packages/db`, `api-types`, `shared`
-3. `npm run prisma:generate -w marppa-cloud-scripts`
+2. `npm run prisma:generate -w marppa-cloud-scripts` — must precede the build:
+   `packages/db` re-exports `@prisma/client`
+3. `npm run build:shared` — `packages/db`, `api-types`, `shared`
 4. typecheck + test (gate: a broken build never reaches `/opt`)
 5. `npm run build -w marppa-cloud-scripts` — emits `dist/`
 6. `rsync` the tree into `/opt/cloud-script/marppa-cloud`, preserving `.env*`

@@ -30,11 +30,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build shared packages
-        run: npm run build:shared
-
       - name: Generate Prisma client
         run: npm run prisma:generate -w marppa-cloud-scripts
+
+      - name: Build shared packages
+        run: npm run build:shared
 
       - name: Typecheck
         run: npm run typecheck -w marppa-cloud-scripts
