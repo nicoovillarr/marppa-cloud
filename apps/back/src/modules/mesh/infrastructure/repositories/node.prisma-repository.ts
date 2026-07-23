@@ -62,6 +62,20 @@ export class NodePrismaRepository implements NodeRepository {
     return NodePrismaMapper.toEntity(model);
   }
 
+  public async update(node: NodeEntity): Promise<NodeEntity> {
+    const sanitized = PrismaMapper.toCreate(node);
+
+    const model = await this.prisma.node.update({
+      where: { id: node.id },
+      data: {
+        status: sanitized.status,
+        updatedBy: sanitized.updatedBy,
+      },
+    });
+
+    return NodePrismaMapper.toEntity(model);
+  }
+
   public async delete(zoneId: string, id: string): Promise<void> {
     await this.prisma.node.deleteMany({
       where: { zoneId, id },

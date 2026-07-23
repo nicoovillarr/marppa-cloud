@@ -112,6 +112,36 @@ export const useZone = () => {
         }
     }, [setIsLoading, setError, setZones]);
 
+    const stopZone = useCallback(async (id: string): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await zoneApi.stop(id);
+            return true;
+        } catch (error) {
+            setError(error as string);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setIsLoading, setError]);
+
+    const startZone = useCallback(async (id: string): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await zoneApi.start(id);
+            return true;
+        } catch (error) {
+            setError(error as string);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setIsLoading, setError]);
+
     return {
         isLoading,
         error,
@@ -121,5 +151,7 @@ export const useZone = () => {
         validateZone,
         createZone,
         updateZone,
+        stopZone,
+        startZone,
     }
 }

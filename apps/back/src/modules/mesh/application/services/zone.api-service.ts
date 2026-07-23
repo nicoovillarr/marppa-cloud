@@ -114,4 +114,22 @@ export class ZoneApiService {
       primary: { type: 'Zone', id },
     });
   }
+
+  public async stop(id: string): Promise<void> {
+    await this.zoneService.stop(id);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.ZONE_STOP,
+      primary: { type: 'Zone', id },
+    });
+  }
+
+  public async start(id: string): Promise<void> {
+    await this.zoneService.start(id);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.ZONE_START,
+      primary: { type: 'Zone', id },
+    });
+  }
 }

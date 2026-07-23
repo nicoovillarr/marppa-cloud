@@ -54,6 +54,17 @@ export const EVENT_STATE_MACHINE: Partial<
   [EventTypeKey.WORKER_TERMINATE]: { entry: QUEUED, work: TERMINATING, ok: INACTIVE, fail: FAILED },
   [EventTypeKey.ZONE_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
   [EventTypeKey.NODE_DELETE_FIBER]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+
+  // --- power on/off (reversible; the DB row survives) ---
+  // "start" rebuilds host config from the row; "stop" tears it down but keeps
+  // the row at INACTIVE so it can be started again. Guards in the backend block
+  // stopping/deleting a parent that still has live children (fiber→node→zone).
+  [EventTypeKey.ZONE_START]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.ZONE_STOP]: { entry: QUEUED, work: TERMINATING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.NODE_START]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.NODE_STOP]: { entry: QUEUED, work: TERMINATING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.NODE_START_FIBER]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.NODE_STOP_FIBER]: { entry: QUEUED, work: TERMINATING, ok: INACTIVE, fail: FAILED },
   // Unassign starts from the node's live ACTIVE state (the backend does not
   // pre-set a status before dispatch for this transition).
   [EventTypeKey.NODE_UNASSIGN_WORKER]: { entry: ACTIVE, work: TERMINATING, ok: INACTIVE, fail: FAILED },

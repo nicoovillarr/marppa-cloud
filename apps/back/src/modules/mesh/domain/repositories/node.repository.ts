@@ -8,5 +8,6 @@ export abstract class NodeRepository {
   abstract findByWorkerId(workerId: string): Promise<NodeEntity | null>;
   abstract findByWorkerIds(workerIds: string[]): Promise<NodeEntity[]>;
   abstract create(node: NodeEntity): Promise<NodeEntity>;
+  abstract update(node: NodeEntity): Promise<NodeEntity>;
   abstract delete(zoneId: string, id: string): Promise<void>;
 }

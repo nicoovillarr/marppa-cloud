@@ -19,4 +19,12 @@ export const nodeApi = {
     delete: (zoneId: string, id: string): Promise<void> => {
         return fetcher<void>(`${baseUrl(zoneId)}/${id}`, 'DELETE');
     },
+
+    stop: (zoneId: string, id: string): Promise<void> => {
+        return fetcher<void>(`${baseUrl(zoneId)}/${id}/stop`, 'POST');
+    },
+
+    start: (zoneId: string, id: string): Promise<void> => {
+        return fetcher<void>(`${baseUrl(zoneId)}/${id}/start`, 'POST');
+    },
 };

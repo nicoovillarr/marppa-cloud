@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { NodeService } from '../../domain/services/node.service';
+import { FiberService } from '../../domain/services/fiber.service';
 import { NetmaskService } from '../../domain/services/netmask.service';
 import { plainToInstance } from 'class-transformer';
 import { CreateNodeDto } from '../../presentation/dtos/create-node.dto';
@@ -19,6 +20,7 @@ export class NodeApiService {
   constructor(
     private readonly zoneService: ZoneService,
     private readonly nodeService: NodeService,
+    private readonly fiberService: FiberService,
     private readonly netmaskService: NetmaskService,
     private readonly eventDispatch: EventDispatchService,
   ) { }
@@ -118,6 +120,59 @@ export class NodeApiService {
       type: EventTypeKey.NODE_UNASSIGN_WORKER,
       primary: { type: 'Node', id },
       related: [{ type: 'Worker', id: node.workerId }],
+    });
+  }
+
+  /**
+   * Turn a node off: detach its NIC and drop its DHCP reservation, keeping the
+   * worker attached. Blocked while the node still has live fibers — those DNAT
+   * rules point at this node's IP and must be stopped first.
+   */
+  public async stop(zoneId: string, id: string): Promise<void> {
+    await this.zoneService.findById(zoneId);
+    const node = await this.nodeService.findById(zoneId, id);
+
+    const fibers = await this.fiberService.findByNodeId(zoneId, id);
+    const liveFibers = fibers.filter(
+      (f) =>
+        f.status !== ResourceStatus.INACTIVE &&
+        f.status !== ResourceStatus.DELETED,
+    );
+    if (liveFibers.length > 0) {
+      throw new Error(
+        'Node has live fibers and cannot be stopped; stop its fibers first',
+      );
+    }
+
+    await this.nodeService.stop(zoneId, id);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.NODE_STOP,
+      primary: { type: 'Node', id },
+      related: [{ type: 'Worker', id: node.workerId! }],
+    });
+  }
+
+  /**
+   * Turn a node back on: re-add its DHCP reservation and re-attach the NIC. The
+   * zone must be ACTIVE — a stopped zone has no bridge to attach to.
+   */
+  public async start(zoneId: string, id: string): Promise<void> {
+    const zone = await this.zoneService.findById(zoneId);
+    if (zone.status !== ResourceStatus.ACTIVE) {
+      throw new Error(
+        `Zone must be ACTIVE to start a node in it (is ${zone.status})`,
+      );
+    }
+
+    const node = await this.nodeService.findById(zoneId, id);
+
+    await this.nodeService.start(zoneId, id);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.NODE_START,
+      primary: { type: 'Node', id },
+      related: [{ type: 'Worker', id: node.workerId! }],
     });
   }
 }

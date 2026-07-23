@@ -49,11 +49,43 @@ export const useFiber = () => {
         }
     }, []);
 
+    const stopFiber = useCallback(async (zoneId: string, nodeId: string, fiberId: string | number): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await fiberApi.stop(zoneId, nodeId, fiberId);
+            return true;
+        } catch (error) {
+            setError(error);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const startFiber = useCallback(async (zoneId: string, nodeId: string, fiberId: string | number): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await fiberApi.start(zoneId, nodeId, fiberId);
+            return true;
+        } catch (error) {
+            setError(error);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     return {
         isLoading,
         error,
         fetchFibers,
         createFiber,
         deleteFiber,
+        stopFiber,
+        startFiber,
     }
 }

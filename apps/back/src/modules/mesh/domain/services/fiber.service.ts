@@ -87,4 +87,67 @@ export class FiberService {
 
     await this.repository.update(updated);
   }
+
+  /**
+   * Queue NODE_STOP_FIBER: the processor removes the DNAT rules but keeps the
+   * row at INACTIVE so the same host port can be re-published later. Only an
+   * active fiber can be stopped.
+   */
+  public async stop(
+    zoneId: string,
+    nodeId: string,
+    fiberId: number,
+  ): Promise<FiberEntity> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const fiber = await this.findById(zoneId, nodeId, fiberId);
+
+    const stoppable: string[] = [ResourceStatus.ACTIVE, ResourceStatus.FAILED];
+    if (!stoppable.includes(fiber.status)) {
+      throw new Error(
+        `Fiber must be ${stoppable.join(' or ')} to be stopped (is ${fiber.status})`,
+      );
+    }
+
+    const updated = fiber.clone({
+      status: getEventStateTransition(EventTypeKey.NODE_STOP_FIBER).entry,
+      updatedBy: user.userId,
+    });
+
+    return this.repository.update(updated);
+  }
+
+  /**
+   * Queue NODE_START_FIBER: the processor re-adds the DNAT rules. Only a
+   * stopped/failed fiber can be started.
+   */
+  public async start(
+    zoneId: string,
+    nodeId: string,
+    fiberId: number,
+  ): Promise<FiberEntity> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const fiber = await this.findById(zoneId, nodeId, fiberId);
+
+    const startable: string[] = [ResourceStatus.INACTIVE, ResourceStatus.FAILED];
+    if (!startable.includes(fiber.status)) {
+      throw new Error(
+        `Fiber must be ${startable.join(' or ')} to be started (is ${fiber.status})`,
+      );
+    }
+
+    const updated = fiber.clone({
+      status: getEventStateTransition(EventTypeKey.NODE_START_FIBER).entry,
+      updatedBy: user.userId,
+    });
+
+    return this.repository.update(updated);
+  }
 }

@@ -16,4 +16,12 @@ export const fiberApi = {
     delete: (zoneId: string, nodeId: string, fiberId: string | number): Promise<void> => {
         return fetcher<void>(`${baseUrl(zoneId, nodeId)}/${fiberId}`, 'DELETE');
     },
+
+    stop: (zoneId: string, nodeId: string, fiberId: string | number): Promise<void> => {
+        return fetcher<void>(`${baseUrl(zoneId, nodeId)}/${fiberId}/stop`, 'POST');
+    },
+
+    start: (zoneId: string, nodeId: string, fiberId: string | number): Promise<void> => {
+        return fetcher<void>(`${baseUrl(zoneId, nodeId)}/${fiberId}/start`, 'POST');
+    },
 };

@@ -37,4 +37,20 @@ export class NodeController {
   ): Promise<void> {
     return this.apiService.delete(zoneId, nodeId);
   }
+
+  @Post(':nodeId/stop')
+  public async stop(
+    @Param('zoneId') zoneId: string,
+    @Param('nodeId') nodeId: string,
+  ): Promise<void> {
+    return this.apiService.stop(zoneId, nodeId);
+  }
+
+  @Post(':nodeId/start')
+  public async start(
+    @Param('zoneId') zoneId: string,
+    @Param('nodeId') nodeId: string,
+  ): Promise<void> {
+    return this.apiService.start(zoneId, nodeId);
+  }
 }

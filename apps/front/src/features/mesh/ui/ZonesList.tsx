@@ -3,9 +3,12 @@
 import { Button } from "@/core/ui/Button";
 import { Table } from "@/core/ui/Table";
 import { useEffect } from "react";
+import { toast } from "sonner";
 import { LuListPlus } from "react-icons/lu";
 import { useZone } from "../models/use-zone";
 import { useMeshRealtime } from "../models/use-mesh-realtime";
+import { useDialog } from "@/core/ui/DialogProvider";
+import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { ZoneWithNodes } from "../api/zone.api.types";
 
 const COLUMNS = {
@@ -52,13 +55,59 @@ export function ZonesList() {
   const {
     zones,
     fetchZones,
+    stopZone,
+    startZone,
   } = useZone();
+
+  const { showDialog } = useDialog();
 
   useMeshRealtime();
 
   useEffect(() => {
     fetchZones();
   }, [fetchZones]);
+
+  const onStart = async (zone: ZoneWithNodes) => {
+    const ok = await startZone(zone.id);
+    if (ok) {
+      toast.success("Zone start queued");
+      fetchZones();
+    } else {
+      toast.error("Failed to start zone");
+    }
+  };
+
+  const onStop = (zone: ZoneWithNodes) => {
+    showDialog({
+      type: "confirm",
+      title: "Stop Zone",
+      description:
+        "Tear down the zone's bridge, DHCP and firewall rules. The zone can be started again. Stop its nodes first.",
+      confirmText: "Stop",
+      confirmButtonStyle: "danger",
+      onConfirm: async () => {
+        const ok = await stopZone(zone.id);
+        if (ok) {
+          toast.success("Zone stop queued");
+          fetchZones();
+        } else {
+          toast.error("Failed to stop zone");
+        }
+      },
+    });
+  };
+
+  const contextMenuGroups = (zone: ZoneWithNodes) => {
+    const canStart =
+      zone.status === ResourceStatus.INACTIVE ||
+      zone.status === ResourceStatus.FAILED;
+    const canStop = zone.status === ResourceStatus.ACTIVE;
+
+    return [
+      ...(canStart ? [{ label: "Start", action: () => onStart(zone) }] : []),
+      ...(canStop ? [{ label: "Stop", action: () => onStop(zone) }] : []),
+    ];
+  };
 
   return (
     <section>
@@ -79,6 +128,7 @@ export function ZonesList() {
             data={zones}
             rowHref={(rowData: ZoneWithNodes) => `/dashboard/mesh/zones/${rowData.id}`}
             getKey={(rowData: ZoneWithNodes) => rowData.id}
+            contextMenuGroups={contextMenuGroups}
           />
         </>
       ) : (

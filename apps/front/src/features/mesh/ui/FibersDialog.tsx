@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { LuCopy, LuPlus, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
+import { LuCopy, LuPlus, LuPower, LuPowerOff, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
 import { Button } from "@/core/ui/Button";
 import { InlineCode } from "@/core/ui/InlineCode";
 import { closeCurrentDialog, useDialog } from "@/core/ui/DialogProvider";
@@ -38,7 +38,7 @@ export function FibersDialog({
   onChanged?: () => void;
 }) {
   const [fibers, setFibers] = useState<FiberResponseDto[] | null>(null);
-  const { fetchFibers, deleteFiber } = useFiber();
+  const { fetchFibers, deleteFiber, stopFiber, startFiber } = useFiber();
   const { showDialog } = useDialog();
 
   const refresh = useCallback(async () => {
@@ -86,6 +86,21 @@ export function FibersDialog({
     });
   };
 
+  const onToggle = async (fiber: FiberResponseDto) => {
+    const active = fiber.status === ResourceStatus.ACTIVE;
+    const ok = active
+      ? await stopFiber(zoneId, nodeId, fiber.id)
+      : await startFiber(zoneId, nodeId, fiber.id);
+
+    if (ok) {
+      toast.success(active ? "Fiber stop queued" : "Fiber start queued");
+      refresh();
+      onChanged?.();
+    } else {
+      toast.error(active ? "Failed to stop fiber" : "Failed to start fiber");
+    }
+  };
+
   const copy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -127,6 +142,10 @@ export function FibersDialog({
           {fibers.map((fiber) => {
             const hint = connectHint(fiber);
             const active = fiber.status === ResourceStatus.ACTIVE;
+            const togglable =
+              active ||
+              fiber.status === ResourceStatus.INACTIVE ||
+              fiber.status === ResourceStatus.FAILED;
             return (
               <li
                 key={fiber.id}
@@ -157,6 +176,14 @@ export function FibersDialog({
                       icon={<LuCopy />}
                       onClick={() => copy(hint)}
                     />
+                    {togglable && (
+                      <Button
+                        type="button"
+                        style="secondary"
+                        icon={active ? <LuPowerOff /> : <LuPower />}
+                        onClick={() => onToggle(fiber)}
+                      />
+                    )}
                     <Button
                       type="button"
                       style="danger"

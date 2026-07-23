@@ -41,4 +41,22 @@ export class FiberController {
   ): Promise<void> {
     return this.apiService.delete(zoneId, nodeId, Number(fiberId));
   }
+
+  @Post(':fiberId/stop')
+  public async stop(
+    @Param('zoneId') zoneId: string,
+    @Param('nodeId') nodeId: string,
+    @Param('fiberId') fiberId: string,
+  ): Promise<void> {
+    return this.apiService.stop(zoneId, nodeId, Number(fiberId));
+  }
+
+  @Post(':fiberId/start')
+  public async start(
+    @Param('zoneId') zoneId: string,
+    @Param('nodeId') nodeId: string,
+    @Param('fiberId') fiberId: string,
+  ): Promise<void> {
+    return this.apiService.start(zoneId, nodeId, Number(fiberId));
+  }
 }

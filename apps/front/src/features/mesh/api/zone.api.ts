@@ -19,4 +19,12 @@ export const zoneApi = {
     update(id: string, data: Partial<CreateZoneDto>): Promise<ZoneWithNodes> {
         return fetcher<ZoneWithNodes>(`${baseUrl}/${id}`, 'PUT', data);
     },
+
+    stop(id: string): Promise<void> {
+        return fetcher<void>(`${baseUrl}/${id}/stop`, 'POST');
+    },
+
+    start(id: string): Promise<void> {
+        return fetcher<void>(`${baseUrl}/${id}/start`, 'POST');
+    },
 }

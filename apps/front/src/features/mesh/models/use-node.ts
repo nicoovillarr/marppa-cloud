@@ -89,6 +89,36 @@ export const useNode = () => {
         }
     }, [setIsLoading, setError, setNodes, nodes]);
 
+    const stopNode = useCallback(async (zoneId: string, nodeId: string): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await nodeApi.stop(zoneId, nodeId);
+            return true;
+        } catch (error) {
+            setError(error);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setIsLoading, setError]);
+
+    const startNode = useCallback(async (zoneId: string, nodeId: string): Promise<boolean> => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await nodeApi.start(zoneId, nodeId);
+            return true;
+        } catch (error) {
+            setError(error);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setIsLoading, setError]);
+
     return {
         isLoading,
         error,
@@ -97,5 +127,7 @@ export const useNode = () => {
         fetchNode,
         createNode,
         deleteNode,
+        stopNode,
+        startNode,
     }
 }

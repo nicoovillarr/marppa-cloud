@@ -48,4 +48,14 @@ export class ZoneController {
   public async delete(@Param('id') id: string): Promise<void> {
     return this.apiService.delete(id);
   }
+
+  @Post(':id/stop')
+  public async stop(@Param('id') id: string): Promise<void> {
+    return this.apiService.stop(id);
+  }
+
+  @Post(':id/start')
+  public async start(@Param('id') id: string): Promise<void> {
+    return this.apiService.start(id);
+  }
 }

@@ -10,6 +10,7 @@ import { Button } from "@/core/ui/Button";
 import { NodeWithFibers } from "../api/node.api.types";
 import { useZone } from "../models/use-zone";
 import { useNode } from "../models/use-node";
+import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { ZoneWithNodesAndFibers } from "../api/zone.api.types";
 import { TableSkeleton } from "@/core/ui/AsyncTable";
 import { closeCurrentDialog, useDialog } from "@/core/ui/DialogProvider";
@@ -38,7 +39,7 @@ export function NodesList({ zoneId }: { zoneId: string }) {
   const [zone, setZone] = useState<ZoneWithNodesAndFibers | null>(null);
 
   const { fetchZone } = useZone();
-  const { deleteNode } = useNode();
+  const { deleteNode, stopNode, startNode } = useNode();
   const { showDialog } = useDialog();
   const { subscribe } = useWebSocket();
   const { user } = useUser();
@@ -80,6 +81,36 @@ export function NodesList({ zoneId }: { zoneId: string }) {
         />
       ),
     });
+  };
+
+  const onStop = (node: NodeWithFibers) => {
+    showDialog({
+      type: "confirm",
+      title: "Stop Node",
+      description:
+        "Detach the worker's NIC from the zone and release its DHCP reservation. The worker stays assigned and can be started again. Stop its fibers first.",
+      confirmText: "Stop",
+      confirmButtonStyle: "danger",
+      onConfirm: async () => {
+        const ok = await stopNode(zoneId, node.id);
+        if (ok) {
+          toast.success("Node stop queued");
+          refresh();
+        } else {
+          toast.error("Failed to stop node");
+        }
+      },
+    });
+  };
+
+  const onStart = async (node: NodeWithFibers) => {
+    const ok = await startNode(zoneId, node.id);
+    if (ok) {
+      toast.success("Node start queued");
+      refresh();
+    } else {
+      toast.error("Failed to start node");
+    }
   };
 
   const onUnassign = (node: NodeWithFibers) => {
@@ -141,20 +172,31 @@ export function NodesList({ zoneId }: { zoneId: string }) {
     status: { label: "Status", minWidth: 100 },
   };
 
-  const contextMenuGroups = (node: NodeWithFibers) => [
-    {
-      label: "Manage Fibers",
-      action: () => openFibersDialog(node),
-    },
-    {
-      label: "Create Fiber",
-      action: () => openCreateFiberDialog(node),
-    },
-    {
-      label: "Unassign",
-      action: () => onUnassign(node),
-    },
-  ];
+  const contextMenuGroups = (node: NodeWithFibers) => {
+    const canStart =
+      node.status === ResourceStatus.INACTIVE ||
+      node.status === ResourceStatus.FAILED;
+    const canStop = node.status === ResourceStatus.ACTIVE;
+
+    return [
+      {
+        label: "Manage Fibers",
+        action: () => openFibersDialog(node),
+      },
+      {
+        label: "Create Fiber",
+        action: () => openCreateFiberDialog(node),
+      },
+      ...(canStart
+        ? [{ label: "Start", action: () => onStart(node) }]
+        : []),
+      ...(canStop ? [{ label: "Stop", action: () => onStop(node) }] : []),
+      {
+        label: "Unassign",
+        action: () => onUnassign(node),
+      },
+    ];
+  };
 
   useEffect(() => {
     refresh();

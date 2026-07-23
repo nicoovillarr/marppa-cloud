@@ -8,6 +8,7 @@ import { ZoneService } from '../../domain/services/zone.service';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 @Injectable()
 export class FiberApiService {
@@ -75,6 +76,43 @@ export class FiberApiService {
 
     await this.eventDispatch.dispatch({
       type: EventTypeKey.NODE_DELETE_FIBER,
+      primary: { type: 'Fiber', id: fiberId.toString() },
+      parent: { type: 'Node', id: nodeId },
+    });
+  }
+
+  public async stop(
+    zoneId: string,
+    nodeId: string,
+    fiberId: number,
+  ): Promise<void> {
+    await this.zoneService.findById(zoneId);
+    await this.fiberService.stop(zoneId, nodeId, fiberId);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.NODE_STOP_FIBER,
+      primary: { type: 'Fiber', id: fiberId.toString() },
+      parent: { type: 'Node', id: nodeId },
+    });
+  }
+
+  public async start(
+    zoneId: string,
+    nodeId: string,
+    fiberId: number,
+  ): Promise<void> {
+    await this.zoneService.findById(zoneId);
+    const node = await this.nodeService.findById(zoneId, nodeId);
+    if (node.status !== ResourceStatus.ACTIVE) {
+      throw new Error(
+        `Node must be ACTIVE to start a fiber on it (is ${node.status})`,
+      );
+    }
+
+    await this.fiberService.start(zoneId, nodeId, fiberId);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.NODE_START_FIBER,
       primary: { type: 'Fiber', id: fiberId.toString() },
       parent: { type: 'Node', id: nodeId },
     });
