@@ -8,13 +8,16 @@ import { Pool } from "pg";
 import * as dotenv from 'dotenv';
 import { ConnectionOptions } from "tls";
 
-const env = process.env.NODE_ENV;
-const envFilePath =
-  env == null || env === 'development'
-    ? '.env'
-    : `.env.${env}`;
+const env = process.env.NODE_ENV ?? 'development';
 
-dotenv.config({ path: envFilePath });
+dotenv.config({
+  path: [
+    `.env.${env}.local`,
+    '.env.local',
+    `.env.${env}`,
+    '.env',
+  ],
+});
 
 const dbCA = process.env.DB_CA;
 let ssl: ConnectionOptions | undefined;
