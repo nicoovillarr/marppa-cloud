@@ -11,6 +11,8 @@ import { FormSelect } from "@/core/ui/inputs/form/FormSelect";
 import { toast } from "sonner";
 import { useWorker } from "../models/use-worker";
 import { useZone } from "src/features/mesh/models/use-zone";
+import { useNode } from "src/features/mesh/models/use-node";
+import { useDialog } from "@/core/ui/DialogProvider";
 
 interface WorkerDetailsProps {
   workerId: string;
@@ -31,8 +33,36 @@ export function WorkerDetails({ workerId }: WorkerDetailsProps) {
     fetchZones,
   } = useZone();
 
+  const { deleteNode } = useNode();
+  const { showDialog } = useDialog();
+
   const methods = useForm();
   const { handleSubmit, control } = methods;
+
+  const onUnassign = () => {
+    if (!worker?.node) return;
+
+    const { id: nodeId, zoneId } = worker.node;
+
+    showDialog({
+      type: "confirm",
+      title: "Unassign IP",
+      description:
+        "Release this IP reservation and detach the worker's NIC from the zone.",
+      confirmText: "Unassign",
+      confirmButtonStyle: "danger",
+      onConfirm: async () => {
+        const ok = await deleteNode(zoneId, nodeId);
+        if (ok) {
+          toast.success("Node unassignment queued");
+          const refreshed = await fetchWorker(workerId);
+          setWorker(refreshed);
+        } else {
+          toast.error("Failed to unassign IP");
+        }
+      },
+    });
+  };
 
   const onSubmit = async (data: any) => {
     console.log("Form submitted with data:", data);
@@ -121,7 +151,7 @@ export function WorkerDetails({ workerId }: WorkerDetailsProps) {
                 type="button"
                 style={"danger"}
                 icon={<LuTrash2 />}
-                onClick={() => console.log('Unassign IP')}
+                onClick={onUnassign}
                 disabled={worker.status !== "INACTIVE"}
               />
             </>
