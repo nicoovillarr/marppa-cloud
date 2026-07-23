@@ -110,6 +110,44 @@ Open `http://localhost:3000`.
 
 The front is deployed to Vercel (`cloud.marppa.com`), the API to Render (`api.cloud.marppa.com`), and the Cloud Scripts WebSocket server behind a reverse proxy (Caddy) at `ws.cloud.marppa.com`. In production `NODE_ENV=production` makes the cookies `Secure` + `SameSite=None` scoped to `COOKIES_DOMAIN`, the front proxies `/api` to `NEXT_PUBLIC_API_URL`, and the WS server binds to loopback (`WS_HOST=127.0.0.1`) with TLS terminated by the proxy so browsers connect over `wss://`.
 
+### Hosting Cloud Scripts (networking & security)
+
+Cloud Scripts runs on the hypervisor host — typically a machine on your own LAN (e.g. `192.168.1.100`) behind a home/office router with a **dynamic** public IP kept current in Cloudflare by a DDNS updater. Two very different kinds of traffic reach that host, and they need different DNS records:
+
+- **WebSocket** — browsers connect to `wss://ws.cloud.marppa.com` on port `443`, terminated by Caddy. This can go through Cloudflare's **proxy (orange cloud)**: Cloudflare supports WebSocket over 443, gives you TLS and DDoS protection, and hides your real IP.
+- **Fibers** — the connect commands the UI renders (`ssh -p <hostPort> ubuntu@<host>`, or `<host>:<hostPort>`) are **raw TCP** to a port in the `MIN_PORT`–`MAX_PORT` range. Cloudflare's proxy does **not** forward arbitrary TCP ports (only 80/443-class HTTP), so this traffic must reach your real IP directly.
+
+Because one hostname cannot be both proxied and direct, use **two records**:
+
+| Record | Cloudflare mode | Points at | Used for |
+| --- | --- | --- | --- |
+| `ws.cloud.marppa.com` | Proxied (orange) | Your public IP | `wss://` WebSocket on 443 (via Caddy) |
+| `host.cloud.marppa.com` | DNS-only (grey), low TTL (60s) | Your public IP | Fiber connect commands (raw TCP) |
+
+Then set on the front (Vercel):
+
+```
+NEXT_PUBLIC_WS_URL=wss://ws.cloud.marppa.com
+NEXT_PUBLIC_HOST_ADDRESS=host.cloud.marppa.com
+```
+
+The `host.cloud.marppa.com` record must be **DNS-only (grey)** so it resolves to your real IP; a proxied record would send `ssh`/raw-TCP at Cloudflare, which drops it. Keep its TTL low (60s): when your dynamic IP changes there is a window (your DDNS interval plus the TTL) where fiber connections fail. The proxied `ws.` record is unaffected by IP changes because clients hit Cloudflare's edge.
+
+**Router port-forwarding** — forward these from the router to the host (`192.168.1.100`):
+
+- `443/tcp` → Caddy (the WebSocket entrypoint).
+- `MIN_PORT`–`MAX_PORT` `/tcp` → the host (the fiber DNAT range).
+
+**Host firewall** — allow only `443/tcp` and the `MIN_PORT`–`MAX_PORT` range from the internet; default-deny everything else. The WS server itself stays bound to loopback (`WS_HOST=127.0.0.1`) and is never exposed directly — only Caddy on the same host reaches it. Keep `WS_ALLOWED_ORIGINS=https://cloud.marppa.com`.
+
+**Security recommendations** — fibers deliberately expose worker ports (including SSH) to the internet from your network, so harden accordingly:
+
+- Run **fail2ban** on the host to ban brute-force sources hitting SSH and other exposed ports.
+- SSH: key-only authentication, `PasswordAuthentication no`, `PermitRootLogin no`. Workers should ship with an authorized key rather than a password.
+- Keep the exposed port range as narrow as your fiber needs require, and default-deny at both the router and the host firewall.
+- Keep the host patched; monitor auth logs and set alerts on repeated failures.
+- If you would rather not expose raw ports from a home network at all, consider a VPN/bastion in front of the fibers, or Cloudflare Spectrum (paid) to proxy arbitrary TCP through Cloudflare instead of the grey record.
+
 ## Hive
 
 The Hive is a core module of the MCS that provides virtualization for running applications. It is designed to be lightweight and efficient, allowing for quick deployment and management of VMs. Within the Hive, users can create, manage, and scale Workers (VMs) as needed, providing a flexible environment for application development and deployment.
