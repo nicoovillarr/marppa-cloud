@@ -47,9 +47,8 @@ jobs:
 
       - name: Sync build to ${{ env.DEPLOY_DIR }}
         run: |
-          sudo mkdir -p "$DEPLOY_DIR"
-          sudo rsync -a --delete \
-            --chown=cloud-script:cloud-script \
+          mkdir -p "$DEPLOY_DIR"
+          rsync -a --delete \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='**/.env' \
