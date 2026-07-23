@@ -4,6 +4,112 @@
 
 This repository contains the code for the Marppa Cloud Solution, which is designed to provide a scalable and efficient cloud-based platform for managing and deploying applications. It contains the fullstack code and server scripts necessary to run the Marppa Cloud Solution.
 
+## Local Development
+
+The monorepo has three runnable apps under `apps/`:
+
+| App | Path | Dev command | Default port |
+| --- | --- | --- | --- |
+| Back (NestJS API) | `apps/back` | `npm run start:dev` | `4000` |
+| Front (Next.js) | `apps/front` | `npm run dev` | `3000` |
+| Cloud Scripts (worker + WS server) | `apps/cloud-scripts` | `npm run dev:watch` | WS on `WS_PORT` |
+
+### Do I need TLS / mkcert / JWT keys?
+
+**No.** Two things people expect to need but don't for local dev:
+
+- **JWT** uses HS256, a symmetric algorithm — there are no key files to generate. You only need a shared secret string. Set the **same** `JWT_SECRET` in `apps/back` and `apps/cloud-scripts`; if they differ, the WebSocket handshake (back signs the access token, cloud-scripts verifies it) fails.
+- **TLS / mkcert is not required.** In development the auth cookies are `SameSite=Lax` and **not** `Secure`, and host-only on `localhost`, so everything works over plain `http`. The front serves on `http://localhost:3000`, proxies `/api/*` to the back same-origin, and connects to the WS server over `ws://` (not `wss://`). HTTPS is only needed in production.
+
+### Prerequisites
+
+- Node.js (version per `.nvmrc`/`package.json`) and npm workspaces.
+- PostgreSQL and Redis. Quick start with Docker:
+
+```bash
+docker run -d --name mcs-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=mcs-dev -p 5432:5432 postgres:16
+docker run -d --name mcs-redis -p 6379:6379 redis:7
+```
+
+Cloud Scripts normally drives libvirt/nftables on a Linux host. For local development on any OS set `USE_STUBS=true` so it uses stub implementations instead of touching real virtualization.
+
+### 1. Install and build shared packages
+
+```bash
+npm install
+npm run build:shared
+```
+
+### 2. Environment files
+
+Each app loads `.env.development.local` (then `.env.local`, `.env.development`, `.env`). Copy each `.env.template` to `.env.development.local` and fill in the values below.
+
+`apps/back/.env.development.local`:
+
+```
+PORT=4000
+CORS_URL="http://localhost:3000"
+COOKIES_DOMAIN=".cloud.marppa.com"
+JWT_SECRET="dev-secret-change-me"
+REGISTRATION_ENABLED="true"
+DATABASE_URL="postgres://postgres:postgres@localhost:5432/mcs-dev?schema=public"
+REDIS_URL="redis://localhost:6379"
+FRONTEND_URL="http://localhost:3000"
+```
+
+`apps/front/.env.development.local`:
+
+```
+NEXT_PUBLIC_API_URL="http://localhost:4000"
+NEXT_PUBLIC_WS_URL="ws://localhost:8080"
+```
+
+`apps/cloud-scripts/.env.development.local`:
+
+```
+USE_STUBS=true
+JWT_SECRET="dev-secret-change-me"
+DATABASE_URL="postgres://postgres:postgres@localhost:5432/mcs-dev?schema=public"
+REDIS_URL="redis://localhost:6379"
+WS_PORT=8080
+WS_HOST="127.0.0.1"
+MIN_PORT=20000
+MAX_PORT=30000
+```
+
+Notes:
+
+- `JWT_SECRET` must be identical in back and cloud-scripts.
+- `NEXT_PUBLIC_WS_URL` port must match cloud-scripts `WS_PORT`. `WS_HOST=127.0.0.1` still works because the browser connects to `localhost`.
+- `REDIS_URL` must be the same instance for back (BullMQ producer) and cloud-scripts (consumer).
+- Captcha (`TURNSTILE_*`) and email (`RESEND_*`) are optional in dev: captcha verification is skipped when unset, and password-reset links are logged to the back console instead of being emailed.
+- `REGISTRATION_ENABLED=true` lets you create the first user through `POST /auth/register`; leave it `false` (default) in production.
+
+### 3. Database
+
+From `apps/back`:
+
+```bash
+npx prisma migrate dev
+npm run prisma:seed
+```
+
+### 4. Run
+
+In separate terminals:
+
+```bash
+cd apps/back && npm run start:dev
+cd apps/front && npm run dev
+cd apps/cloud-scripts && npm run dev:watch
+```
+
+Open `http://localhost:3000`.
+
+### Production topology
+
+The front is deployed to Vercel (`cloud.marppa.com`), the API to Render (`api.cloud.marppa.com`), and the Cloud Scripts WebSocket server behind a reverse proxy (Caddy) at `ws.cloud.marppa.com`. In production `NODE_ENV=production` makes the cookies `Secure` + `SameSite=None` scoped to `COOKIES_DOMAIN`, the front proxies `/api` to `NEXT_PUBLIC_API_URL`, and the WS server binds to loopback (`WS_HOST=127.0.0.1`) with TLS terminated by the proxy so browsers connect over `wss://`.
+
 ## Hive
 
 The Hive is a core module of the MCS that provides virtualization for running applications. It is designed to be lightweight and efficient, allowing for quick deployment and management of VMs. Within the Hive, users can create, manage, and scale Workers (VMs) as needed, providing a flexible environment for application development and deployment.

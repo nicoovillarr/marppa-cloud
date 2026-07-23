@@ -29,10 +29,11 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   public onModuleInit(): void {
-    const { WS_PORT } = process.env;
+    const { WS_PORT, WS_HOST } = process.env;
 
     this.wss = new WsServer({
       port: Number(WS_PORT),
+      host: WS_HOST || '127.0.0.1',
       verifyClient: (info) => this.isOriginAllowed(info.origin),
     });
 
