@@ -14,14 +14,21 @@ export class PrismaService
   private readonly pool: Pool;
 
   constructor() {
+    const dbCA = process.env.DB_CA;
     const dbCARoute = process.env.DB_CA_ROUTE;
     let ssl: ConnectionOptions | undefined;
 
-    if (dbCARoute) {
+    if (dbCA) {
+      ssl = {
+        ca: dbCA,
+        rejectUnauthorized: true,
+      };
+    } else if (dbCARoute) {
       const caPath = path.resolve(process.cwd(), dbCARoute);
       if (fs.existsSync(caPath)) {
         ssl = {
           ca: fs.readFileSync(caPath).toString(),
+          rejectUnauthorized: true,
         };
       }
     }

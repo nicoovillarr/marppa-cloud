@@ -18,10 +18,16 @@ const envFilePath =
 
 dotenv.config({ path: envFilePath });
 
+const dbCA = process.env.DB_CA;
 const dbCARoute = process.env.DB_CA_ROUTE;
 let ssl: ConnectionOptions | undefined;
 
-if (dbCARoute) {
+if (dbCA) {
+  ssl = {
+    ca: dbCA,
+    rejectUnauthorized: true,
+  };
+} else if (dbCARoute) {
   const caPath = path.resolve(process.cwd(), dbCARoute);
 
   if (!fs.existsSync(caPath)) {
@@ -30,6 +36,7 @@ if (dbCARoute) {
 
   ssl = {
     ca: fs.readFileSync(caPath).toString(),
+    rejectUnauthorized: true,
   };
 }
 
