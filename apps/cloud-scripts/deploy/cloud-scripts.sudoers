@@ -1,0 +1,41 @@
+# Runtime sudo grant for the cloud-script service user.
+#
+# The worker shells out to host tooling via `sudo <bare command>`; sudo resolves
+# each name through its secure_path (/usr/local/sbin:/usr/local/bin:/usr/sbin:
+# /usr/bin:/sbin:/bin), so the paths below are the FIRST match in that order —
+# not necessarily where `command -v` points. Notably `ip`, `nft` and `sysctl`
+# resolve under /usr/sbin. If a command hits "command not allowed" at runtime,
+# check the resolved path in the sudo log line and fix it here.
+#
+# `true` is required by the startup preflight (`sudo -n true`).
+#
+# Install (never edit /etc/sudoers.d directly — validate a copy first):
+#   sudo visudo -cf apps/cloud-scripts/deploy/cloud-scripts.sudoers   # parsed OK
+#   sudo install -m 0440 -o root -g root \
+#     apps/cloud-scripts/deploy/cloud-scripts.sudoers \
+#     /etc/sudoers.d/cloud-scripts
+#
+# Paths are host-specific; re-resolve them per host before installing.
+cloud-script ALL=(ALL) NOPASSWD: /usr/bin/true, \
+  /usr/bin/virsh, \
+  /usr/bin/virt-install, \
+  /usr/bin/virt-customize, \
+  /usr/bin/guestfish, \
+  /usr/bin/genisoimage, \
+  /usr/bin/qemu-img, \
+  /usr/sbin/ip, \
+  /usr/bin/networkctl, \
+  /usr/sbin/nft, \
+  /usr/sbin/sysctl, \
+  /usr/bin/systemctl, \
+  /usr/sbin/nginx, \
+  /usr/bin/pkill, \
+  /usr/bin/cat, \
+  /usr/bin/cp, \
+  /usr/bin/mv, \
+  /usr/bin/rm, \
+  /usr/bin/mkdir, \
+  /usr/bin/install, \
+  /usr/bin/chown, \
+  /usr/bin/chmod, \
+  /usr/local/sbin/reset-dnsmasq.sh

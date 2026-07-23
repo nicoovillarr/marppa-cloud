@@ -73,6 +73,33 @@ ExecStart=/usr/bin/node -r ./scripts/register-aliases.js dist/index.js
 `register-aliases.js` maps the `@/…` path aliases onto `dist/` at runtime; keep
 it in sync with `tsconfig.json` when a new top-level module directory is added.
 
+## Runtime sudo grant
+
+Separate from the CI restart rule above: the **worker itself** shells out to host
+tooling (`ip`, `nft`, `virsh`, `qemu-img`, …) via `sudo`, and its startup
+preflight aborts without passwordless sudo for them. Install
+`deploy/cloud-scripts.sudoers` as `/etc/sudoers.d/cloud-scripts`:
+
+```bash
+# validate a copy BEFORE touching /etc — a bad file in sudoers.d kills sudo
+sudo visudo -cf /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cloud-scripts.sudoers
+sudo install -m 0440 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cloud-scripts.sudoers \
+  /etc/sudoers.d/cloud-scripts
+```
+
+Paths are host-specific: sudo resolves each bare command through its
+`secure_path` (`…:/usr/sbin:/usr/bin:…`), so `ip`/`nft`/`sysctl` land under
+`/usr/sbin`, not `/usr/bin`. Re-resolve per host — for each binary take the
+first hit walking `/usr/local/sbin /usr/local/bin /usr/sbin /usr/bin /sbin /bin`
+in order. A wrong path surfaces at runtime as `command not allowed` in the sudo
+log, naming the resolved path to use.
+
+Never write into `/etc/sudoers.d` by piping pasted text through `sudo tee`: a
+truncated line or an indented heredoc terminator leaves a malformed file, and
+sudo then refuses every invocation host-wide. Always `visudo -cf` a copy first,
+then `install`.
+
 ## Secrets / `.env`
 
 Nothing goes into GitHub secrets. The host keeps its own
