@@ -1,0 +1,128 @@
+import { Injectable } from '@nestjs/common';
+import { PortalService } from '../../domain/services/portal.service';
+import { plainToInstance } from 'class-transformer';
+import { PortalResponseModel } from '../models/portal.response-model';
+import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { CreatePortalDto } from '../../presentation/dtos/create-portal.dto';
+import { UpdatePortalDto } from '../../presentation/dtos/update-portal.dto';
+import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
+import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
+import { PortalWithTranspondersWithNodeResponseModel } from '../models/portal-with-transponders-with-node.response-model';
+import { TransponderResponseModel } from '../models/transponder.response-model';
+import { NodeResponseModel } from '@/mesh/application/models/node.response-model';
+import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
+import { TransponderWithNodeResponseModel } from '../models/transponder-with-node.response-model';
+
+@Injectable()
+export class PortalApiService {
+  constructor(
+    private readonly service: PortalService,
+    private readonly eventDispatch: EventDispatchService,
+  ) { }
+
+  public getPortalTypes(): string[] {
+    return this.service.getPortalTypes();
+  }
+
+  public async findById(id: string): Promise<PortalResponseModel> {
+    const entity = await this.service.findById(id);
+    if (entity == null) {
+      throw new NotFoundError();
+    }
+
+    return plainToInstance(PortalResponseModel, entity, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  public async findByIdWithTranspondersWithNode(id: string): Promise<PortalWithTranspondersWithNodeResponseModel> {
+    const model = await this.service.findByIdWithTranspondersWithNode(id);
+    if (model == null) {
+      throw new NotFoundError();
+    }
+
+    const portal = plainToInstance(PortalResponseModel, model.portal, {
+      excludeExtraneousValues: true,
+    });
+
+    const transponders = model.transponders.map((data) => {
+      const transponder = plainToInstance(TransponderResponseModel, data.transponder, {
+        excludeExtraneousValues: true,
+      });
+
+      const node = plainToInstance(NodeResponseModel, data.node, {
+        excludeExtraneousValues: true,
+      });
+
+      return mergeDto(
+        TransponderWithNodeResponseModel,
+        transponder,
+        { node }
+      );
+    });
+
+    return mergeDto(
+      PortalWithTranspondersWithNodeResponseModel,
+      portal,
+      { transponders }
+    );
+  }
+
+  public async findByOwnerId(ownerId?: string): Promise<PortalResponseModel[]> {
+    if (ownerId == null) {
+      const user = getCurrentUser();
+      if (user == null) {
+        throw new UnauthorizedError();
+      }
+
+      ownerId = user.companyId;
+    }
+
+    const list = await this.service.findByOwnerId(ownerId);
+    return list.map((entity) =>
+      plainToInstance(PortalResponseModel, entity, {
+        excludeExtraneousValues: true,
+      }),
+    );
+  }
+
+  public async create(data: CreatePortalDto): Promise<PortalResponseModel> {
+    const entity = await this.service.create(data);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.PORTAL_CREATE,
+      primary: { type: 'Portal', id: entity.id!.toString() },
+    });
+
+    return plainToInstance(PortalResponseModel, entity, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  public async update(
+    id: string,
+    data: UpdatePortalDto,
+  ): Promise<PortalResponseModel> {
+    const entity = await this.service.update(id, data);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.PORTAL_UPDATE,
+      primary: { type: 'Portal', id: entity.id!.toString() },
+    });
+
+    return plainToInstance(PortalResponseModel, entity, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  public async delete(id: string): Promise<void> {
+    await this.service.delete(id);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.PORTAL_DELETE,
+      primary: { type: 'Portal', id },
+    });
+  }
+}

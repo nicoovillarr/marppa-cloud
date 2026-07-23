@@ -1,0 +1,34 @@
+{
+  "name": "marppa-cloud",
+  "version": "1.0.0",
+  "description": "[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prisma:generate": "npm run prisma:generate -w back && npm run prisma:generate -w marppa-cloud-scripts",
+    "build:shared": "npm run build -w packages/db && npm run build -w packages/api-types && npm run build -w packages/shared"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nicoovillarr/marppa-cloud.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nicoovillarr/marppa-cloud/issues"
+  },
+  "homepage": "https://github.com/nicoovillarr/marppa-cloud#readme",
+  "devDependencies": {
+    "@eslint/eslintrc": "3.2.0",
+    "@types/node": "22.10.7",
+    "eslint": "9.18.0",
+    "ts-node": "10.9.2",
+    "tsx": "4.21.0",
+    "typescript": "5.8.3"
+  }
+}

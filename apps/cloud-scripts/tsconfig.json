@@ -1,0 +1,46 @@
+{
+  "ts-node": {
+    "require": ["tsconfig-paths/register"],
+    "compilerOptions": {
+      "module": "CommonJS",
+      "moduleResolution": "node"
+    }
+  },
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["ES2022"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "allowJs": true,
+    "checkJs": false,
+    "paths": {
+      "@/app/*": ["./src/app/*"],
+      "@/decorators/*": ["./src/decorators/*"],
+      "@/interfaces/*": ["./src/interfaces/*"],
+      "@/libs/*": ["./src/libs/*"],
+
+      // Modules
+      "@/event/*": ["./src/modules/event/*"],
+      "@/mesh/*": ["./src/modules/mesh/*"],
+      "@/orbit/*": ["./src/modules/orbit/*"],
+      "@/shared/*": ["./src/modules/shared/*"],
+      "@/system/*": ["./src/modules/system/*"],
+      "@/worker/*": ["./src/modules/worker/*"],
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
