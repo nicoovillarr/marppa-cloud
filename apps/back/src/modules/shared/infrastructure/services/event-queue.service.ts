@@ -57,7 +57,7 @@ export class EventQueueService implements OnModuleDestroy {
     if (!this.queue) return;
 
     const data: EventJobData = { eventId, primary };
-    const jobId = String(eventId);
+    const jobId = `event-${eventId}`;
 
     if (!primary || !this.redis) {
       await this.queue.add('process-event', data, { jobId });
