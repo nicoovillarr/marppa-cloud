@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { Command } from '@/libs/Command';
+import { NftablesRuleset } from '@/libs/NftablesRuleset';
 import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
 
@@ -32,6 +33,8 @@ const REQUIRED_DIRS = [
 ];
 
 const DNSMASQ_RESET_SCRIPT = '/usr/local/sbin/reset-dnsmasq.sh';
+
+const NFT_CONF = '/etc/nftables.conf';
 
 const IP_FORWARD_PROC = '/proc/sys/net/ipv4/ip_forward';
 const SYSCTL_DROPIN = '/etc/sysctl.d/99-cloud-scripts.conf';
@@ -64,6 +67,7 @@ export class HostPreflightService {
     await this.checkBinaries(problems);
     this.checkPaths(problems);
     await this.checkNftables(problems);
+    await this.checkNftablesResetSource(problems);
     await this.checkUplink(problems);
     await this.checkVirtualization(problems);
     await this.checkDnsmasqConfDir(problems);
@@ -223,6 +227,49 @@ export class HostPreflightService {
     if (!fs.existsSync(DNSMASQ_RESET_SCRIPT)) {
       problems.push(
         `Missing ${DNSMASQ_RESET_SCRIPT} (used to clear DHCP leases on reset).`,
+      );
+    }
+
+    if (!fs.existsSync(NFT_CONF)) {
+      problems.push(
+        `Missing ${NFT_CONF}. Every zone and fiber operation backs it up and rewrites it; ` +
+          'create the base ruleset before starting (see README, "nftables base ruleset").',
+      );
+    }
+  }
+
+  private async checkNftablesResetSource(problems: string[]): Promise<void> {
+    const resetSource = process.env.NFTABLES_RESET_SOURCE?.trim();
+    if (!resetSource || !fs.existsSync(resetSource)) {
+      return;
+    }
+
+    let contents: string;
+    try {
+      contents = await Command.runCommand('sudo', ['cat', resetSource]);
+    } catch (err) {
+      problems.push(
+        `Could not read NFTABLES_RESET_SOURCE (${resetSource}): ${this.message(err)}`,
+      );
+      return;
+    }
+
+    const ruleset = NftablesRuleset.stripFlushRuleset(contents);
+
+    const foreign = NftablesRuleset.foreignTables(ruleset);
+    if (foreign.length) {
+      problems.push(
+        `NFTABLES_RESET_SOURCE (${resetSource}) declares tables this app does not own: ` +
+          `${foreign.join(', ')}. A system reset would recreate them and clobber whatever ` +
+          'owns them (fail2ban, libvirt, docker). Remove them from the base ruleset.',
+      );
+    }
+
+    const missing = NftablesRuleset.missingTables(ruleset);
+    if (missing.length) {
+      problems.push(
+        `NFTABLES_RESET_SOURCE (${resetSource}) is missing required tables: ` +
+          `${missing.join(', ')}. A system reset would leave the host without them.`,
       );
     }
   }

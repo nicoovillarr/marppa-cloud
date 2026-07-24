@@ -65,8 +65,14 @@ The process runs **unprivileged**: every file under `/etc` is written via
 
 ### Passwordless sudo
 
+Never write into `/etc/sudoers.d` directly. A truncated line or an indented heredoc
+terminator leaves a malformed file, and sudo then refuses **every** invocation
+host-wide — including the one you would use to fix it. Write a copy, validate it with
+`visudo -c`, and only then install it. Keep a second terminal with an open root shell
+(`sudo -i`) while you do it.
+
 ```bash
-sudo tee /etc/sudoers.d/cloud-scripts > /dev/null <<EOF
+tee /tmp/cloud-scripts.sudoers > /dev/null <<EOF
 $USER ALL=(ALL) NOPASSWD: \
   /usr/bin/virsh, \
   /usr/bin/virt-install, \
@@ -92,8 +98,10 @@ $USER ALL=(ALL) NOPASSWD: \
   /usr/local/sbin/reset-dnsmasq.sh
 EOF
 
-sudo chmod 440 /etc/sudoers.d/cloud-scripts
-sudo visudo -c -f /etc/sudoers.d/cloud-scripts   # must print "parsed OK"
+sudo visudo -cf /tmp/cloud-scripts.sudoers       # must print "parsed OK" — stop if it does not
+sudo install -m 0440 -o root -g root /tmp/cloud-scripts.sudoers /etc/sudoers.d/cloud-scripts
+rm /tmp/cloud-scripts.sudoers
+
 sudo -n true && echo "passwordless sudo OK"      # preflight checks this
 ```
 
@@ -109,7 +117,10 @@ The app appends rules to chains it assumes exist; it never creates the base rule
 sudo tee /etc/nftables.conf > /dev/null <<'EOF'
 #!/usr/sbin/nft -f
 
-flush ruleset
+add table inet filter
+delete table inet filter
+add table ip nat
+delete table ip nat
 
 table inet filter {
   chain input   { type filter hook input   priority 0; policy accept; }
@@ -128,6 +139,41 @@ sudo nft -f /etc/nftables.conf
 # Pristine copy restored by SYSTEM_RESET → this path goes in NFTABLES_RESET_SOURCE
 sudo cp /etc/nftables.conf /etc/nftables.base.conf
 ```
+
+**Do not put `flush ruleset` in either file.** It is the obvious way to make a ruleset
+re-applicable, and it is wrong here: it wipes *every* table on the host, including ones
+this app does not own — fail2ban's `f2b-table`, libvirt's, docker's. Whoever owns them
+is not notified and keeps assuming its rules are in place.
+
+The `add`/`delete` pair above replaces it, scoped to the two tables this app owns. The
+`add` is a no-op when the table exists and creates an empty one when it does not, so the
+`delete` never fails on a fresh host. Applied with a single `nft -f`, the whole file is
+one atomic transaction.
+
+The startup preflight rejects a base ruleset that declares any other table, and the app
+strips a stray `flush ruleset` at runtime rather than applying it — but the file is
+yours, so keep it correct at the source.
+
+### Coexisting with fail2ban and other nftables users
+
+This app owns exactly two tables: `inet filter` and `ip nat`. It never flushes the
+ruleset, and it persists only those two into `/etc/nftables.conf`, so anything else on
+the host survives every zone, fiber and reset operation.
+
+Two caveats worth knowing before adding another nftables user:
+
+- `ip nat` is a **shared name**: the `iptables-nft` shim uses it too. If libvirt brings
+  up a NAT network or docker starts, their rules land in that table and a `SYSTEM_RESET`
+  will take them with it. `inet filter` has the same exposure with anything writing to
+  the standard filter table.
+- Rules you add by hand to `inet filter` or `ip nat` are persisted by the app, but a
+  `SYSTEM_RESET` recreates both tables from `NFTABLES_RESET_SOURCE`. Anything that must
+  survive a reset — rate limiting, extra accepts — belongs in that file, not in the live
+  ruleset.
+
+fail2ban with `banaction = nftables-multiport` needs no special handling: it creates its
+own `inet f2b-table` at a lower hook priority, so its bans are evaluated before this
+app's rules and neither side touches the other's tables.
 
 ### dnsmasq
 

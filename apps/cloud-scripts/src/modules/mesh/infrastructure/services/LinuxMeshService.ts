@@ -1,4 +1,5 @@
 import { Command } from '@/libs/Command';
+import { NftablesRuleset } from '@/libs/NftablesRuleset';
 import fs from 'fs';
 
 const fsPromises = fs.promises;
@@ -24,11 +25,6 @@ export class LinuxMeshService extends MeshService {
     '10.0.0.0/8',
     '172.16.0.0/12',
     '192.168.0.0/16',
-  ];
-
-  private static readonly OWNED_TABLES: ReadonlyArray<[string, string]> = [
-    ['inet', 'filter'],
-    ['ip', 'nat'],
   ];
 
   constructor() {
@@ -388,7 +384,7 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
 
   private async dumpOwnedTables(): Promise<string> {
     const dumps: string[] = [];
-    for (const [family, name] of LinuxMeshService.OWNED_TABLES) {
+    for (const [family, name] of NftablesRuleset.OWNED_TABLES) {
       dumps.push(
         await Command.runCommand('sudo', ['nft', 'list', 'table', family, name]),
       );
@@ -397,12 +393,8 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
     return dumps.join('\n');
   }
 
-  private stripFlushRuleset(rulesetText: string): string {
-    return rulesetText.replace(/^[ \t]*flush[ \t]+ruleset[ \t]*$/gm, '');
-  }
-
   private addBeforeDeleteGuards(): string[] {
-    return LinuxMeshService.OWNED_TABLES.flatMap(([family, name]) => [
+    return NftablesRuleset.OWNED_TABLES.flatMap(([family, name]) => [
       `add table ${family} ${name}`,
       `delete table ${family} ${name}`,
     ]);
@@ -413,21 +405,14 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
   }
 
   private assertOnlyOwnedTables(rulesetText: string): void {
-    const declared = [
-      ...rulesetText.matchAll(/^table\s+(\S+)\s+(\S+)\s*\{/gm),
-    ].map(([, family, name]) => `${family} ${name}`);
-    const expected = LinuxMeshService.OWNED_TABLES.map(
-      ([family, name]) => `${family} ${name}`,
-    );
-
-    const foreign = declared.filter((t) => !expected.includes(t));
+    const foreign = NftablesRuleset.foreignTables(rulesetText);
     if (foreign.length) {
       throw new Error(
         `Refusing to write a ruleset with foreign tables: ${foreign.join(', ')}`,
       );
     }
 
-    const missing = expected.filter((t) => !declared.includes(t));
+    const missing = NftablesRuleset.missingTables(rulesetText);
     if (missing.length) {
       throw new Error(
         `Refusing to write an incomplete ruleset, missing: ${missing.join(', ')}`,
@@ -438,7 +423,7 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
   private extractOwnedTables(rulesetText: string): string {
     const blocks: string[] = [];
 
-    for (const [family, name] of LinuxMeshService.OWNED_TABLES) {
+    for (const [family, name] of NftablesRuleset.OWNED_TABLES) {
       const header = new RegExp(`^table\\s+${family}\\s+${name}\\s*\\{`, 'm');
       const match = header.exec(rulesetText);
       if (!match) {
@@ -1169,7 +1154,7 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
       throw new Error('NFTABLES_RESET_SOURCE environment variable is required for mesh reset');
     }
 
-    const baseRuleset = this.stripFlushRuleset(
+    const baseRuleset = NftablesRuleset.stripFlushRuleset(
       await this.readRootFile(this.nftResetSourcePath),
     );
     this.assertOnlyOwnedTables(baseRuleset);
