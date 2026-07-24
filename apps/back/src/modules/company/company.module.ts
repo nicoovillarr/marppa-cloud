@@ -19,6 +19,6 @@ import { AuthModule } from '@/auth/auth.module';
       useClass: CompanyPrismaRepository,
     },
   ],
-  exports: [CompanyApiService],
+  exports: [CompanyApiService, CompanyService],
 })
 export class CompanyModule {}

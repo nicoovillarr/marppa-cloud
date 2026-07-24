@@ -10,6 +10,7 @@ import { EventModule } from '@/event/event.module';
 import { HiveModule } from '@/hive/hive.module';
 import { MeshModule } from '@/mesh/mesh.module';
 import { OrbitModule } from '@/orbit/orbit.module';
+import { SystemModule } from '@/system/system.module';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -37,6 +38,7 @@ const env = process.env.NODE_ENV ?? 'development';
     HiveModule,
     MeshModule,
     OrbitModule,
+    SystemModule,
   ],
 })
 export class AppModule {

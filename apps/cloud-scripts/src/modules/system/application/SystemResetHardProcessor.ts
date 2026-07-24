@@ -84,7 +84,6 @@ export class SystemResetHardProcessor implements IEventProcessor {
         await tx.node.deleteMany(),
         await tx.zone.deleteMany(),
         await tx.worker.deleteMany(),
-        await tx.atom.deleteMany(),
       ];
 
       return deletions.reduce((total, result) => total + result.count, 0);

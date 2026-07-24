@@ -30,6 +30,7 @@
       "@/hive/*": ["./src/modules/hive/*"],
       "@/mesh/*": ["./src/modules/mesh/*"],
       "@/orbit/*": ["./src/modules/orbit/*"],
+      "@/system/*": ["./src/modules/system/*"],
     }
   }
 }
