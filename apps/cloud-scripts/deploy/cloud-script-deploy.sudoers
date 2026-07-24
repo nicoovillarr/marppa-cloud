@@ -1,10 +1,1 @@
-# Install as: /etc/sudoers.d/cloud-script-deploy  (mode 0440)
-#   sudo install -m 0440 -o root -g root \
-#     /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cloud-script-deploy.sudoers \
-#     /etc/sudoers.d/cloud-script-deploy
-#   sudo visudo -c -f /etc/sudoers.d/cloud-script-deploy   # must print "parsed OK"
-#
-# Lets the CI runner (running as cloud-script) restart only its own service.
-# Nothing else is granted — the deploy writes /opt/cloud-script/marppa-cloud as
-# the owning user, so no sudo is needed for the file sync.
-cloud-script ALL=(root) NOPASSWD: /usr/bin/systemctl restart cloud-script, /usr/bin/systemctl is-active cloud-script
+cloud-deploy ALL=(root) NOPASSWD: /usr/local/sbin/install-cloud-script-unit.sh, /usr/bin/systemctl restart cloud-script, /usr/bin/systemctl is-active cloud-script

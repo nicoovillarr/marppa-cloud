@@ -49,6 +49,8 @@ jobs:
         run: |
           mkdir -p "$DEPLOY_DIR"
           rsync -a --delete \
+            --chown=cloud-deploy:cloud-script \
+            --chmod=Dg+rx,Fg+r \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='**/.env' \
@@ -65,16 +67,7 @@ jobs:
             > "$DEPLOY_DIR/DEPLOYED_SHA"
 
       - name: Install systemd unit
-        run: |
-          UNIT_SRC="$DEPLOY_DIR/apps/cloud-scripts/deploy/cloud-script.service"
-          UNIT_DST="/etc/systemd/system/$SERVICE_NAME.service"
-          if cmp -s "$UNIT_SRC" "$UNIT_DST"; then
-            echo "unit unchanged"
-          else
-            sudo install -m 0644 -o root -g root "$UNIT_SRC" "$UNIT_DST"
-            sudo systemctl daemon-reload
-            echo "unit updated"
-          fi
+        run: sudo /usr/local/sbin/install-cloud-script-unit.sh
 
       - name: Restart service
         run: sudo systemctl restart "$SERVICE_NAME"
