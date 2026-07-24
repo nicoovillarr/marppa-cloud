@@ -305,18 +305,14 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
     await this.writeRootFile(dnsmasqFile, dnsmasqConf);
   }
 
-  public async createNftablesConfig(
-    bridgeName,
-    cidr,
-    gateway,
-    externalInterface = this.bridgeName,
-  ) {
-    if (!externalInterface)
-      throw new Error('BRIDGE_NAME environment variable is required');
-    console.log(`Configuring nftables for bridge: ${bridgeName}`);
-
+  private zoneRuleCommands(
+    bridgeName: string,
+    cidr: string,
+    gateway: string,
+    externalInterface: string,
+  ): string[][] {
     const inet = ['add', 'rule', 'inet', 'filter'];
-    const commands: string[][] = [
+    return [
       [...inet, 'input', 'iifname', `"${bridgeName}"`, 'ct', 'state', 'established,related', 'accept'],
       [...inet, 'input', 'iifname', `"${bridgeName}"`, 'udp', 'dport', '67', 'accept'],
       [...inet, 'input', 'iifname', `"${bridgeName}"`, 'ip', 'daddr', gateway, 'udp', 'dport', '53', 'accept'],
@@ -341,6 +337,44 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
       [...inet, 'forward', 'oifname', `"${bridgeName}"`, 'iifname', `"${externalInterface}"`, 'accept'],
       [...inet, 'forward', 'oifname', `"${bridgeName}"`, 'drop'],
     ];
+  }
+
+  private fiberRuleCommands(
+    protocol: string,
+    externalPort: string,
+    targetIp: string,
+    internalPort: string,
+    externalInterface: string,
+  ): string[][] {
+    return [
+      [
+        'add', 'rule', 'ip', 'nat', 'prerouting', 'iifname', externalInterface,
+        protocol, 'dport', externalPort, 'dnat', 'to', `${targetIp}:${internalPort}`,
+      ],
+      [
+        'add', 'rule', 'inet', 'filter', 'forward', 'ct', 'state', 'new',
+        'iifname', externalInterface, 'ip', 'daddr', targetIp,
+        protocol, 'dport', internalPort, 'accept',
+      ],
+    ];
+  }
+
+  public async createNftablesConfig(
+    bridgeName,
+    cidr,
+    gateway,
+    externalInterface = this.bridgeName,
+  ) {
+    if (!externalInterface)
+      throw new Error('BRIDGE_NAME environment variable is required');
+    console.log(`Configuring nftables for bridge: ${bridgeName}`);
+
+    const commands = this.zoneRuleCommands(
+      bridgeName,
+      cidr,
+      gateway,
+      externalInterface,
+    );
 
     console.log(`Adding nftables rules for bridge: ${bridgeName}`);
 
@@ -932,43 +966,17 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
       );
     }
 
-    await Command.runCommand('sudo', [
-      'nft',
-      'add',
-      'rule',
-      'ip',
-      'nat',
-      'prerouting',
-      'iifname',
-      externalInterface,
+    const commands = this.fiberRuleCommands(
       protocol,
-      'dport',
       extPortStr,
-      'dnat',
-      'to',
-      `${targetIp}:${intPortStr}`,
-    ]);
-
-    await Command.runCommand('sudo', [
-      'nft',
-      'add',
-      'rule',
-      'inet',
-      'filter',
-      'forward',
-      'ct',
-      'state',
-      'new',
-      'iifname',
-      externalInterface,
-      'ip',
-      'daddr',
       targetIp,
-      protocol,
-      'dport',
       intPortStr,
-      'accept',
-    ]);
+      externalInterface,
+    );
+
+    for (const args of commands) {
+      await Command.runCommand('sudo', ['nft', ...args]);
+    }
 
     await this.saveNftConfiguration();
     console.log('✅ Port forwarding rule added and saved.');
@@ -1111,38 +1119,62 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
     return zones;
   }
 
-  public async forceResetMesh() {
-    console.log('Forcing reset of mesh configuration...');
-
-    const activeZones = [];
-
-    console.log('Removing all dnsmasq configuration files...');
-    const dnsmasqFiles = await fsPromises.readdir(this.dnsmasqDir);
-    for (const file of dnsmasqFiles) {
-      if (file.startsWith('z-') && file.endsWith('.conf')) {
-        activeZones.push(file.slice(0, -5));
-
-        const dnsmasqFile = path.join(this.dnsmasqDir, file);
-        await this.removeRootFile(dnsmasqFile);
-        console.log(`Removed ${dnsmasqFile}`);
-      }
-    }
-
-    console.log('Removing all zone bridge units...');
-    const networkFiles = await fsPromises.readdir(this.networkDir);
-    for (const file of networkFiles) {
-      const match = file.match(/^10-(z-[a-z0-9]+)\.(netdev|network)$/);
-      if (match) {
-        activeZones.push(match[1]);
-
-        const unitFile = path.join(this.networkDir, file);
-        await this.removeRootFile(unitFile);
-        console.log(`Removed ${unitFile}`);
-      }
-    }
+  public async reconcileMesh(
+    zones: { id: string; cidr: string; gateway: string }[],
+    fibers: {
+      protocol: string;
+      hostPort: number;
+      targetIp: string;
+      targetPort: number;
+    }[],
+  ): Promise<{ removedZones: string[] }> {
+    console.log('Reconciling mesh against the database...');
 
     if (!this.nftResetSourcePath) {
       throw new Error('NFTABLES_RESET_SOURCE environment variable is required for mesh reset');
+    }
+
+    const expectedZones = new Set(zones.map((zone) => zone.id));
+    const orphans = new Set<string>();
+
+    const dnsmasqFiles = await fsPromises.readdir(this.dnsmasqDir);
+    for (const file of dnsmasqFiles) {
+      if (!file.startsWith('z-') || !file.endsWith('.conf')) continue;
+
+      const zoneId = file.slice(0, -5);
+      if (expectedZones.has(zoneId)) continue;
+
+      orphans.add(zoneId);
+      await this.removeRootFile(path.join(this.dnsmasqDir, file));
+      console.log(`Removed orphan dnsmasq config for ${zoneId}`);
+    }
+
+    const networkFiles = await fsPromises.readdir(this.networkDir);
+    for (const file of networkFiles) {
+      const match = file.match(/^10-(z-[a-z0-9]+)\.(netdev|network)$/);
+      if (!match || expectedZones.has(match[1])) continue;
+
+      orphans.add(match[1]);
+      await this.removeRootFile(path.join(this.networkDir, file));
+      console.log(`Removed orphan bridge unit ${file}`);
+    }
+
+    const links = await Command.runCommand('ip', ['-o', 'link', 'show']);
+    for (const match of links.matchAll(/^\d+:\s+(z-[a-z0-9]+)[:@]/gm)) {
+      if (!expectedZones.has(match[1])) orphans.add(match[1]);
+    }
+
+    for (const zoneId of orphans) {
+      if (!(await this.deviceExists(zoneId))) continue;
+
+      try {
+        console.log(`Deleting orphan bridge ${zoneId}...`);
+        await Command.runCommand('sudo', ['ip', 'link', 'delete', zoneId]);
+      } catch (err) {
+        console.error(
+          `Failed to delete bridge ${zoneId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     }
 
     const baseRuleset = NftablesRuleset.stripFlushRuleset(
@@ -1153,18 +1185,35 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
     // The base ruleset must also be applied live: nothing else reloads nftables
     // (restarting the service is avoided so live rules are never lost silently).
     await this.applyOwnedRuleset(this.extractOwnedTables(baseRuleset));
-    await this.saveNftConfiguration();
 
-    for (const zone of new Set(activeZones)) {
-      if (!(await this.deviceExists(zone))) continue;
+    const externalInterface = this.bridgeName;
+    if (!externalInterface)
+      throw new Error('BRIDGE_NAME environment variable is required');
 
-      try {
-        console.log(`Deleting zone ${zone}...`);
-        await Command.runCommand('sudo', ['ip', 'link', 'delete', zone]);
-      } catch (err) {
-        console.error(`Failed to delete bridge ${zone}: ${err instanceof Error ? err.message : String(err)}`);
+    for (const zone of zones) {
+      for (const args of this.zoneRuleCommands(
+        zone.id,
+        zone.cidr,
+        zone.gateway,
+        externalInterface,
+      )) {
+        await Command.runCommand('sudo', ['nft', ...args]);
       }
     }
+
+    for (const fiber of fibers) {
+      for (const args of this.fiberRuleCommands(
+        fiber.protocol,
+        String(fiber.hostPort),
+        fiber.targetIp,
+        String(fiber.targetPort),
+        externalInterface,
+      )) {
+        await Command.runCommand('sudo', ['nft', ...args]);
+      }
+    }
+
+    await this.saveNftConfiguration();
 
     await this.reloadNetworkd();
 
@@ -1174,6 +1223,13 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
     await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
 
     await this.restartServices();
+
+    return { removedZones: [...orphans] };
+  }
+
+  public async forceResetMesh(): Promise<{ removedZones: string[] }> {
+    console.log('Forcing reset of mesh configuration...');
+    return this.reconcileMesh([], []);
   }
 
   public async verifyWorkerConnectivity(ip, timeout = 10) {

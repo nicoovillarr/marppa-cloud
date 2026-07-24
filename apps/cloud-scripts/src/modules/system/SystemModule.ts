@@ -5,13 +5,14 @@ import { WorkerModule } from '@/worker/WorkerModule';
 import { MeshModule } from '@/mesh/MeshModule';
 import { OrbitModule } from '@/orbit/OrbitModule';
 import { SystemResetProcessor } from './application/SystemResetProcessor';
+import { SystemResetHardProcessor } from './application/SystemResetHardProcessor';
 import { DeleteProcessor } from '@/system/application/DeleteProcessor';
 import { HostPreflightService } from './infrastructure/services/HostPreflightService';
 
 @Module({
   imports: [SharedModule, EventModule, WorkerModule, MeshModule, OrbitModule],
   providers: [DeleteProcessor, HostPreflightService],
-  processors: [SystemResetProcessor],
+  processors: [SystemResetProcessor, SystemResetHardProcessor],
   exports: [HostPreflightService],
 })
 export class SystemModule {}

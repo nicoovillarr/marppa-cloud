@@ -15,5 +15,7 @@ export abstract class OrbitService {
   
   abstract deleteNginxConfig(portalId: string): Promise<void>;
   
-  abstract forceResetOrbit(): Promise<void>;
+  abstract reconcileOrbit(expectedPortalIds: string[]): Promise<string[]>;
+
+  abstract forceResetOrbit(): Promise<string[]>;
 }

@@ -105,8 +105,22 @@ export class StubMeshService extends MeshService {
     return [];
   }
 
-  public async forceResetMesh(): Promise<void> {
+  public async reconcileMesh(
+    zones: { id: string; cidr: string; gateway: string }[],
+    fibers: {
+      protocol: string;
+      hostPort: number;
+      targetIp: string;
+      targetPort: number;
+    }[],
+  ): Promise<{ removedZones: string[] }> {
+    console.log(`[STUB] reconcileMesh: ${zones.length} zones ${fibers.length} fibers`);
+    return { removedZones: [] };
+  }
+
+  public async forceResetMesh(): Promise<{ removedZones: string[] }> {
     console.log('[STUB] forceResetMesh');
+    return { removedZones: [] };
   }
 
   public async verifyWorkerConnectivity(ip: string, timeout?: number): Promise<boolean> {

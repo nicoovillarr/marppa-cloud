@@ -33,7 +33,13 @@ export class StubOrbitService extends OrbitService {
     console.log(`[STUB] deleteNginxConfig: portal=${portalId}`);
   }
 
-  public async forceResetOrbit(): Promise<void> {
+  public async reconcileOrbit(expectedPortalIds: string[]): Promise<string[]> {
+    console.log(`[STUB] reconcileOrbit: ${expectedPortalIds.length} expected`);
+    return [];
+  }
+
+  public async forceResetOrbit(): Promise<string[]> {
     console.log('[STUB] forceResetOrbit');
+    return [];
   }
 }

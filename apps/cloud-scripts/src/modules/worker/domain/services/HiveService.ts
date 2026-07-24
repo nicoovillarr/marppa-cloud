@@ -56,7 +56,9 @@ export abstract class HiveService {
   
   abstract getDefinedWorkers(): Promise<string[]>;
   
-  abstract forceResetHive(): Promise<void>;
+  abstract reconcileWorkers(expectedVmNames: string[]): Promise<string[]>;
+
+  abstract forceResetHive(): Promise<string[]>;
   
   abstract testWorkerLogin(vmName: string): Promise<boolean>;
   

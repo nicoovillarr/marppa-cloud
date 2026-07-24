@@ -2,6 +2,7 @@ import { EventType } from '@marppa-cloud/db';
 
 export const FAILED_VARIANT: Partial<Record<EventType, EventType>> = {
   [EventType.SYSTEM_RESET]: EventType.SYSTEM_RESET_FAILED,
+  [EventType.SYSTEM_RESET_HARD]: EventType.SYSTEM_RESET_HARD_FAILED,
   [EventType.WORKER_CREATE]: EventType.WORKER_CREATE_FAILED,
   [EventType.WORKER_UPDATE]: EventType.WORKER_UPDATE_FAILED,
   [EventType.WORKER_START]: EventType.WORKER_START_FAILED,

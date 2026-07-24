@@ -234,33 +234,29 @@ export class LinuxOrbitService extends OrbitService {
     console.log(`Nginx config for portal ${portalId} deleted`);
   }
 
-  public async forceResetOrbit() {
-    const enabledFiles = (
-      await fsPromises.readdir('/etc/nginx/sites-enabled')
-    ).filter((file) => file.startsWith('p-'));
+  public async reconcileOrbit(expectedPortalIds: string[]): Promise<string[]> {
+    const expected = new Set(expectedPortalIds);
+    const removed = new Set<string>();
 
-    console.log(
-      'Removing enabled Nginx config files:',
-      enabledFiles.join(', '),
-    );
+    const orphansIn = async (dir: string): Promise<string[]> => {
+      const files = (await fsPromises.readdir(dir)).filter(
+        (file) => file.startsWith('p-') && file.endsWith('.conf'),
+      );
 
-    await Promise.all(
-      enabledFiles.map((file) =>
-        fsPromises.unlink(`/etc/nginx/sites-enabled/${file}`),
-      ),
-    );
+      return files.filter((file) => !expected.has(file.slice(0, -5)));
+    };
 
-    const files = (
-      await fsPromises.readdir('/etc/nginx/sites-available')
-    ).filter((file) => file.startsWith('p-'));
+    for (const dir of ['/etc/nginx/sites-enabled', '/etc/nginx/sites-available']) {
+      const orphans = await orphansIn(dir);
+      if (orphans.length) {
+        console.log(`Removing orphan Nginx configs from ${dir}:`, orphans.join(', '));
+      }
 
-    console.log('Removing available Nginx config files:', files.join(', '));
-
-    await Promise.all(
-      files.map((file) =>
-        fsPromises.unlink(`/etc/nginx/sites-available/${file}`),
-      ),
-    );
+      for (const file of orphans) {
+        await fsPromises.unlink(`${dir}/${file}`);
+        removed.add(file.slice(0, -5));
+      }
+    }
 
     try {
       await Command.runCommand('sudo', ['nginx', '-t'], true);
@@ -268,6 +264,12 @@ export class LinuxOrbitService extends OrbitService {
     } catch (error) {
       console.error(`Nginx configuration test failed: ${error.message}`);
     }
+
+    return [...removed];
+  }
+
+  public async forceResetOrbit(): Promise<string[]> {
+    return this.reconcileOrbit([]);
   }
 
   private renderNginxBlock(obj: NginxBlock, indent = 0): string {
