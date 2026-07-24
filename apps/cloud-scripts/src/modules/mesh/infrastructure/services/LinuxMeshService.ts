@@ -26,6 +26,11 @@ export class LinuxMeshService extends MeshService {
     '192.168.0.0/16',
   ];
 
+  private static readonly OWNED_TABLES: ReadonlyArray<[string, string]> = [
+    ['inet', 'filter'],
+    ['ip', 'nat'],
+  ];
+
   constructor() {
     super();
     this.bridgeName = process.env.BRIDGE_NAME ?? '';
@@ -357,12 +362,9 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
         err instanceof Error ? err.message : String(err),
       );
       console.log('Restoring last backup...');
-      await Command.runCommand('sudo', [
-        'cp',
-        this.latestBackup(),
-        this.nftConfPath,
-      ]);
-      await Command.runCommand('sudo', ['nft', '-f', this.nftConfPath]);
+      const backup = await this.readRootFile(this.latestBackup());
+      await this.applyOwnedRuleset(this.extractOwnedTables(backup));
+      await this.saveNftConfiguration();
       throw err;
     }
 
@@ -384,16 +386,109 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
     console.log(`Backup created at ${backupFile}`);
   }
 
+  private async dumpOwnedTables(): Promise<string> {
+    const dumps: string[] = [];
+    for (const [family, name] of LinuxMeshService.OWNED_TABLES) {
+      dumps.push(
+        await Command.runCommand('sudo', ['nft', 'list', 'table', family, name]),
+      );
+    }
+
+    return dumps.join('\n');
+  }
+
+  private stripFlushRuleset(rulesetText: string): string {
+    return rulesetText.replace(/^[ \t]*flush[ \t]+ruleset[ \t]*$/gm, '');
+  }
+
+  private addBeforeDeleteGuards(): string[] {
+    return LinuxMeshService.OWNED_TABLES.flatMap(([family, name]) => [
+      `add table ${family} ${name}`,
+      `delete table ${family} ${name}`,
+    ]);
+  }
+
+  private renderOwnedRuleset(tableDefs: string): string {
+    return `${this.addBeforeDeleteGuards().join('\n')}\n\n${tableDefs.trim()}\n`;
+  }
+
+  private assertOnlyOwnedTables(rulesetText: string): void {
+    const declared = [
+      ...rulesetText.matchAll(/^table\s+(\S+)\s+(\S+)\s*\{/gm),
+    ].map(([, family, name]) => `${family} ${name}`);
+    const expected = LinuxMeshService.OWNED_TABLES.map(
+      ([family, name]) => `${family} ${name}`,
+    );
+
+    const foreign = declared.filter((t) => !expected.includes(t));
+    if (foreign.length) {
+      throw new Error(
+        `Refusing to write a ruleset with foreign tables: ${foreign.join(', ')}`,
+      );
+    }
+
+    const missing = expected.filter((t) => !declared.includes(t));
+    if (missing.length) {
+      throw new Error(
+        `Refusing to write an incomplete ruleset, missing: ${missing.join(', ')}`,
+      );
+    }
+  }
+
+  private extractOwnedTables(rulesetText: string): string {
+    const blocks: string[] = [];
+
+    for (const [family, name] of LinuxMeshService.OWNED_TABLES) {
+      const header = new RegExp(`^table\\s+${family}\\s+${name}\\s*\\{`, 'm');
+      const match = header.exec(rulesetText);
+      if (!match) {
+        throw new Error(`Ruleset is missing table ${family} ${name}`);
+      }
+
+      let depth = 0;
+      let end = -1;
+      for (let i = match.index; i < rulesetText.length; i++) {
+        if (rulesetText[i] === '{') depth++;
+        else if (rulesetText[i] === '}') {
+          depth--;
+          if (depth === 0) {
+            end = i + 1;
+            break;
+          }
+        }
+      }
+
+      if (end === -1) {
+        throw new Error(`Unterminated table ${family} ${name} in ruleset`);
+      }
+
+      blocks.push(rulesetText.slice(match.index, end));
+    }
+
+    return blocks.join('\n');
+  }
+
+  private async applyOwnedRuleset(tableDefs: string): Promise<void> {
+    const ruleset = this.renderOwnedRuleset(tableDefs);
+    this.assertOnlyOwnedTables(ruleset);
+
+    const tmpPath = path.join(os.tmpdir(), `nftables-apply-${Date.now()}.conf`);
+    await fsPromises.writeFile(tmpPath, ruleset, { encoding: 'utf8' });
+
+    try {
+      await Command.runCommand('sudo', ['nft', '-f', tmpPath]);
+    } finally {
+      await fsPromises.rm(tmpPath, { force: true });
+    }
+  }
+
   public async saveNftConfiguration() {
     console.log('💾 Saving nftables configuration...');
 
-    const tmpPath = path.join(os.tmpdir(), `nftables-${Date.now()}.conf`);
-    const ruleset = await Command.runCommand('sudo', [
-      'nft',
-      'list',
-      'ruleset',
-    ]);
+    const ruleset = this.renderOwnedRuleset(await this.dumpOwnedTables());
+    this.assertOnlyOwnedTables(ruleset);
 
+    const tmpPath = path.join(os.tmpdir(), `nftables-${Date.now()}.conf`);
     await fsPromises.writeFile(tmpPath, ruleset, { encoding: 'utf8' });
 
     try {
@@ -1073,10 +1168,16 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
     if (!this.nftResetSourcePath) {
       throw new Error('NFTABLES_RESET_SOURCE environment variable is required for mesh reset');
     }
-    await Command.runCommand('sudo', ['cp', this.nftResetSourcePath, this.nftConfPath]);
+
+    const baseRuleset = this.stripFlushRuleset(
+      await this.readRootFile(this.nftResetSourcePath),
+    );
+    this.assertOnlyOwnedTables(baseRuleset);
+
     // The base ruleset must also be applied live: nothing else reloads nftables
     // (restarting the service is avoided so live rules are never lost silently).
-    await Command.runCommand('sudo', ['nft', '-f', this.nftConfPath]);
+    await this.applyOwnedRuleset(this.extractOwnedTables(baseRuleset));
+    await this.saveNftConfiguration();
 
     for (const zone of new Set(activeZones)) {
       if (!(await this.deviceExists(zone))) continue;
