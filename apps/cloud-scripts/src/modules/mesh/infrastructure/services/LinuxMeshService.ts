@@ -594,16 +594,7 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
       if (err.code !== 'ENOENT') throw err;
     }
 
-    let confText = await this.readRootFile(this.nftConfPath);
-    const nftFilePath = `/etc/nftables.d/${bridgeName}.conf`;
-    const includeLine = `include "${nftFilePath}"`;
-    if (confText.includes(includeLine)) {
-      confText = confText.replace(includeLine, '');
-      await this.writeRootFile(this.nftConfPath, confText, '600');
-    }
-
     await this.removeRootFile(dnsmasqFile);
-    await this.removeRootFile(nftFilePath);
 
     await this.destroyInterface(bridgeName);
 
