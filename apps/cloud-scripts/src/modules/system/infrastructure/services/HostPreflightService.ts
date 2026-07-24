@@ -189,8 +189,9 @@ export class HostPreflightService {
       await Command.runCommand('sudo', ['-n', 'true']);
     } catch {
       problems.push(
-        'Passwordless sudo is not available. Install /etc/sudoers.d/cloud-scripts ' +
-        '(see apps/cloud-scripts/WINDOWS_DEV.md §6).',
+        `Passwordless sudo is not available for '${os.userInfo().username}', the user ` +
+        'running this process. /etc/sudoers.d/cloud-scripts must grant that exact user ' +
+        '(see README §1 "Passwordless sudo" for a dev run, §3.2 step 5 for a service).',
       );
     }
   }

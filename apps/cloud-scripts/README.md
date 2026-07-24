@@ -12,6 +12,29 @@ owns the bridges and the VMs.
 
 ## 1. Requirements
 
+### Two ways to run it — decide first
+
+Everything below assumes one of these, and they differ in **which Unix user owns the
+setup**:
+
+| | Development | Service |
+|---|---|---|
+| How | `npm run dev` from a clone anywhere | systemd unit, `/opt/cloud-script/marppa-cloud` |
+| Runs as | your own login user (`$USER`) | a dedicated `cloud-script` account |
+| Setup | §1 as written, then §3.1 | §1 substituting the user, then §3.2 |
+
+The app shells out through `sudo` for `ip`, `nft`, `virsh` and friends, so **the
+passwordless sudo grant must name the user the process actually runs as**. That is the
+single thing people get wrong: they follow §1 as `$USER`, then install the systemd unit
+and the service dies in the preflight because `cloud-script` has no sudo.
+
+The startup preflight cannot catch this for you — it runs `sudo -n true` as whoever
+started the process, so it validates the identity it happens to have, not the one you
+intended.
+
+If you want the service, you can go straight to §3.2: it repeats every §1 step with the
+right ownership.
+
 ### Host
 
 | Requirement | Notes |
@@ -42,6 +65,9 @@ from systemd. The startup preflight lists anything missing.
 
 ### System users, directories and permissions
 
+`$USER` below is the account the app will run as. For a service install replace every
+occurrence with `cloud-script` — or just follow §3.2, which does exactly that.
+
 ```bash
 # libvirt access for the user running this app
 sudo usermod -aG libvirt,kvm $USER
@@ -64,6 +90,12 @@ The process runs **unprivileged**: every file under `/etc` is written via
 `sudo install`, never directly. Do not run the app as root.
 
 ### Passwordless sudo
+
+The grant below names `$USER`. **It must name whoever runs the process.** For a service
+install the repo ships the same rule already written for `cloud-script` —
+`deploy/cloud-scripts.sudoers`, installed in §3.2 — and it lands on the same
+`/etc/sudoers.d/cloud-scripts` path, so the two replace each other rather than stacking.
+If you run both ways on one host, grant both users.
 
 Never write into `/etc/sudoers.d` directly. A truncated line or an indented heredoc
 terminator leaves a malformed file, and sudo then refuses **every** invocation
@@ -229,6 +261,10 @@ process refuses to boot with a list of what is wrong.
 
 ## 3. Install and run
 
+### 3.1 Development
+
+Runs as your own login user, from a clone anywhere. Requires §1 done as `$USER`.
+
 ```bash
 # From the repo root
 npm ci
@@ -241,15 +277,80 @@ cd apps/back && npx prisma migrate deploy
 # Seed: root company, root user, worker families/flavors and the Ubuntu cloud image
 npm run prisma:seed
 
-# Build and start the worker
+# Start the worker
 cd ../cloud-scripts
-npm run build
-npm start
+npm run dev                   # ts-node; npm run dev:watch to reload on change
 ```
 
-`npm start` uses `scripts/register-aliases.js` to resolve the `@/...` path aliases at
-runtime — `node dist/index.js` on its own does not work. For development use
-`npm run dev` (ts-node) or `npm run dev:watch`.
+To run the compiled build instead, `npm run build && npm start`. `npm start` goes
+through `scripts/register-aliases.js` to resolve the `@/...` path aliases at runtime —
+`node dist/index.js` on its own does not work.
+
+### 3.2 Running as a service
+
+Runs as a dedicated `cloud-script` account out of `/opt/cloud-script/marppa-cloud`,
+which is what `deploy/cloud-script.service` and `deploy/cloud-scripts.sudoers` assume.
+Do **not** do §1 as `$USER` and then this — the sudo grant would name the wrong user.
+
+```bash
+# 1. Service account, with /opt/cloud-script as its home
+sudo useradd -m -d /opt/cloud-script -s /bin/bash cloud-script
+sudo usermod -aG libvirt,kvm cloud-script
+
+# 2. Host state from §1, owned by the service user
+sudo mkdir -p /var/lib/libvirt/images /var/lib/libvirt/cloud-init
+sudo chown -R cloud-script:libvirt /var/lib/libvirt/images /var/lib/libvirt/cloud-init
+sudo chmod 775 /var/lib/libvirt/images /var/lib/libvirt/cloud-init
+sudo mkdir -p /etc/dnsmasq.d /etc/systemd/network /etc/nft-backups
+sudo chmod 755 /etc/nft-backups
+
+# 3. Code, built as the service user
+sudo -u cloud-script -H git clone <your-fork> /opt/cloud-script/marppa-cloud
+cd /opt/cloud-script/marppa-cloud
+sudo -u cloud-script -H npm ci
+sudo -u cloud-script -H npm run prisma:generate -w marppa-cloud-scripts
+sudo -u cloud-script -H npm run build:shared
+sudo -u cloud-script -H npm run build -w marppa-cloud-scripts
+sudo -u cloud-script -H mkdir -p apps/cloud-scripts/.logs
+
+# 4. Config — secrets, so 600 and owned by the service user only
+sudo -u cloud-script cp apps/cloud-scripts/.env.template apps/cloud-scripts/.env.local
+sudo -u cloud-script chmod 600 apps/cloud-scripts/.env.local
+sudo -u cloud-script nano apps/cloud-scripts/.env.local    # fill it per §2
+```
+
+Set `USERNAME=cloud-script` in that file: it is the account `guestfish` edits images as,
+and it has to match the user the process runs under.
+
+Then the two privileged pieces. The sudo grant replaces the `$USER` one from §1 (same
+destination path), and the unit is the one the service boots from:
+
+```bash
+# 5. Passwordless sudo for the SERVICE user
+sudo visudo -cf apps/cloud-scripts/deploy/cloud-scripts.sudoers   # must print "parsed OK"
+sudo install -m 0440 -o root -g root \
+  apps/cloud-scripts/deploy/cloud-scripts.sudoers /etc/sudoers.d/cloud-scripts
+sudo -l -U cloud-script            # lists what the service user may run, NOPASSWD
+
+# 6. systemd unit
+sudo install -m 0644 -o root -g root \
+  apps/cloud-scripts/deploy/cloud-script.service /etc/systemd/system/cloud-script.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now cloud-script
+
+systemctl status cloud-script
+journalctl -u cloud-script -f
+```
+
+The binary paths in `cloud-scripts.sudoers` are host-specific — sudo resolves each bare
+command through its `secure_path`, so `ip`/`nft`/`sysctl` land under `/usr/sbin` on a
+usr-merged system and elsewhere otherwise. If a command comes back as `command not
+allowed` at runtime, the sudo log line names the path that was actually resolved; fix
+the file to match. Step 5's `sudo -l -U cloud-script` shows the grant as sudo resolved
+it, which catches a wrong user or a bad path before the service ever starts.
+
+Once this works and you want pushes to deploy themselves, `deploy/README.md` covers the
+self-hosted GitHub Actions runner, which builds on exactly this layout.
 
 A healthy boot looks like this:
 
