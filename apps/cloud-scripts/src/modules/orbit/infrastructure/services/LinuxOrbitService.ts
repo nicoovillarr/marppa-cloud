@@ -239,11 +239,21 @@ export class LinuxOrbitService extends OrbitService {
     const removed = new Set<string>();
 
     const orphansIn = async (dir: string): Promise<string[]> => {
-      const files = (await fsPromises.readdir(dir)).filter(
-        (file) => file.startsWith('p-') && file.endsWith('.conf'),
-      );
+      let entries: string[];
+      try {
+        entries = await fsPromises.readdir(dir);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          console.log(`${dir} does not exist, nothing to reconcile there`);
+          return [];
+        }
 
-      return files.filter((file) => !expected.has(file.slice(0, -5)));
+        throw error;
+      }
+
+      return entries
+        .filter((file) => file.startsWith('p-') && file.endsWith('.conf'))
+        .filter((file) => !expected.has(file.slice(0, -5)));
     };
 
     for (const dir of ['/etc/nginx/sites-enabled', '/etc/nginx/sites-available']) {
@@ -258,11 +268,13 @@ export class LinuxOrbitService extends OrbitService {
       }
     }
 
-    try {
-      await Command.runCommand('sudo', ['nginx', '-t'], true);
-      await Command.runCommand('sudo', ['systemctl', 'restart', 'nginx'], true);
-    } catch (error) {
-      console.error(`Nginx configuration test failed: ${error.message}`);
+    if (removed.size) {
+      try {
+        await Command.runCommand('sudo', ['nginx', '-t'], true);
+        await Command.runCommand('sudo', ['systemctl', 'restart', 'nginx'], true);
+      } catch (error) {
+        console.error(`Nginx configuration test failed: ${error.message}`);
+      }
     }
 
     return [...removed];
