@@ -1127,6 +1127,7 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
       targetIp: string;
       targetPort: number;
     }[],
+    protectedZoneIds: string[] = [],
   ): Promise<{ removedZones: string[] }> {
     console.log('Reconciling mesh against the database...');
 
@@ -1134,7 +1135,10 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
       throw new Error('NFTABLES_RESET_SOURCE environment variable is required for mesh reset');
     }
 
-    const expectedZones = new Set(zones.map((zone) => zone.id));
+    const expectedZones = new Set([
+      ...zones.map((zone) => zone.id),
+      ...protectedZoneIds,
+    ]);
     const orphans = new Set<string>();
 
     const dnsmasqFiles = await fsPromises.readdir(this.dnsmasqDir);

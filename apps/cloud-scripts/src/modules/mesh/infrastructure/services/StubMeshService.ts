@@ -113,6 +113,7 @@ export class StubMeshService extends MeshService {
       targetIp: string;
       targetPort: number;
     }[],
+    protectedZoneIds: string[] = [],
   ): Promise<{ removedZones: string[] }> {
     console.log(`[STUB] reconcileMesh: ${zones.length} zones ${fibers.length} fibers`);
     return { removedZones: [] };

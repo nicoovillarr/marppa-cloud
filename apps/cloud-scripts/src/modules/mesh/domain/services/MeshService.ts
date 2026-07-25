@@ -55,6 +55,7 @@ export abstract class MeshService {
       targetIp: string;
       targetPort: number;
     }[],
+    protectedZoneIds?: string[],
   ): Promise<{ removedZones: string[] }>;
 
   abstract forceResetMesh(): Promise<{ removedZones: string[] }>;

@@ -40,15 +40,17 @@ export class SystemResetProcessor implements IEventProcessor {
       await this.preflightService.run();
 
       const alive = { status: { not: ResourceStatus.DELETED } };
+      const active = { status: ResourceStatus.ACTIVE };
 
-      const [workers, zones, fibers, portals] = await Promise.all([
+      const [workers, zones, protectedZones, fibers, portals] = await Promise.all([
         this.prisma.worker.findMany({ where: alive, select: { id: true } }),
         this.prisma.zone.findMany({
-          where: alive,
+          where: active,
           select: { id: true, cidr: true, gateway: true },
         }),
+        this.prisma.zone.findMany({ where: alive, select: { id: true } }),
         this.prisma.fiber.findMany({
-          where: { ...alive, hostPort: { not: null }, node: alive },
+          where: { ...active, hostPort: { not: null }, node: active },
           select: {
             protocol: true,
             hostPort: true,
@@ -71,6 +73,7 @@ export class SystemResetProcessor implements IEventProcessor {
           targetIp: fiber.node.ipAddress,
           targetPort: fiber.targetPort,
         })),
+        protectedZones.map((zone) => zone.id),
       );
 
       const removedPortals = await this.orbitService.reconcileOrbit(
