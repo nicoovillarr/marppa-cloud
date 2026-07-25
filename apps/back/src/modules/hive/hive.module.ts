@@ -9,6 +9,9 @@ import { WorkerDiskApiService } from './application/services/worker-disk.api-ser
 import { WorkerDiskService } from './domain/services/worker-disk.service';
 import { WORKER_DISK_REPOSITORY_SYMBOL } from './domain/repositories/worker-disk.repository';
 import { WorkerDiskPrismaRepository } from './infrastructure/repositories/worker-disk.prisma-repository';
+import { WorkerSshKeyApiService } from './application/services/worker-ssh-key.api-service';
+import { WORKER_SSH_KEY_REPOSITORY_SYMBOL } from './domain/repositories/worker-ssh-key.repository';
+import { WorkerSshKeyPrismaRepository } from './infrastructure/repositories/worker-ssh-key.prisma-repository';
 import { WorkerApiService } from './application/services/worker.api-service';
 import { WorkerFamilyApiService } from './application/services/worker-family.api-service';
 import { WorkerFlavorApiService } from './application/services/worker-flavor.api-service';
@@ -82,6 +85,11 @@ import { MacAddressService } from './domain/services/mac-address.service';
     },
 
     WorkerApiService,
+    WorkerSshKeyApiService,
+    {
+      provide: WORKER_SSH_KEY_REPOSITORY_SYMBOL,
+      useClass: WorkerSshKeyPrismaRepository,
+    },
     WorkerService,
     {
       provide: WORKER_REPOSITORY_SYMBOL,

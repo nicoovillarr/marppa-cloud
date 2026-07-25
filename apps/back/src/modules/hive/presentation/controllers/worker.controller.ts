@@ -17,10 +17,38 @@ import { UpdateWorkerDto } from '../dtos/update-worker.dto';
 import { WorkerWithRelationsResponseModel } from '@/hive/application/models/worker-with-relations.response-model';
 import { WorkerResponseModel } from '@/hive/application/models/worker.response-model';
 import type { Response } from 'express';
+import { WorkerSshKeyApiService } from '@/hive/application/services/worker-ssh-key.api-service';
+import { WorkerSshKeyModel } from '@/hive/domain/models/worker-ssh-key.model';
+import { CreateWorkerSshKeyDto } from '../dtos/create-worker-ssh-key.dto';
 
 @Controller('hive/workers')
 export class WorkerController {
-  constructor(private readonly service: WorkerApiService) { }
+  constructor(
+    private readonly service: WorkerApiService,
+    private readonly sshKeyService: WorkerSshKeyApiService,
+  ) { }
+
+  @Get(':id/ssh-keys')
+  async findSshKeys(@Param('id') id: string): Promise<WorkerSshKeyModel[]> {
+    return this.sshKeyService.findByWorkerId(id);
+  }
+
+  @Post(':id/ssh-keys')
+  async createSshKey(
+    @Param('id') id: string,
+    @Body() data: CreateWorkerSshKeyDto,
+  ): Promise<WorkerSshKeyModel> {
+    return this.sshKeyService.create(id, data);
+  }
+
+  @Delete(':id/ssh-keys/:keyId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteSshKey(
+    @Param('id') id: string,
+    @Param('keyId') keyId: string,
+  ): Promise<void> {
+    return this.sshKeyService.delete(id, Number(keyId));
+  }
 
   @Get()
   async findByOwnerId(

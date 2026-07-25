@@ -8,6 +8,7 @@ import { InlineCode } from "@/core/ui/InlineCode";
 import { closeCurrentDialog } from "@/core/ui/DialogProvider";
 import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
 import { useWorker } from "../models/use-worker";
+import { WorkerSshKeysSection } from "./WorkerSshKeysSection";
 
 interface WorkerManageDialogProps {
   worker: WorkerWithRelationsResponseDto;
@@ -111,6 +112,8 @@ export function WorkerManageDialog({
           </p>
         )}
       </section>
+
+      <WorkerSshKeysSection workerId={worker.id} live={isRunning} />
     </div>
   );
 }
