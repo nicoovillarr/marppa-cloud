@@ -10,6 +10,7 @@ import { FormRadioCards } from "@/core/ui/inputs/form/FormRadioCards";
 import { CodeBlock } from "@/core/ui/CodeBlock";
 import { redirect } from "next/navigation";
 import { InlineCode } from "@/core/ui/InlineCode";
+import { SshKeyPermissionsNote } from "./SshKeyPermissionsNote";
 import * as forge from "node-forge";
 import { useWorker } from "../models/use-worker";
 import { useWorkerImage } from "../models/use-worker-image";
@@ -162,6 +163,7 @@ export function CreateWorkerForm() {
               Please save the SSH credentials:
             </p>
             <CodeBlock code={privatePem} fileName={`${workerName}_id_rsa`} />
+            <SshKeyPermissionsNote fileName={`${workerName}_id_rsa`} />
           </div>
         ),
       });
