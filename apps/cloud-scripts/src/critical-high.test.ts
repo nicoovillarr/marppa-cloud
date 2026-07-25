@@ -92,6 +92,60 @@ test('LinuxHiveService rejects invalid VM names before invoking virsh', async ()
   }
 });
 
+test('EventWorker accepts system events with no primary resource', async () => {
+  let handled = 0;
+  let markFailedCalls = 0;
+
+  const repository = {
+    findById: async () =>
+      ({
+        id: 48,
+        type: EventType.SYSTEM_RESET,
+        createdBy: 'u-1',
+        companyId: 'c-1',
+        processedAt: null,
+        failedAt: null,
+        resources: [],
+        properties: [],
+      }) as any,
+    markProcessed: async () => undefined,
+    markFailed: async () => {
+      markFailedCalls += 1;
+    },
+    incrementRetry: async () => undefined,
+    createEvent: async () => 1,
+    addEventResource: async () => undefined,
+  };
+
+  const registry = {
+    resolve: () => ({
+      handle: async () => {
+        handled += 1;
+      },
+    }),
+  };
+
+  const logger = {
+    info: () => undefined,
+    log: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  };
+
+  const worker = new EventWorker(
+    {} as any,
+    registry as any,
+    logger as any,
+    { classify: async () => ({ kind: 'ready' }) } as any,
+    repository as any,
+  );
+
+  await (worker as any).process({ data: { eventId: 48 } });
+
+  assert.equal(handled, 1);
+  assert.equal(markFailedCalls, 0);
+});
+
 test('LinuxOrbitService rejects injected proxy config values', () => {
   const service = new LinuxOrbitService({} as any);
 

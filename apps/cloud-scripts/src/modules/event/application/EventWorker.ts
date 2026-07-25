@@ -8,6 +8,7 @@ import {
   EventRepository,
 } from '../domain/repositories/EventRepository';
 import { AbortError } from '../domain/errors/AbortError';
+import { expectedPrimaryResources } from '../domain/models/SystemScopedEvents';
 import { RedisService } from '@/shared/infrastructure/services/RedisService';
 import { Inject } from '@/decorators/Inject';
 import { OnModuleDestroy, OnModuleInit } from '@/libs/Container';
@@ -102,9 +103,11 @@ export class EventWorker implements OnModuleInit, OnModuleDestroy {
     const primaries = event.resources.filter(
       (r) => r.role === EventResourceRole.PRIMARY,
     );
-    if (primaries.length !== 1) {
+    const expectedPrimaries = expectedPrimaryResources(event.type as EventType);
+    if (primaries.length !== expectedPrimaries) {
       this.logger.error(
-        `[EventWorker] Event ${eventId} has ${primaries.length} PRIMARY resources (expected 1). Marking as failed.`,
+        `[EventWorker] Event ${eventId} has ${primaries.length} PRIMARY resources ` +
+        `(expected ${expectedPrimaries}). Marking as failed.`,
       );
       await this.repository.markFailed(eventId);
       return;
