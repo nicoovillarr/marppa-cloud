@@ -25,6 +25,7 @@ const BASE_IMAGE_PACKAGES = [
   'ufw',
   'vim',
   'iputils-ping',
+  'qemu-guest-agent',
 ];
 
 /** Budget for a guest to honour the ACPI shutdown before it is powered off. */
@@ -97,6 +98,8 @@ export class LinuxHiveService extends HiveService {
       'systemctl enable ssh',
       '--run-command',
       'systemctl enable nginx',
+      '--run-command',
+      'systemctl enable qemu-guest-agent',
       '--run-command',
       'setcap cap_net_raw+ep /usr/bin/ping || true',
     ]);
