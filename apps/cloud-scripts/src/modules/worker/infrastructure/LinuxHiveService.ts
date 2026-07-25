@@ -790,10 +790,14 @@ local-hostname: ${name}
     return vmNames;
   }
 
-  public async forceResetHive() {
+  public async reconcileWorkers(expectedVmNames: string[]): Promise<string[]> {
+    const expected = new Set(expectedVmNames);
     const workers = await this.getDefinedWorkers();
+    const removed: string[] = [];
 
     for (const worker of workers) {
+      if (expected.has(worker)) continue;
+
       try {
         if (await this.isWorkerRunning(worker)) {
           await this.forceStopWorker(worker);
@@ -801,10 +805,17 @@ local-hostname: ${name}
         }
 
         await this.deleteWorker(worker);
+        removed.push(worker);
       } catch (error) {
         console.error(`Failed to delete worker ${worker}:`, error);
       }
     }
+
+    return removed;
+  }
+
+  public async forceResetHive(): Promise<string[]> {
+    return this.reconcileWorkers([]);
   }
 
   public async testWorkerLogin(vmName: string): Promise<boolean> {

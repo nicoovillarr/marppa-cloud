@@ -62,7 +62,7 @@ export class TransponderDeleteProcessor implements IEventProcessor {
 
       await updateTransponderStatus(ResourceStatus.DELETING);
 
-      await this.orbitService.generateNginxConfig({
+      await this.orbitService.generatePortalConfig({
         ...transponder.portal,
         transponders: transponder.portal.transponders.filter(
           (t: { id: string }) => t.id !== transponder!.id,

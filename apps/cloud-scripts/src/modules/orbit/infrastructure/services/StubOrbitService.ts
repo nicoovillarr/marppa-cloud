@@ -25,15 +25,21 @@ export class StubOrbitService extends OrbitService {
     return { id: 'stub-record-id', name: domain, content: ip };
   }
 
-  public async generateNginxConfig(portal: any, forceTransponder?: any): Promise<void> {
-    console.log(`[STUB] generateNginxConfig: portal=${portal?.id} forceTransponder=${forceTransponder}`);
+  public async generatePortalConfig(portal: any, forceTransponder?: any): Promise<void> {
+    console.log(`[STUB] generatePortalConfig: portal=${portal?.id} forceTransponder=${forceTransponder}`);
   }
 
-  public async deleteNginxConfig(portalId: string): Promise<void> {
-    console.log(`[STUB] deleteNginxConfig: portal=${portalId}`);
+  public async deletePortalConfig(portalId: string): Promise<void> {
+    console.log(`[STUB] deletePortalConfig: portal=${portalId}`);
   }
 
-  public async forceResetOrbit(): Promise<void> {
+  public async reconcileOrbit(expectedPortalIds: string[]): Promise<string[]> {
+    console.log(`[STUB] reconcileOrbit: ${expectedPortalIds.length} expected`);
+    return [];
+  }
+
+  public async forceResetOrbit(): Promise<string[]> {
     console.log('[STUB] forceResetOrbit');
+    return [];
   }
 }

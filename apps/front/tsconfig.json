@@ -47,6 +47,9 @@
       "@/mesh/*": [
         "src/features/mesh/*"
       ],
+      "@/system/*": [
+        "src/features/system/*"
+      ],
       "@/libs/*": [
         "./src/libs/*"
       ],

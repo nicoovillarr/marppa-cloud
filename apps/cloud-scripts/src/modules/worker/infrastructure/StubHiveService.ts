@@ -89,8 +89,14 @@ export class StubHiveService extends HiveService {
     return [];
   }
 
-  public async forceResetHive(): Promise<void> {
+  public async reconcileWorkers(expectedVmNames: string[]): Promise<string[]> {
+    console.log(`[STUB] reconcileWorkers: ${expectedVmNames.length} expected`);
+    return [];
+  }
+
+  public async forceResetHive(): Promise<string[]> {
     console.log('[STUB] forceResetHive');
+    return [];
   }
 
   public async testWorkerLogin(vmName: string): Promise<boolean> {

@@ -2,6 +2,7 @@
 
 import { useDashboardLayout } from "@/dashboard/models/use-dashboard-layout";
 import { DashboardDetails } from "@/dashboard/ui/DashboardDetails";
+import { SystemResetBar } from "@/system/ui/SystemResetBar";
 import { useEffect } from "react";
 
 export default function Page() {
@@ -18,5 +19,10 @@ export default function Page() {
     ]);
   }, []);
 
-  return <DashboardDetails />;
+  return (
+    <div className="flex flex-col gap-8">
+      <SystemResetBar />
+      <DashboardDetails />
+    </div>
+  );
 }

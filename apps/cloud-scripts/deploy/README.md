@@ -56,6 +56,10 @@ resolves `@marppa-cloud/*` through workspace symlinks under `node_modules`, so
 
 ## One-time host setup
 
+This assumes the host already runs cloud-scripts as a service: the `cloud-script`
+account, `/opt/cloud-script/marppa-cloud`, the sudoers grant and the systemd unit. If it
+does not, do `README.md` §3.2 first — everything here builds on that layout.
+
 Create the deploy identity and let it write the tree while `cloud-script` keeps
 read access through the group:
 

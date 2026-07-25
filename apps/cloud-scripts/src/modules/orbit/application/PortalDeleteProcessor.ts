@@ -54,7 +54,7 @@ export class PortalDeleteProcessor implements IEventProcessor {
       }
 
       await updatePortalStatus(ResourceStatus.DELETING);
-      await this.orbitService.deleteNginxConfig(portal.id);
+      await this.orbitService.deletePortalConfig(portal.id);
       await updatePortalStatus(ResourceStatus.DELETED);
 
       const eventCreatedId = await this.repository.createEvent(EventType.PORTAL_DELETED, event.createdBy, event.companyId);
