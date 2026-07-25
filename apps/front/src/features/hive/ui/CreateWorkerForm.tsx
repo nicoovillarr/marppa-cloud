@@ -19,7 +19,7 @@ import { useWorkerFamily } from "../models/use-worker-family";
 import { useDialog } from "@/core/ui/DialogProvider";
 import { ColumnMapping } from "@/core/ui/Table";
 
-const OPENSSH_PUBLIC_KEY = /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+)\s+[A-Za-z0-9+/=]+(\s+\S+)?$/;
+const OPENSSH_PUBLIC_KEY = /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+)[ \t]+[A-Za-z0-9+/=]+([ \t]+[^\r\n]*)?$/;
 
 export function CreateWorkerForm() {
   const [flavors, setFlavors] = useState<WorkerFlavorResponseDto[]>([]);

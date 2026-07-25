@@ -57,7 +57,7 @@ export abstract class HiveService {
   abstract getDefinedWorkers(): Promise<string[]>;
   
   static readonly OPENSSH_PUBLIC_KEY =
-    /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+)\s+[A-Za-z0-9+/=]+(\s+\S+)?$/;
+    /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+)[ \t]+[A-Za-z0-9+/=]+([ \t]+[^\r\n]*)?$/;
 
   abstract isGuestAgentReachable(vmName: string): Promise<boolean>;
 
