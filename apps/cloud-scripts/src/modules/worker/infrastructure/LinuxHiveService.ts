@@ -583,6 +583,83 @@ local-hostname: ${name}
     await this.forceStopWorker(vmName);
   }
 
+  private async guestAgentCommand(
+    vmName: string,
+    payload: Record<string, unknown>,
+  ): Promise<any> {
+    const raw = await Command.runCommand('sudo', [
+      'virsh',
+      'qemu-agent-command',
+      vmName,
+      JSON.stringify(payload),
+    ]);
+
+    return JSON.parse(raw);
+  }
+
+  public async isGuestAgentReachable(vmName: string): Promise<boolean> {
+    this.validateVmName(vmName);
+
+    try {
+      await this.guestAgentCommand(vmName, { execute: 'guest-ping' });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  public async applySshKeys(
+    vmName: string,
+    publicKeys: string[],
+    guestUser = 'ubuntu',
+  ): Promise<void> {
+    this.validateVmName(vmName);
+
+    for (const key of publicKeys) {
+      if (!HiveService.OPENSSH_PUBLIC_KEY.test(key.trim())) {
+        throw new Error(`Refusing to write a malformed SSH public key: ${key}`);
+      }
+    }
+
+    if (!(await this.isWorkerRunning(vmName))) {
+      throw new Error(`VM ${vmName} is not running; cannot update its keys live`);
+    }
+
+    if (!(await this.isGuestAgentReachable(vmName))) {
+      throw new Error(
+        `qemu-guest-agent is not answering on ${vmName}. The image may predate it, ` +
+        'or the agent was stopped inside the guest.',
+      );
+    }
+
+    const path = `/home/${guestUser}/.ssh/authorized_keys`;
+    const contents = publicKeys.map((key) => key.trim()).join('\n') + '\n';
+
+    const opened = await this.guestAgentCommand(vmName, {
+      execute: 'guest-file-open',
+      arguments: { path, mode: 'w' },
+    });
+
+    const handle = opened.return;
+
+    try {
+      await this.guestAgentCommand(vmName, {
+        execute: 'guest-file-write',
+        arguments: {
+          handle,
+          'buf-b64': Buffer.from(contents, 'utf8').toString('base64'),
+        },
+      });
+    } finally {
+      await this.guestAgentCommand(vmName, {
+        execute: 'guest-file-close',
+        arguments: { handle },
+      });
+    }
+
+    console.log(`Wrote ${publicKeys.length} SSH keys to ${vmName}:${path}`);
+  }
+
   public async forceStopWorker(vmName: string): Promise<void> {
     this.validateVmName(vmName);
     await Command.runCommand('sudo', ['virsh', 'destroy', `${vmName}`]);

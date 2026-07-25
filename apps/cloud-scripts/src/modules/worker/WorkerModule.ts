@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@/decorators/Module';
 import { SharedModule } from '@/shared/SharedModule';
 import { EventModule } from '@/event/EventModule';
 import { WorkerCreateProcessor } from './application/WorkerCreateProcessor';
+import { WorkerUpdateSshKeysProcessor } from './application/WorkerUpdateSshKeysProcessor';
 import { WorkerUpdateProcessor } from './application/WorkerUpdateProcessor';
 import { WorkerStartProcessor } from './application/WorkerStartProcessor';
 import { WorkerTerminateProcessor } from './application/WorkerTerminateProcessor';
@@ -25,6 +26,7 @@ const useStubs = process.env.USE_STUBS === 'true';
   processors: [
     WorkerCreateProcessor,
     WorkerUpdateProcessor,
+    WorkerUpdateSshKeysProcessor,
     WorkerStartProcessor,
     WorkerTerminateProcessor,
     WorkerDeleteProcessor,

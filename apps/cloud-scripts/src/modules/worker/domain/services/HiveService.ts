@@ -56,6 +56,17 @@ export abstract class HiveService {
   
   abstract getDefinedWorkers(): Promise<string[]>;
   
+  static readonly OPENSSH_PUBLIC_KEY =
+    /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+)\s+[A-Za-z0-9+/=]+(\s+\S+)?$/;
+
+  abstract isGuestAgentReachable(vmName: string): Promise<boolean>;
+
+  abstract applySshKeys(
+    vmName: string,
+    publicKeys: string[],
+    guestUser?: string,
+  ): Promise<void>;
+
   abstract reconcileWorkers(expectedVmNames: string[]): Promise<string[]>;
 
   abstract forceResetHive(): Promise<string[]>;

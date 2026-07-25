@@ -89,6 +89,15 @@ export class StubHiveService extends HiveService {
     return [];
   }
 
+  public async isGuestAgentReachable(vmName: string): Promise<boolean> {
+    console.log(`[STUB] isGuestAgentReachable: ${vmName}`);
+    return true;
+  }
+
+  public async applySshKeys(vmName: string, publicKeys: string[]): Promise<void> {
+    console.log(`[STUB] applySshKeys: ${vmName} (${publicKeys.length} keys)`);
+  }
+
   public async reconcileWorkers(expectedVmNames: string[]): Promise<string[]> {
     console.log(`[STUB] reconcileWorkers: ${expectedVmNames.length} expected`);
     return [];

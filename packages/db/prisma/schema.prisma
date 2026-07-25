@@ -15,6 +15,10 @@ enum EventType {
   SYSTEM_RESET_HARD_FAILED
   SYSTEM_RESET_HARD_SUCCESS
 
+  WORKER_UPDATE_SSH_KEYS
+  WORKER_UPDATE_SSH_KEYS_FAILED
+  WORKER_SSH_KEYS_UPDATED
+
   SYSTEM_TEST_EVENT
 
   WORKER_CREATE
@@ -167,8 +171,26 @@ model Worker {
   flavor   WorkerFlavor @relation(fields: [flavorId], references: [id])
 
   storages WorkerDisk[]
+  sshKeys  WorkerSshKey[]
 
   node Node?
+}
+
+model WorkerSshKey {
+  id        Int    @id @default(autoincrement())
+  name      String
+  publicKey String
+
+  createdAt DateTime @default(now())
+  createdBy String
+
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  workerId String
+  worker   Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@unique([workerId, publicKey])
 }
 
 model WorkerImage {
