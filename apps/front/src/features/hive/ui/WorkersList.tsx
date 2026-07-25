@@ -10,6 +10,7 @@ import { useHiveRealtime } from "../models/use-hive-realtime";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
 import { useDialog } from "@/core/ui/DialogProvider";
+import { WorkerManageDialog } from "./WorkerManageDialog";
 
 const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
   id: {
@@ -87,6 +88,13 @@ export function WorkersList() {
       toast.info("This worker has been deleted.");
       return;
     }
+
+    showDialog({
+      title: `Manage ${worker.name}`,
+      content: (
+        <WorkerManageDialog worker={worker} onChanged={() => fetchWorkers()} />
+      ),
+    });
   };
 
   const selectedWorker =

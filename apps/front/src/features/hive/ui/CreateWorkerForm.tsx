@@ -19,6 +19,8 @@ import { useWorkerFamily } from "../models/use-worker-family";
 import { useDialog } from "@/core/ui/DialogProvider";
 import { ColumnMapping } from "@/core/ui/Table";
 
+const OPENSSH_PUBLIC_KEY = /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+)\s+[A-Za-z0-9+/=]+(\s+\S+)?$/;
+
 export function CreateWorkerForm() {
   const [flavors, setFlavors] = useState<WorkerFlavorResponseDto[]>([]);
 
@@ -80,6 +82,7 @@ export function CreateWorkerForm() {
       workerMmiId: "",
       workerImageId: "",
       publicSshKey: "",
+      ownPublicKey: "",
     },
   });
 
@@ -136,7 +139,22 @@ export function CreateWorkerForm() {
       return;
     }
 
-    const { publicSsh, privatePem } = await createSshCredentials(workerName);
+    const ownPublicKey = (data.ownPublicKey ?? "").trim();
+
+    if (ownPublicKey && !OPENSSH_PUBLIC_KEY.test(ownPublicKey)) {
+      setError("ownPublicKey", {
+        type: "manual",
+        message:
+          "Not an OpenSSH public key. It should start with ssh-ed25519, ssh-rsa or ecdsa-sha2-…",
+      });
+      await buttonRef.current?.setIsLoading(false);
+      return;
+    }
+
+    const { publicSsh, privatePem } = ownPublicKey
+      ? { publicSsh: ownPublicKey, privatePem: null }
+      : await createSshCredentials(workerName);
+
     setValue("publicSshKey", publicSsh);
 
     buttonRef.current?.setProgress(50);
@@ -156,7 +174,7 @@ export function CreateWorkerForm() {
           await fetchWorker(newWorker.id);
           redirect(`/dashboard/hive/workers`);
         },
-        content: (
+        content: privatePem ? (
           <div className="space-y-4">
             <p>
               <InlineCode code={newWorker.name} /> has been created successfully.
@@ -165,6 +183,12 @@ export function CreateWorkerForm() {
             <CodeBlock code={privatePem} fileName={`${workerName}_id_rsa`} />
             <SshKeyPermissionsNote fileName={`${workerName}_id_rsa`} />
           </div>
+        ) : (
+          <p>
+            <InlineCode code={newWorker.name} /> has been created successfully.
+            It accepts the public key you provided, so there are no credentials
+            to save here.
+          </p>
         ),
       });
     } else {
@@ -228,6 +252,20 @@ export function CreateWorkerForm() {
           }))}
           required
         />
+
+        <FormInput
+          controlName="ownPublicKey"
+          control={control}
+          label="Your SSH public key (optional)"
+          placeholder="ssh-ed25519 AAAAC3... you@laptop"
+          className="w-full"
+        />
+
+        <p className="text-xs text-gray-500 -mt-2">
+          Leave it empty and a key pair is generated in your browser; you get the
+          private key once, and have to fix its file permissions before using it.
+          Paste your own public key instead and there is nothing to download.
+        </p>
 
         <Button ref={buttonRef} text="Save Worker" type="submit" />
       </form>
