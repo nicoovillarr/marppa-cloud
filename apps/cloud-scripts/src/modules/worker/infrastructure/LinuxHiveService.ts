@@ -1,6 +1,7 @@
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
+import os from 'os';
 import { spawn } from 'child_process';
 import { Command } from '@/libs/Command';
 import { sleep } from '@/libs/sleep';
@@ -608,27 +609,31 @@ local-hostname: ${name}
     }
   }
 
+  private assertPublicKeys(publicKeys: string[]): void {
+    for (const key of publicKeys) {
+      if (!HiveService.OPENSSH_PUBLIC_KEY.test(key.trim())) {
+        throw new Error(`Refusing to write a malformed SSH public key: ${key}`);
+      }
+    }
+  }
+
   public async applySshKeys(
     vmName: string,
     publicKeys: string[],
     guestUser = 'ubuntu',
   ): Promise<void> {
     this.validateVmName(vmName);
-
-    for (const key of publicKeys) {
-      if (!HiveService.OPENSSH_PUBLIC_KEY.test(key.trim())) {
-        throw new Error(`Refusing to write a malformed SSH public key: ${key}`);
-      }
-    }
+    this.assertPublicKeys(publicKeys);
 
     if (!(await this.isWorkerRunning(vmName))) {
-      throw new Error(`VM ${vmName} is not running; cannot update its keys live`);
+      return this.applySshKeysOffline(vmName, publicKeys, guestUser);
     }
 
     if (!(await this.isGuestAgentReachable(vmName))) {
       throw new Error(
         `qemu-guest-agent is not answering on ${vmName}. The image may predate it, ` +
-        'or the agent was stopped inside the guest.',
+        'or the agent was stopped inside the guest. Stop the VM and retry: with it ' +
+        'off the keys are written straight to the disk, which needs no agent.',
       );
     }
 
@@ -658,6 +663,55 @@ local-hostname: ${name}
     }
 
     console.log(`Wrote ${publicKeys.length} SSH keys to ${vmName}:${path}`);
+  }
+
+  public async applySshKeysOffline(
+    vmName: string,
+    publicKeys: string[],
+    guestUser = 'ubuntu',
+  ): Promise<void> {
+    this.validateVmName(vmName);
+    this.assertPublicKeys(publicKeys);
+
+    if (await this.isWorkerRunning(vmName)) {
+      throw new Error(
+        `VM ${vmName} is running; editing its disk now would corrupt the filesystem`,
+      );
+    }
+
+    const diskPath = path.join(IMAGE_DIR, `${vmName}.img`);
+    const sshDir = `/home/${guestUser}/.ssh`;
+    const tmpPath = path.join(os.tmpdir(), `authorized_keys-${vmName}-${Date.now()}`);
+
+    await fsPromises.writeFile(
+      tmpPath,
+      publicKeys.map((key) => key.trim()).join('\n') + '\n',
+      { encoding: 'utf8' },
+    );
+
+    try {
+      await Command.runCommand('sudo', [
+        'virt-customize',
+        '-a',
+        diskPath,
+        '--run-command',
+        `mkdir -p ${sshDir}`,
+        '--upload',
+        `${tmpPath}:${sshDir}/authorized_keys`,
+        '--run-command',
+        `chown -R ${guestUser}:${guestUser} ${sshDir}`,
+        '--run-command',
+        `chmod 700 ${sshDir}`,
+        '--run-command',
+        `chmod 600 ${sshDir}/authorized_keys`,
+      ]);
+    } finally {
+      await fsPromises.rm(tmpPath, { force: true });
+    }
+
+    console.log(
+      `Wrote ${publicKeys.length} SSH keys offline to ${vmName}:${sshDir}/authorized_keys`,
+    );
   }
 
   public async forceStopWorker(vmName: string): Promise<void> {

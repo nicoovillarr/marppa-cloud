@@ -67,6 +67,12 @@ export abstract class HiveService {
     guestUser?: string,
   ): Promise<void>;
 
+  abstract applySshKeysOffline(
+    vmName: string,
+    publicKeys: string[],
+    guestUser?: string,
+  ): Promise<void>;
+
   abstract reconcileWorkers(expectedVmNames: string[]): Promise<string[]>;
 
   abstract forceResetHive(): Promise<string[]>;

@@ -98,6 +98,10 @@ export class StubHiveService extends HiveService {
     console.log(`[STUB] applySshKeys: ${vmName} (${publicKeys.length} keys)`);
   }
 
+  public async applySshKeysOffline(vmName: string, publicKeys: string[]): Promise<void> {
+    console.log(`[STUB] applySshKeysOffline: ${vmName} (${publicKeys.length} keys)`);
+  }
+
   public async reconcileWorkers(expectedVmNames: string[]): Promise<string[]> {
     console.log(`[STUB] reconcileWorkers: ${expectedVmNames.length} expected`);
     return [];

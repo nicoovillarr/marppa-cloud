@@ -61,12 +61,11 @@ export function WorkerSshKeysSection({ workerId, live }: WorkerSshKeysSectionPro
     <section className="space-y-3">
       <h3 className="font-semibold text-sm">Authorized SSH keys</h3>
 
-      {!live && (
-        <p className="text-xs text-amber-600">
-          The VM is not running, so changes are recorded here but not written to
-          it. Start it and re-apply, or the VM keeps the keys it already has.
-        </p>
-      )}
+      <p className="text-xs text-gray-500">
+        {live
+          ? "Changes are written to the running VM through its guest agent."
+          : "The VM is off, so changes are written straight to its disk."}
+      </p>
 
       {keys.length === 0 ? (
         <p className="text-xs text-gray-500">No keys registered for this worker.</p>

@@ -1,6 +1,16 @@
-# Pendiente: administrar claves SSH de un worker en cualquier momento
+# Administrar claves SSH de un worker
 
-**Estado:** no implementado. Anotado el 2026-07-24.
+**Estado:** implementado el 2026-07-25, **sin probar contra una VM real**. Lo que sigue
+describe el diseño y lo que quedó afuera.
+
+Implementado: tabla `WorkerSshKey`, endpoints `GET/POST/DELETE
+/hive/workers/:id/ssh-keys`, evento `WORKER_UPDATE_SSH_KEYS` con su processor, y la
+sección de claves en el diálogo de administración del worker.
+
+El processor elige el camino según el estado de la VM: **encendida** escribe por el
+guest agent, **apagada** escribe directo en el disco con `virt-customize`. Si la VM está
+encendida pero el agente no responde, falla y pide apagarla — editar el disco de una VM
+corriendo corrompe el filesystem.
 
 ## La necesidad
 

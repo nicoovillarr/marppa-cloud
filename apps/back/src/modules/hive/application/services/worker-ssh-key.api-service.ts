@@ -1,5 +1,4 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { ResourceStatus } from '@marppa-cloud/db';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
@@ -74,12 +73,6 @@ export class WorkerSshKeyApiService {
   }
 
   private async dispatchApply(workerId: string): Promise<void> {
-    const worker = await this.workerService.findById(workerId);
-
-    if (worker.status !== ResourceStatus.ACTIVE) {
-      return;
-    }
-
     await this.eventDispatch.dispatch({
       type: EventTypeKey.WORKER_UPDATE_SSH_KEYS,
       primary: { type: 'Worker', id: workerId },
