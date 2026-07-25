@@ -28,7 +28,7 @@ cloud-script ALL=(ALL) NOPASSWD: /usr/bin/true, \
   /usr/sbin/nft, \
   /usr/sbin/sysctl, \
   /usr/bin/systemctl, \
-  /usr/sbin/nginx, \
+  /usr/bin/caddy, \
   /usr/bin/pkill, \
   /usr/bin/cat, \
   /usr/bin/cp, \

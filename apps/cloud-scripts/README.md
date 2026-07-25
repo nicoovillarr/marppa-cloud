@@ -2,7 +2,7 @@
 
 Infrastructure event worker. It consumes events from the BullMQ queue the backend
 publishes to and applies them on the host: zone bridges (`ip link` + dnsmasq +
-nftables), worker VMs (libvirt/KVM + cloud-init), fibers (DNAT) and portals (nginx).
+nftables), worker VMs (libvirt/KVM + cloud-init), fibers (DNAT) and portals (Caddy).
 
 It never exposes a REST API — the backend is the only writer of commands, the DB is
 the shared state, and Redis is the transport. It **must** run on the Linux host that
@@ -117,7 +117,7 @@ $USER ALL=(ALL) NOPASSWD: \
   /usr/sbin/nft, \
   /usr/sbin/sysctl, \
   /usr/bin/systemctl, \
-  /usr/sbin/nginx, \
+  /usr/bin/caddy, \
   /usr/bin/pkill, \
   /usr/bin/cat, \
   /usr/bin/cp, \
@@ -206,6 +206,34 @@ Two caveats worth knowing before adding another nftables user:
 fail2ban with `banaction = nftables-multiport` needs no special handling: it creates its
 own `inet f2b-table` at a lower hook priority, so its bans are evaluated before this
 app's rules and neither side touches the other's tables.
+
+### Caddy (portals)
+
+Portals are reverse-proxy sites, one Caddy config file per portal under
+`/etc/caddy/sites/`. The app writes and removes those files and reloads Caddy; it never
+edits the main `Caddyfile`, so anything you serve from it by hand keeps working.
+
+Caddy is not in the Debian repos — install it from the official repository, then wire
+the include once:
+
+```bash
+sudo mkdir -p /etc/caddy/sites
+
+# Append once, so the app's per-portal files get picked up
+grep -q 'import sites/\*.caddy' /etc/caddy/Caddyfile \
+  || echo 'import sites/*.caddy' | sudo tee -a /etc/caddy/Caddyfile
+
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+TLS is Caddy's automatic ACME: certificates are requested and renewed on their own, so
+portals carry no certificate paths. The host must be reachable on 80 and 443 from the
+internet for the challenge to complete.
+
+Two portal options have no Caddy equivalent and are logged as warnings rather than
+silently dropped: per-transponder `cacheEnabled` (Caddy has no built-in cache; it needs
+a plugin) and portal `defaultServer` (the portal is served on its own address only).
 
 ### dnsmasq
 

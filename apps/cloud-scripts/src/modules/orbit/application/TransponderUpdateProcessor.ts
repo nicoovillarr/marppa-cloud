@@ -71,7 +71,7 @@ export class TransponderUpdateProcessor implements IEventProcessor {
 
       await updateTransponderStatus(ResourceStatus.PROVISIONING);
 
-      await this.orbitService.generateNginxConfig(transponder.portal);
+      await this.orbitService.generatePortalConfig(transponder.portal);
 
       await updateTransponderStatus(ResourceStatus.ACTIVE);
 

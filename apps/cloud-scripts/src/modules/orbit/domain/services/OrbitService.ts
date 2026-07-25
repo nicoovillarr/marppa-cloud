@@ -11,9 +11,9 @@ export abstract class OrbitService {
   
   abstract updateCloudflareDNS(apiToken: string, domain: string, ip: string, options?: any): Promise<any>;
   
-  abstract generateNginxConfig(portal: any, forceTransponder?: any): Promise<void>;
+  abstract generatePortalConfig(portal: any, forceTransponder?: any): Promise<void>;
   
-  abstract deleteNginxConfig(portalId: string): Promise<void>;
+  abstract deletePortalConfig(portalId: string): Promise<void>;
   
   abstract reconcileOrbit(expectedPortalIds: string[]): Promise<string[]>;
 

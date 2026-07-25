@@ -92,20 +92,43 @@ test('LinuxHiveService rejects invalid VM names before invoking virsh', async ()
   }
 });
 
-test('LinuxOrbitService rejects injected nginx values', () => {
+test('LinuxOrbitService rejects injected proxy config values', () => {
   const service = new LinuxOrbitService({} as any);
+
+  const transponder = {
+    id: 't-1',
+    path: '/app',
+    port: 8080,
+    priority: 1,
+    status: ResourceStatus.ACTIVE,
+    customIPAddress: '10.0.0.10',
+  };
 
   assert.throws(
     () =>
-      (service as any).buildLocationBlock({
-        id: 't-1',
-        path: '/app',
-        port: 8080,
-        priority: 1,
-        status: ResourceStatus.ACTIVE,
-        customIPAddress: '10.0.0.10\nroot /tmp;',
+      (service as any).buildTransponderRoute({
+        ...transponder,
+        customIPAddress: '10.0.0.10\nrespond "pwned"',
       }),
     /Invalid proxy target IP/,
+  );
+
+  assert.throws(
+    () =>
+      (service as any).buildTransponderRoute({
+        ...transponder,
+        path: '/app\n\t\trespond "pwned"',
+      }),
+    /Invalid route path/,
+  );
+
+  assert.throws(
+    () =>
+      (service as any).buildTransponderRoute({
+        ...transponder,
+        addHeaders: { 'X-Bad\nrespond': 'value' },
+      }),
+    /Invalid header name/,
   );
 });
 

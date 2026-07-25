@@ -7,12 +7,10 @@ import { Injectable } from '@/decorators/Injectable';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { isIPv4 } from 'net';
 import path from 'path';
+import os from 'os';
 
 const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
 
-interface NginxBlock {
-  [key: string]: string | string[] | NginxBlock;
-}
 
 interface PortalConfig {
   id: string;
@@ -190,48 +188,158 @@ export class LinuxOrbitService extends OrbitService {
     return data.result;
   }
 
-  public async generateNginxConfig(portal, forceTransponder = null) {
-    const nginxTree = this.buildNginxTree(
+  private readonly caddySitesDir = '/etc/caddy/sites';
+
+  private caddySitePath(portalId: string): string {
+    return `${this.caddySitesDir}/${portalId}.caddy`;
+  }
+
+  private async writeRootFile(destPath: string, content: string): Promise<void> {
+    const tmpPath = path.join(
+      os.tmpdir(),
+      `orbit-${path.basename(destPath)}-${Date.now()}`,
+    );
+
+    await fsPromises.writeFile(tmpPath, content, { encoding: 'utf8' });
+
+    try {
+      await Command.runCommand('sudo', ['mkdir', '-p', path.dirname(destPath)]);
+      await Command.runCommand('sudo', ['install', '-m', '644', tmpPath, destPath]);
+    } finally {
+      await fsPromises.rm(tmpPath, { force: true });
+    }
+  }
+
+  private async removeRootFile(filePath: string): Promise<void> {
+    await Command.runCommand('sudo', ['rm', '-f', filePath]);
+  }
+
+  private buildTransponderRoute(t: TransponderConfig): string[] {
+    const ip = t.node?.ipAddress || t.customIPAddress;
+    if (!ip) {
+      console.warn(`No IP address found for transponder ${t.id}`);
+      return [];
+    }
+
+    if (t.cacheEnabled) {
+      console.warn(
+        `Transponder ${t.id} requests caching, which Caddy does not support ` +
+        'without a plugin. Serving it uncached.',
+      );
+    }
+
+    const target = `http://${this.sanitizeProxyTarget(ip)}:${this.sanitizePort(t.port)}`;
+    const proxyBody: string[] = [];
+
+    for (const [header, value] of Object.entries(t.proxyHeaders ?? {})) {
+      proxyBody.push(
+        `\t\t\theader_up ${this.sanitizeHeaderName(header)} ${this.sanitizeHeaderValue(value)}`,
+      );
+    }
+
+    if (t.allowCookies === false) {
+      proxyBody.push('\t\t\theader_up -Cookie');
+      proxyBody.push('\t\t\theader_down -Set-Cookie');
+    }
+
+    if (t.proxyReadTimeout) {
+      proxyBody.push('\t\t\ttransport http {');
+      proxyBody.push(`\t\t\t\tread_timeout ${Number(t.proxyReadTimeout)}s`);
+      proxyBody.push('\t\t\t}');
+    }
+
+    const lines = [`\t\thandle ${this.sanitizeLocationPath(t.path)}* {`];
+
+    if (t.gzipEnabled) lines.push('\t\t\tencode gzip');
+
+    for (const [header, value] of Object.entries(t.addHeaders ?? {})) {
+      lines.push(
+        `\t\t\theader ${this.sanitizeHeaderName(header)} ${this.sanitizeHeaderValue(value)}`,
+      );
+    }
+
+    if (proxyBody.length) {
+      lines.push(`\t\t\treverse_proxy ${target} {`);
+      lines.push(...proxyBody);
+      lines.push('\t\t\t}');
+    } else {
+      lines.push(`\t\t\treverse_proxy ${target}`);
+    }
+
+    lines.push('\t\t}');
+
+    return lines;
+  }
+
+  private buildCaddySite(
+    portal: PortalConfig,
+    transponders: TransponderConfig[],
+    forceTransponder: string | null = null,
+  ): string {
+    if (portal.defaultServer) {
+      console.warn(
+        `Portal ${portal.id} is flagged as default server, which has no direct ` +
+        'Caddy equivalent. Serving it on its own address only.',
+      );
+    }
+
+    const routes = transponders
+      .filter((t) => t.node || t.customIPAddress)
+      .filter(
+        (t) =>
+          t.status === ResourceStatus.ACTIVE ||
+          (forceTransponder &&
+            t.id === forceTransponder &&
+            t.status === ResourceStatus.QUEUED),
+      )
+      .sort((a, b) => b.priority - a.priority)
+      .flatMap((t) => this.buildTransponderRoute(t));
+
+    if (!routes.length) {
+      console.warn(
+        `No enabled transponders with nodes found for portal ${portal.id}`,
+      );
+    }
+
+    const lines = [`${this.sanitizeServerName(portal.address)} {`];
+
+    if (portal.enableCompression) lines.push('\tencode gzip zstd');
+    if (portal.corsEnabled) lines.push('\theader Access-Control-Allow-Origin *');
+
+    lines.push('\troute {');
+    lines.push(...routes);
+    lines.push('\t}');
+    lines.push('}');
+
+    return `${lines.join('\n')}\n`;
+  }
+
+  private async reloadCaddy(): Promise<void> {
+    await Command.runCommand('sudo', ['caddy', 'validate', '--config', '/etc/caddy/Caddyfile'], true);
+    await Command.runCommand('sudo', ['systemctl', 'reload', 'caddy'], true);
+  }
+
+  public async generatePortalConfig(portal, forceTransponder = null) {
+    const config = this.buildCaddySite(
       portal,
       portal.transponders || [],
       forceTransponder,
     );
-    const nginxConfig = this.renderNginxBlock(nginxTree);
 
-    const configPath = `/etc/nginx/sites-available/${portal.id}.conf`;
-    await fsPromises.writeFile(configPath, nginxConfig, 'utf8');
+    const configPath = this.caddySitePath(portal.id);
+    await this.writeRootFile(configPath, config);
 
-    const enabledPath = `/etc/nginx/sites-enabled/${portal.id}.conf`;
+    console.log(config);
+    console.log(`Caddy config for portal ${portal.id} written to ${configPath}`);
 
-    try {
-      await fsPromises.access(enabledPath);
-    } catch {
-      await fsPromises.symlink(configPath, enabledPath);
-    }
-
-    console.log(nginxConfig);
-
-    console.log(
-      `Nginx config for portal ${portal.id} written to ${configPath}`,
-    );
-
-    await Command.runCommand('sudo', ['nginx', '-t'], true);
-    await Command.runCommand('sudo', ['systemctl', 'restart', 'nginx'], true);
+    await this.reloadCaddy();
   }
 
-  public async deleteNginxConfig(portalId) {
-    const configPath = `/etc/nginx/sites-available/${portalId}.conf`;
-    const enabledPath = `/etc/nginx/sites-enabled/${portalId}.conf`;
+  public async deletePortalConfig(portalId) {
+    await this.removeRootFile(this.caddySitePath(portalId));
+    await this.reloadCaddy();
 
-    for (const filePath of [enabledPath, configPath]) {
-      try {
-        await fsPromises.unlink(filePath);
-      } catch (err) {
-        if (err.code !== 'ENOENT') throw err;
-      }
-    }
-
-    console.log(`Nginx config for portal ${portalId} deleted`);
+    console.log(`Caddy config for portal ${portalId} deleted`);
   }
 
   public async reconcileOrbit(expectedPortalIds: string[]): Promise<string[]> {
@@ -252,28 +360,28 @@ export class LinuxOrbitService extends OrbitService {
       }
 
       return entries
-        .filter((file) => file.startsWith('p-') && file.endsWith('.conf'))
-        .filter((file) => !expected.has(file.slice(0, -5)));
+        .filter((file) => file.startsWith('p-') && file.endsWith('.caddy'))
+        .filter((file) => !expected.has(file.slice(0, -6)));
     };
 
-    for (const dir of ['/etc/nginx/sites-enabled', '/etc/nginx/sites-available']) {
-      const orphans = await orphansIn(dir);
-      if (orphans.length) {
-        console.log(`Removing orphan Nginx configs from ${dir}:`, orphans.join(', '));
-      }
+    const orphans = await orphansIn(this.caddySitesDir);
+    if (orphans.length) {
+      console.log(
+        `Removing orphan Caddy configs from ${this.caddySitesDir}:`,
+        orphans.join(', '),
+      );
+    }
 
-      for (const file of orphans) {
-        await fsPromises.unlink(`${dir}/${file}`);
-        removed.add(file.slice(0, -5));
-      }
+    for (const file of orphans) {
+      await this.removeRootFile(`${this.caddySitesDir}/${file}`);
+      removed.add(file.slice(0, -6));
     }
 
     if (removed.size) {
       try {
-        await Command.runCommand('sudo', ['nginx', '-t'], true);
-        await Command.runCommand('sudo', ['systemctl', 'restart', 'nginx'], true);
+        await this.reloadCaddy();
       } catch (error) {
-        console.error(`Nginx configuration test failed: ${error.message}`);
+        console.error(`Caddy configuration reload failed: ${error.message}`);
       }
     }
 
@@ -284,124 +392,8 @@ export class LinuxOrbitService extends OrbitService {
     return this.reconcileOrbit([]);
   }
 
-  private renderNginxBlock(obj: NginxBlock, indent = 0): string {
-    const pad = '  '.repeat(indent);
-    let output = '';
-
-    for (const [key, value] of Object.entries(obj)) {
-      const safeKey = this.sanitizeNginxKey(key);
-      if (Array.isArray(value)) {
-        for (const v of value) {
-          output += `${pad}${safeKey} ${v};\n`;
-        }
-      } else if (typeof value === 'object' && value !== null) {
-        output += `${pad}${safeKey} {\n`;
-        output += this.renderNginxBlock(value, indent + 1);
-        output += `${pad}}\n`;
-      } else {
-        output += `${pad}${safeKey} ${value};\n`;
-      }
-    }
-
-    return output;
-  }
-
-  private buildNginxTree(
-    portal: PortalConfig,
-    transponders: TransponderConfig[],
-    forceTransponder: string | null = null,
-  ): NginxBlock {
-    const listen: string[] = [];
-    if (portal.listenHttp) listen.push('80');
-    if (portal.sslCertificate) listen.push('443 ssl');
-
-    const locations = transponders
-      .filter((t) => t.node || t.customIPAddress)
-      .filter(
-        (t) =>
-          t.status === ResourceStatus.ACTIVE ||
-          (forceTransponder &&
-            t.id === forceTransponder &&
-            t.status === ResourceStatus.QUEUED),
-      )
-      .sort((a, b) => b.priority - a.priority)
-      .map((t) => this.buildLocationBlock(t))
-      .reduce<NginxBlock>((acc, loc) => Object.assign(acc, loc), {});
-
-    if (Object.keys(locations).length === 0) {
-      console.warn(
-        `No enabled transponders with nodes found for portal ${portal.id}`,
-      );
-    }
-    const serverName = this.sanitizeServerName(portal.address);
-    const server = {
-      server: {
-        listen,
-        server_name:
-          serverName + (portal.defaultServer ? ' default_server' : ''),
-        ...(portal.sslCertificate && {
-          ssl_certificate: this.sanitizeNginxPath(
-            portal.sslCertificate,
-            'ssl_certificate',
-          ),
-        }),
-        ...(portal.sslKey && {
-          ssl_certificate_key: this.sanitizeNginxPath(
-            portal.sslKey,
-            'ssl_certificate_key',
-          ),
-        }),
-        ...(portal.enableCompression && { gzip: 'on' }),
-        ...(portal.corsEnabled && {
-          add_header: ['Access-Control-Allow-Origin *'],
-        }),
-        ...locations,
-      },
-    };
-
-    return server;
-  }
-
-  private buildLocationBlock = (t: TransponderConfig): NginxBlock => {
-    const ip = t.node?.ipAddress || t.customIPAddress;
-    if (!ip) {
-      console.warn(`No IP address found for transponder ${t.id}`);
-      return {};
-    }
-
-    const inner: NginxBlock = {
-      proxy_pass: `http://${this.sanitizeProxyTarget(ip)}:${this.sanitizePort(t.port)}`,
-      proxy_http_version: '1.1',
-      ...(t.cacheEnabled && { proxy_cache: t.id }),
-      ...(t.gzipEnabled && { gzip: 'on' }),
-      ...(t.allowCookies === false && {
-        proxy_cookie_domain: 'off',
-        proxy_cookie_path: 'off',
-      }),
-      ...(t.proxyReadTimeout && {
-        proxy_read_timeout: `${t.proxyReadTimeout}s`,
-      }),
-    };
-
-    if (t.addHeaders && Object.keys(t.addHeaders).length) {
-      inner.add_header = Object.entries(t.addHeaders).map(
-        ([h, v]) =>
-          `${this.sanitizeHeaderName(h)} ${this.sanitizeHeaderValue(v)}`,
-      );
-    }
-
-    if (t.proxyHeaders && Object.keys(t.proxyHeaders).length) {
-      inner.proxy_set_header = Object.entries(t.proxyHeaders).map(
-        ([h, v]) =>
-          `${this.sanitizeHeaderName(h)} ${this.sanitizeHeaderValue(v)}`,
-      );
-    }
-
-    return { [`location ${this.sanitizeLocationPath(t.path)}`]: inner };
-  };
-
   private sanitizeProxyTarget(ip: string): string {
-    const value = this.sanitizeNginxValue(ip, 'proxy target IP');
+    const value = this.sanitizeConfigValue(ip, 'proxy target IP');
     if (!isIPv4(value)) {
       throw new Error(`Invalid proxy target IP: ${ip}`);
     }
@@ -410,25 +402,25 @@ export class LinuxOrbitService extends OrbitService {
 
   private sanitizePort(port: number): number {
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
-      throw new Error(`Invalid nginx port: ${port}`);
+      throw new Error(`Invalid proxy port: ${port}`);
     }
 
     return port;
   }
 
   private sanitizeLocationPath(locationPath: string): string {
-    const value = this.sanitizeNginxValue(locationPath, 'location path');
+    const value = this.sanitizeConfigValue(locationPath, 'route path');
     if (!/^\/[A-Za-z0-9\-._~\/]*$/.test(value)) {
-      throw new Error(`Invalid nginx location path: ${locationPath}`);
+      throw new Error(`Invalid route path: ${locationPath}`);
     }
 
     return value;
   }
 
   private sanitizeServerName(serverName: string): string {
-    const value = this.sanitizeNginxValue(serverName, 'server_name');
+    const value = this.sanitizeConfigValue(serverName, 'site address');
     if (!/^[A-Za-z0-9*._-]+$/.test(value)) {
-      throw new Error(`Invalid nginx server_name: ${serverName}`);
+      throw new Error(`Invalid site address: ${serverName}`);
     }
 
     return value;
@@ -436,41 +428,17 @@ export class LinuxOrbitService extends OrbitService {
 
   private sanitizeHeaderName(headerName: string): string {
     if (!/^[A-Za-z0-9_-]+$/.test(headerName)) {
-      throw new Error(`Invalid nginx header name: ${headerName}`);
+      throw new Error(`Invalid header name: ${headerName}`);
     }
 
     return headerName;
   }
 
   private sanitizeHeaderValue(headerValue: string): string {
-    return this.sanitizeNginxValue(headerValue, 'header value');
+    return this.sanitizeConfigValue(headerValue, 'header value');
   }
 
-  private sanitizeNginxPath(filePath: string, label: string): string {
-    const value = this.sanitizeNginxValue(filePath, label);
-    const normalized = path.posix.normalize(value);
-
-    if (
-      !path.posix.isAbsolute(normalized) ||
-      normalized !== value ||
-      !normalized.startsWith('/etc/')
-    ) {
-      throw new Error(`Invalid nginx ${label}: ${filePath}`);
-    }
-
-    return normalized;
-  }
-
-  private sanitizeNginxKey(key: string): string {
-    const value = this.sanitizeNginxValue(key, 'nginx directive');
-    if (!/^[A-Za-z_][A-Za-z0-9_-]*(?: [^;{}\r\n]+)?$/.test(value)) {
-      throw new Error(`Invalid nginx directive: ${key}`);
-    }
-
-    return value;
-  }
-
-  private sanitizeNginxValue(value: string, label: string): string {
+  private sanitizeConfigValue(value: string, label: string): string {
     if (/[\n\r;{}]/.test(value)) {
       throw new Error(`Invalid ${label}: ${value}`);
     }

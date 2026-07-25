@@ -9,7 +9,7 @@ import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
 const REQUIRED_BINARIES = [
   'nmap', 'ipcalc', 'nft', 'dnsmasq', 'virsh', 'virt-install',
   'virt-customize', 'genisoimage', 'guestfish', 'qemu-img', 'wget', 'ping',
-  'arp', 'ip', 'networkctl',
+  'arp', 'ip', 'networkctl', 'caddy',
 ];
 
 const REQUIRED_ENV_VARS = [
