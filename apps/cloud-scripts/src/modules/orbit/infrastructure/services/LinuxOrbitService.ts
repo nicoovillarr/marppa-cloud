@@ -1,24 +1,26 @@
 import fs from 'fs';
 const fsPromises = fs.promises;
 import { Command } from '@/libs/Command';
-import { ResourceStatus } from '@marppa-cloud/db';
-import { OrbitService } from '../../domain/services/OrbitService';
+import { PortalType, ResourceStatus } from '@marppa-cloud/db';
+import {
+  OrbitService,
+  PortalDnsRecord,
+  PortalDnsSyncOptions,
+} from '../../domain/services/OrbitService';
 import { Injectable } from '@/decorators/Injectable';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { isIPv4 } from 'net';
 import path from 'path';
 import os from 'os';
 
-const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
+const PUBLIC_IP_URL = 'https://api.ipify.org';
+const DDCLIENT_TTL_SECONDS = 120;
+const DDCLIENT_TIMEOUT_MS = 30_000;
 
 
 interface PortalConfig {
   id: string;
   address: string;
-  defaultServer?: boolean | null;
-  listenHttp?: boolean | null;
-  sslCertificate?: string | null;
-  sslKey?: string | null;
   enableCompression?: boolean | null;
   corsEnabled?: boolean | null;
   transponders?: TransponderConfig[];
@@ -34,9 +36,6 @@ interface TransponderConfig {
   gzipEnabled?: boolean | null;
   allowCookies?: boolean | null;
   proxyReadTimeout?: number | null;
-  customIPAddress?: string | null;
-  addHeaders?: Record<string, string> | null;
-  proxyHeaders?: Record<string, string> | null;
   node?: { ipAddress?: string | null } | null;
 }
 
@@ -46,29 +45,22 @@ export class LinuxOrbitService extends OrbitService {
     super();
   }
 
-  public async createPortal(id, address, type, apiKey) {
-    console.log(`Creating portal ${id} (${address}) of type ${type}`);
-    await this.updateDynamicDNS(id, address, type, apiKey);
-    console.log(`Portal ${id} created successfully`);
-  }
+  public async syncPortalDns(
+    portal: PortalDnsRecord,
+    options: PortalDnsSyncOptions = {},
+  ): Promise<void> {
+    const ip = await this.getPublicIPAddress();
+    if (!ip) {
+      throw new Error(`No public IP found, cannot sync DNS for portal ${portal.id}`);
+    }
 
-  public async updateDynamicDNS(id, address, type, apiKey) {
-    await this.batchUpdateDynamicDNS(
-      [
-        {
-          id,
-          address,
-          type,
-          apiKey,
-        },
-      ],
-      null,
-    );
+    await this.runDdclient(portal, options.force === true);
+    await this.recordDnsSync(portal.id, ip);
   }
 
   public async getPublicIPAddress() {
     try {
-      const ip = await fetch('https://api.ipify.org').then((res) => res.text());
+      const ip = await fetch(PUBLIC_IP_URL).then((res) => res.text());
       return ip;
     } catch (err) {
       console.error('Error getting public IP:', err);
@@ -76,7 +68,11 @@ export class LinuxOrbitService extends OrbitService {
     }
   }
 
-  public async batchUpdateDynamicDNS(portals, ip) {
+  public async batchSyncPortalDns(
+    portals: PortalDnsRecord[],
+    ip: string | null,
+    options: PortalDnsSyncOptions = {},
+  ): Promise<void> {
     if (portals.length === 0) return;
 
     if (!ip) {
@@ -89,8 +85,7 @@ export class LinuxOrbitService extends OrbitService {
     }
 
     const batchSize = 4;
-
-    const prismaTransactions = [];
+    const synced: string[] = [];
 
     for (let i = 0; i < portals.length; i += batchSize) {
       const batch = portals.slice(i, i + batchSize);
@@ -101,25 +96,8 @@ export class LinuxOrbitService extends OrbitService {
               `Updating dynamic DNS records for portal ${portal.id} to point to IP: ${ip}`,
             );
 
-            switch (portal.type.toLowerCase()) {
-              case 'cloudflare':
-                await this.updateCloudflareDNS(
-                  portal.apiKey,
-                  portal.address,
-                  ip,
-                );
-                prismaTransactions.push(
-                  this.prisma.portal.update({
-                    where: { id: portal.id },
-                    data: { lastPublicIP: ip, lastSyncAt: new Date() },
-                  }),
-                );
-                break;
-              default:
-                console.warn(
-                  `Unknown portal type ${portal.type} for portal ${portal.id}`,
-                );
-            }
+            await this.runDdclient(portal, options.force === true);
+            synced.push(portal.id);
           } catch (error) {
             console.error(`Error updating DNS for portal ${portal.id}:`, error);
           }
@@ -127,65 +105,95 @@ export class LinuxOrbitService extends OrbitService {
       );
     }
 
-    if (prismaTransactions.length > 0) {
-      await this.prisma.$transaction(prismaTransactions);
+    if (synced.length > 0) {
+      await this.recordDnsSync(synced, ip);
     }
   }
 
-  public async updateCloudflareDNS(apiToken, domain, ip, options: any = {}) {
-    const { type = 'A', ttl = 120, proxied = false } = options;
+  private async recordDnsSync(
+    portalIds: string | string[],
+    ip: string,
+  ): Promise<void> {
+    const ids = Array.isArray(portalIds) ? portalIds : [portalIds];
 
-    const parts = domain.split('.');
-    const zoneName = parts.slice(-2).join('.');
-
-    const zoneRes = await fetch(`${CLOUDFLARE_API}/zones?name=${zoneName}`, {
-      headers: { Authorization: `Bearer ${apiToken}` },
+    await this.prisma.portal.updateMany({
+      where: { id: { in: ids } },
+      data: { lastPublicIP: ip, lastSyncAt: new Date() },
     });
-    const zoneData: any = await zoneRes.json();
-    const zone = zoneData.result?.[0];
-    if (!zone) throw new Error(`Zone not found for ${zoneName}`);
+  }
 
-    const dnsRes = await fetch(
-      `${CLOUDFLARE_API}/zones/${zone.id}/dns_records?name=${domain}`,
-      { headers: { Authorization: `Bearer ${apiToken}` } },
-    );
-    const dnsData: any = await dnsRes.json();
-    const record = dnsData.result?.[0];
+  private readonly ddclientConfigDir = '/etc/ddclient/portals';
+  private readonly ddclientCacheDir = '/var/cache/ddclient/portals';
 
-    const url = record
-      ? `${CLOUDFLARE_API}/zones/${zone.id}/dns_records/${record.id}`
-      : `${CLOUDFLARE_API}/zones/${zone.id}/dns_records`;
+  private ddclientConfigPath(portalId: string): string {
+    return `${this.ddclientConfigDir}/${portalId}.conf`;
+  }
 
-    const method = record ? 'PUT' : 'POST';
+  private ddclientCachePath(portalId: string): string {
+    return `${this.ddclientCacheDir}/${portalId}.cache`;
+  }
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiToken}`,
-      },
-      body: JSON.stringify({
-        type,
-        name: domain,
-        content: ip,
-        ttl,
-        proxied,
-      }),
-    });
+  private cloudflareZoneOf(address: string): string {
+    return address.split('.').slice(-2).join('.');
+  }
 
-    const data: any = await res.json();
-    if (!data.success) {
+  private buildDdclientConfig(portal: PortalDnsRecord): string {
+    if (portal.type !== PortalType.CLOUDFLARE) {
       throw new Error(
-        `Failed to ${record ? 'update' : 'create'} record: ${JSON.stringify(
-          data.errors,
-        )}`,
+        `Unsupported portal type ${portal.type} for portal ${portal.id}; only ${PortalType.CLOUDFLARE} is supported`,
       );
     }
 
-    console.log(
-      `✅ Record ${record ? 'updated' : 'created'}: ${domain} → ${ip}`,
+    const address = this.sanitizeServerName(portal.address);
+
+    return [
+      `# Managed by marppa-cloud — portal ${portal.id}. Manual edits are overwritten.`,
+      '# No `daemon` line on purpose: setting it makes ddclient fork, and the parent',
+      '# then exits 0 before the update happens, hiding every failure from the caller.',
+      'syslog=no',
+      'ssl=yes',
+      `cache=${this.ddclientCachePath(portal.id)}`,
+      'usev4=webv4',
+      `webv4=${PUBLIC_IP_URL}`,
+      'protocol=cloudflare',
+      `zone=${this.cloudflareZoneOf(address)}`,
+      `ttl=${DDCLIENT_TTL_SECONDS}`,
+      'login=token',
+      `password=${this.sanitizeDdclientValue(portal.apiKey, 'API token')}`,
+      address,
+      '',
+    ].join('\n');
+  }
+
+  private async runDdclient(
+    portal: PortalDnsRecord,
+    force: boolean,
+  ): Promise<void> {
+    const configPath = this.ddclientConfigPath(portal.id);
+
+    await Command.runCommand('sudo', ['mkdir', '-p', this.ddclientCacheDir]);
+    await this.writeRootFile(configPath, this.buildDdclientConfig(portal), '600');
+
+    const args = ['ddclient', '-file', configPath];
+    if (force) args.push('-force');
+
+    const output = await Command.runCommand(
+      'sudo',
+      args,
+      false,
+      DDCLIENT_TIMEOUT_MS,
     );
-    return data.result;
+
+    if (/FAILED/i.test(output)) {
+      throw new Error(`ddclient failed for portal ${portal.id}:\n${output}`);
+    }
+
+    if (output) console.log(output);
+  }
+
+  private async removeDdclientConfig(portalId: string): Promise<void> {
+    await this.removeRootFile(this.ddclientConfigPath(portalId));
+    await this.removeRootFile(this.ddclientCachePath(portalId));
   }
 
   private readonly caddySitesDir = '/etc/caddy/sites';
@@ -194,17 +202,21 @@ export class LinuxOrbitService extends OrbitService {
     return `${this.caddySitesDir}/${portalId}.caddy`;
   }
 
-  private async writeRootFile(destPath: string, content: string): Promise<void> {
+  private async writeRootFile(
+    destPath: string,
+    content: string,
+    mode = '644',
+  ): Promise<void> {
     const tmpPath = path.join(
       os.tmpdir(),
       `orbit-${path.basename(destPath)}-${Date.now()}`,
     );
 
-    await fsPromises.writeFile(tmpPath, content, { encoding: 'utf8' });
+    await fsPromises.writeFile(tmpPath, content, { encoding: 'utf8', mode: 0o600 });
 
     try {
       await Command.runCommand('sudo', ['mkdir', '-p', path.dirname(destPath)]);
-      await Command.runCommand('sudo', ['install', '-m', '644', tmpPath, destPath]);
+      await Command.runCommand('sudo', ['install', '-m', mode, tmpPath, destPath]);
     } finally {
       await fsPromises.rm(tmpPath, { force: true });
     }
@@ -215,7 +227,7 @@ export class LinuxOrbitService extends OrbitService {
   }
 
   private buildTransponderRoute(t: TransponderConfig): string[] {
-    const ip = t.node?.ipAddress || t.customIPAddress;
+    const ip = t.node?.ipAddress;
     if (!ip) {
       console.warn(`No IP address found for transponder ${t.id}`);
       return [];
@@ -231,12 +243,6 @@ export class LinuxOrbitService extends OrbitService {
     const target = `http://${this.sanitizeProxyTarget(ip)}:${this.sanitizePort(t.port)}`;
     const proxyBody: string[] = [];
 
-    for (const [header, value] of Object.entries(t.proxyHeaders ?? {})) {
-      proxyBody.push(
-        `\t\t\theader_up ${this.sanitizeHeaderName(header)} ${this.sanitizeHeaderValue(value)}`,
-      );
-    }
-
     if (t.allowCookies === false) {
       proxyBody.push('\t\t\theader_up -Cookie');
       proxyBody.push('\t\t\theader_down -Set-Cookie');
@@ -251,12 +257,6 @@ export class LinuxOrbitService extends OrbitService {
     const lines = [`\t\thandle ${this.sanitizeLocationPath(t.path)}* {`];
 
     if (t.gzipEnabled) lines.push('\t\t\tencode gzip');
-
-    for (const [header, value] of Object.entries(t.addHeaders ?? {})) {
-      lines.push(
-        `\t\t\theader ${this.sanitizeHeaderName(header)} ${this.sanitizeHeaderValue(value)}`,
-      );
-    }
 
     if (proxyBody.length) {
       lines.push(`\t\t\treverse_proxy ${target} {`);
@@ -276,15 +276,8 @@ export class LinuxOrbitService extends OrbitService {
     transponders: TransponderConfig[],
     forceTransponder: string | null = null,
   ): string {
-    if (portal.defaultServer) {
-      console.warn(
-        `Portal ${portal.id} is flagged as default server, which has no direct ` +
-        'Caddy equivalent. Serving it on its own address only.',
-      );
-    }
-
     const routes = transponders
-      .filter((t) => t.node || t.customIPAddress)
+      .filter((t) => t.node)
       .filter(
         (t) =>
           t.status === ResourceStatus.ACTIVE ||
@@ -295,20 +288,22 @@ export class LinuxOrbitService extends OrbitService {
       .sort((a, b) => b.priority - a.priority)
       .flatMap((t) => this.buildTransponderRoute(t));
 
-    if (!routes.length) {
-      console.warn(
-        `No enabled transponders with nodes found for portal ${portal.id}`,
-      );
-    }
-
     const lines = [`${this.sanitizeServerName(portal.address)} {`];
 
     if (portal.enableCompression) lines.push('\tencode gzip zstd');
     if (portal.corsEnabled) lines.push('\theader Access-Control-Allow-Origin *');
 
-    lines.push('\troute {');
-    lines.push(...routes);
-    lines.push('\t}');
+    if (routes.length) {
+      lines.push('\troute {');
+      lines.push(...routes);
+      lines.push('\t}');
+    } else {
+      console.warn(
+        `No enabled transponders with nodes found for portal ${portal.id}`,
+      );
+      lines.push('\trespond "No transponders configured for this portal" 503');
+    }
+
     lines.push('}');
 
     return `${lines.join('\n')}\n`;
@@ -338,15 +333,16 @@ export class LinuxOrbitService extends OrbitService {
   public async deletePortalConfig(portalId) {
     await this.removeRootFile(this.caddySitePath(portalId));
     await this.reloadCaddy();
+    await this.removeDdclientConfig(portalId);
 
-    console.log(`Caddy config for portal ${portalId} deleted`);
+    console.log(`Caddy and ddclient config for portal ${portalId} deleted`);
   }
 
   public async reconcileOrbit(expectedPortalIds: string[]): Promise<string[]> {
     const expected = new Set(expectedPortalIds);
     const removed = new Set<string>();
 
-    const orphansIn = async (dir: string): Promise<string[]> => {
+    const orphansIn = async (dir: string, suffix: string): Promise<string[]> => {
       let entries: string[];
       try {
         entries = await fsPromises.readdir(dir);
@@ -360,22 +356,23 @@ export class LinuxOrbitService extends OrbitService {
       }
 
       return entries
-        .filter((file) => file.startsWith('p-') && file.endsWith('.caddy'))
-        .filter((file) => !expected.has(file.slice(0, -6)));
+        .filter((file) => file.startsWith('p-') && file.endsWith(suffix))
+        .filter((file) => !expected.has(file.slice(0, -suffix.length)));
     };
 
-    const orphans = await orphansIn(this.caddySitesDir);
-    if (orphans.length) {
-      console.log(
-        `Removing orphan Caddy configs from ${this.caddySitesDir}:`,
-        orphans.join(', '),
-      );
-    }
+    const removeOrphansIn = async (dir: string, suffix: string): Promise<void> => {
+      const orphans = await orphansIn(dir, suffix);
+      if (orphans.length) {
+        console.log(`Removing orphan configs from ${dir}:`, orphans.join(', '));
+      }
 
-    for (const file of orphans) {
-      await this.removeRootFile(`${this.caddySitesDir}/${file}`);
-      removed.add(file.slice(0, -6));
-    }
+      for (const file of orphans) {
+        await this.removeRootFile(`${dir}/${file}`);
+        removed.add(file.slice(0, -suffix.length));
+      }
+    };
+
+    await removeOrphansIn(this.caddySitesDir, '.caddy');
 
     if (removed.size) {
       try {
@@ -384,6 +381,9 @@ export class LinuxOrbitService extends OrbitService {
         console.error(`Caddy configuration reload failed: ${error.message}`);
       }
     }
+
+    await removeOrphansIn(this.ddclientConfigDir, '.conf');
+    await removeOrphansIn(this.ddclientCacheDir, '.cache');
 
     return [...removed];
   }
@@ -426,16 +426,12 @@ export class LinuxOrbitService extends OrbitService {
     return value;
   }
 
-  private sanitizeHeaderName(headerName: string): string {
-    if (!/^[A-Za-z0-9_-]+$/.test(headerName)) {
-      throw new Error(`Invalid header name: ${headerName}`);
+  private sanitizeDdclientValue(value: string, label: string): string {
+    if (!/^[A-Za-z0-9_.-]+$/.test(value)) {
+      throw new Error(`Invalid ${label} for ddclient config`);
     }
 
-    return headerName;
-  }
-
-  private sanitizeHeaderValue(headerValue: string): string {
-    return this.sanitizeConfigValue(headerValue, 'header value');
+    return value;
   }
 
   private sanitizeConfigValue(value: string, label: string): string {

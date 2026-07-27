@@ -1,10 +1,13 @@
-import { spawn } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
+
+const SIGKILL_GRACE_MS = 5000;
 
 export class Command {
   constructor(
     private readonly cmd: string,
     private readonly args: string[] = [],
-    private readonly print: boolean = false
+    private readonly print: boolean = false,
+    private readonly timeoutMs: number | null = null,
   ) {}
 
   public run(): Promise<string> {
@@ -17,6 +20,20 @@ export class Command {
 
       let stdout = '';
       let stderr = '';
+      let timedOut = false;
+
+      const timer =
+        this.timeoutMs == null
+          ? null
+          : setTimeout(() => {
+              timedOut = true;
+              this.terminate(proc);
+            }, this.timeoutMs);
+
+      const settle = (finish: () => void) => {
+        if (timer) clearTimeout(timer);
+        finish();
+      };
 
       proc.stdout.on('data', (data) => {
         stdout += data.toString();
@@ -26,29 +43,43 @@ export class Command {
         stderr += data.toString();
       });
 
-      proc.on('error', reject);
+      proc.on('error', (error) => settle(() => reject(error)));
 
       proc.on('close', (code) => {
-        if (code === 0) {
-          resolve(stdout.trim());
-        } else {
-          reject(
-            new Error(
-              `Command "${this.cmd} ${this.args.join(
-                ' ',
-              )}" failed with code ${code}\n${stderr}`,
-            ),
-          );
-        }
+        settle(() => {
+          if (timedOut) {
+            reject(new Error(`${this.describe()} timed out after ${this.timeoutMs}ms`));
+            return;
+          }
+
+          if (code === 0) {
+            resolve(stdout.trim());
+            return;
+          }
+
+          reject(new Error(`${this.describe()} failed with code ${code}\n${stderr}`));
+        });
       });
     });
+  }
+
+  private describe(): string {
+    return `Command "${this.cmd} ${this.args.join(' ')}"`;
+  }
+
+  private terminate(proc: ChildProcess): void {
+    proc.kill('SIGTERM');
+
+    const sigkill = setTimeout(() => proc.kill('SIGKILL'), SIGKILL_GRACE_MS);
+    proc.on('close', () => clearTimeout(sigkill));
   }
 
   public static runCommand(
     cmd: string,
     args: string[] = [],
     print: boolean = false,
+    timeoutMs: number | null = null,
   ): Promise<string> {
-    return new Command(cmd, args, print).run();
+    return new Command(cmd, args, print, timeoutMs).run();
   }
 }

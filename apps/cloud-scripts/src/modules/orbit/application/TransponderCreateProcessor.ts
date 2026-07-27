@@ -8,6 +8,9 @@ import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/reposito
 import { ORBIT_SERVICE_TOKEN, OrbitService } from '../domain/services/OrbitService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.TRANSPONDER_CREATE);
 
 @EventProcessor(EventType.TRANSPONDER_CREATE)
 export class TransponderCreateProcessor implements IEventProcessor {
@@ -43,7 +46,16 @@ export class TransponderCreateProcessor implements IEventProcessor {
 
       transponder = await this.prisma.transponder.findUnique({
         where: { id: resourceTransponder.resourceId, status: { not: ResourceStatus.DELETED } },
-        include: { portal: { include: { transponders: true } } },
+        include: {
+          portal: {
+            include: {
+              transponders: {
+                where: { status: { not: ResourceStatus.DELETED } },
+                include: { node: true },
+              },
+            },
+          },
+        },
       });
 
       if (!transponder) {
@@ -53,18 +65,18 @@ export class TransponderCreateProcessor implements IEventProcessor {
         );
       }
 
-      if (transponder.status !== ResourceStatus.QUEUED) {
+      if (transponder.status !== STATES.entry) {
         throw new AbortError(
           `Transponder status (${transponder.status}) is not valid for event ID: ${event.id}`,
           EventType.TRANSPONDER_CREATE_FAILED,
         );
       }
 
-      await updateTransponderStatus(ResourceStatus.PROVISIONING);
+      await updateTransponderStatus(STATES.work);
 
       await this.orbitService.generatePortalConfig(transponder.portal, transponder.id);
 
-      await updateTransponderStatus(ResourceStatus.ACTIVE);
+      await updateTransponderStatus(STATES.ok);
 
       const eventCreatedId = await this.repository.createEvent(EventType.TRANSPONDER_CREATED, event.createdBy, event.companyId);
       await this.repository.addEventResource(eventCreatedId, 'Event', String(event.id));
@@ -72,7 +84,7 @@ export class TransponderCreateProcessor implements IEventProcessor {
     } catch (error) {
       if (error instanceof AbortError) throw error;
       if (transponder) {
-        await updateTransponderStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updateTransponderStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }

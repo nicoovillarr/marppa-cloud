@@ -23,7 +23,6 @@ export type TransponderResponseModel = {
     allowCookies: boolean;
     gzipEnabled: boolean;
     priority: number;
-    enabled: boolean;
     createdAt: Date;
     createdBy: string;
     updatedAt: Date;

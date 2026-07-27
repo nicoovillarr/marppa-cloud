@@ -1,28 +1,34 @@
-import { OrbitService } from '../../domain/services/OrbitService';
+import {
+  OrbitService,
+  PortalDnsRecord,
+  PortalDnsSyncOptions,
+} from '../../domain/services/OrbitService';
 import { Injectable } from '@/decorators/Injectable';
 
 @Injectable()
 export class StubOrbitService extends OrbitService {
-  public async createPortal(id: string, address: string, type: string, _apiKey: string): Promise<void> {
-    console.log(`[STUB] createPortal: id=${id} address=${address} type=${type}`);
+  public async syncPortalDns(
+    portal: PortalDnsRecord,
+    options: PortalDnsSyncOptions = {},
+  ): Promise<void> {
+    console.log(
+      `[STUB] syncPortalDns: id=${portal.id} address=${portal.address} type=${portal.type} force=${options.force === true}`,
+    );
   }
 
-  public async updateDynamicDNS(id: string, address: string, type: string, _apiKey: string): Promise<void> {
-    console.log(`[STUB] updateDynamicDNS: id=${id} address=${address} type=${type}`);
+  public async batchSyncPortalDns(
+    portals: PortalDnsRecord[],
+    ip: string | null,
+    options: PortalDnsSyncOptions = {},
+  ): Promise<void> {
+    console.log(
+      `[STUB] batchSyncPortalDns: ${portals.length} portals ip=${ip} force=${options.force === true}`,
+    );
   }
 
   public async getPublicIPAddress(): Promise<string | null> {
     console.log('[STUB] getPublicIPAddress → 1.2.3.4');
     return '1.2.3.4';
-  }
-
-  public async batchUpdateDynamicDNS(portals: any[], ip: string | null): Promise<void> {
-    console.log(`[STUB] batchUpdateDynamicDNS: ${portals.length} portals ip=${ip}`);
-  }
-
-  public async updateCloudflareDNS(apiToken: string, domain: string, ip: string, _options?: any): Promise<any> {
-    console.log(`[STUB] updateCloudflareDNS: domain=${domain} ip=${ip} token=${apiToken.slice(0, 4)}...`);
-    return { id: 'stub-record-id', name: domain, content: ip };
   }
 
   public async generatePortalConfig(portal: any, forceTransponder?: any): Promise<void> {

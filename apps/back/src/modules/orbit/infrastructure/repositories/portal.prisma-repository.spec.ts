@@ -45,12 +45,8 @@ describe('PortalPrismaRepository (Integration)', () => {
         testCompanyId,
         {
           description: 'Test Description',
-          listenHttp: true,
-          listenHttps: true,
           enableCompression: true,
-          cacheEnabled: true,
           corsEnabled: true,
-          defaultServer: false,
           updatedBy: 'u-000001',
         },
       );
@@ -90,23 +86,30 @@ describe('PortalPrismaRepository (Integration)', () => {
 
       const updatedPortal = portal.clone({
         description: 'Updated Description',
-        listenHttp: false,
-        cacheEnabled: false,
+        enableCompression: false,
+        corsEnabled: false,
       });
 
       const result = await repository.update(updatedPortal);
 
       expect(result).toBeDefined();
       expect(result.description).toBe('Updated Description');
-      expect(result.listenHttp).toBe(false);
-      expect(result.cacheEnabled).toBe(false);
+      expect(result.enableCompression).toBe(false);
+      expect(result.corsEnabled).toBe(false);
     });
 
-    it('should delete a portal', async () => {
-      await repository.delete(createdPortalId);
+    it('should hide a portal marked as deleted', async () => {
+      const portal = await repository.findById(createdPortalId);
+      if (!portal) throw new Error('Portal not found');
 
-      const result = await repository.findById(createdPortalId);
-      expect(result).toBeNull();
+      await repository.update(portal.clone({ status: ResourceStatus.DELETED }));
+
+      expect(await repository.findById(createdPortalId)).toBeNull();
+      expect(
+        (await repository.findByOwnerId(testCompanyId)).some(
+          (p) => p.id === createdPortalId,
+        ),
+      ).toBe(false);
     });
   });
 });

@@ -8,10 +8,11 @@ import { SystemResetProcessor } from './application/SystemResetProcessor';
 import { SystemResetHardProcessor } from './application/SystemResetHardProcessor';
 import { DeleteProcessor } from '@/system/application/DeleteProcessor';
 import { HostPreflightService } from './infrastructure/services/HostPreflightService';
+import { IPChecker } from './application/IPChecker';
 
 @Module({
   imports: [SharedModule, EventModule, WorkerModule, MeshModule, OrbitModule],
-  providers: [DeleteProcessor, HostPreflightService],
+  providers: [DeleteProcessor, HostPreflightService, IPChecker],
   processors: [SystemResetProcessor, SystemResetHardProcessor],
   exports: [HostPreflightService],
 })

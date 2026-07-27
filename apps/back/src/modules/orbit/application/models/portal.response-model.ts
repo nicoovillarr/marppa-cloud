@@ -19,9 +19,6 @@ export class PortalResponseModel {
   public readonly type: PortalType;
 
   @Expose()
-  public readonly apiKey: string;
-
-  @Expose()
   public readonly lastSyncAt: Date;
 
   @Expose()
@@ -31,28 +28,10 @@ export class PortalResponseModel {
   public readonly status: ResourceStatus;
 
   @Expose()
-  public readonly listenHttp: boolean;
-
-  @Expose()
-  public readonly listenHttps: boolean;
-
-  @Expose()
-  public readonly sslCertificate: string;
-
-  @Expose()
-  public readonly sslKey: string;
-
-  @Expose()
   public readonly enableCompression: boolean;
 
   @Expose()
-  public readonly cacheEnabled: boolean;
-
-  @Expose()
   public readonly corsEnabled: boolean;
-
-  @Expose()
-  public readonly defaultServer: boolean;
 
   @Expose()
   public readonly createdBy: string;

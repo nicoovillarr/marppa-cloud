@@ -4,6 +4,8 @@ import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { NodeEntity } from '../../domain/entities/node.entity';
 import { NodePrismaMapper } from '../mappers/node.prisma-mapper';
 import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
+import { NodeWithZoneModel } from '../../domain/models/node-with-zone.model';
+import { ZonePrismaMapper } from '../mappers/zone.prisma-mapper';
 
 @Injectable()
 export class NodePrismaRepository implements NodeRepository {
@@ -22,6 +24,31 @@ export class NodePrismaRepository implements NodeRepository {
     }
 
     return NodePrismaMapper.toEntity(model);
+  }
+
+  public async findByIdWithZone(id: string): Promise<NodeWithZoneModel | null> {
+    const model = await this.prisma.node.findUnique({
+      where: { id },
+      include: { zone: true },
+    });
+
+    if (model == null) {
+      return null;
+    }
+
+    return new NodeWithZoneModel(
+      NodePrismaMapper.toEntity(model),
+      ZonePrismaMapper.toEntity(model.zone),
+    );
+  }
+
+  public async findWorkerOwnerId(workerId: string): Promise<string | null> {
+    const worker = await this.prisma.worker.findUnique({
+      where: { id: workerId },
+      select: { ownerId: true },
+    });
+
+    return worker?.ownerId ?? null;
   }
 
   public async findByZoneId(zoneId: string): Promise<NodeEntity[]> {

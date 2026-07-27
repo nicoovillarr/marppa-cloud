@@ -64,6 +64,10 @@ export class WorkerService {
       throw new UnauthorizedError();
     }
 
+    if (data.ownerId != null && data.ownerId !== user.companyId) {
+      throw new UnauthorizedError();
+    }
+
     const macAddress = this.macAddressService.generate();
 
     const entity = new WorkerEntity(

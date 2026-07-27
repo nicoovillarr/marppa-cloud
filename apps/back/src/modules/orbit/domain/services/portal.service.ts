@@ -10,103 +10,157 @@ import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { UpdatePortalDto } from '../../presentation/dtos/update-portal.dto';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
-import { PortalType } from '../enum/portal-type.enum';
+import {
+  EventTypeKey,
+  SUPPORTED_PORTAL_TYPES,
+  getEventStateTransition,
+} from '@marppa-cloud/api-types';
 import { PortalWithTranspondersWithNodeModel } from '../models/portal-with-transponders-with-node.model';
+import { ZoneService } from '@/mesh/domain/services/zone.service';
 
 @Injectable()
 export class PortalService {
   constructor(
     @Inject(PORTAL_REPOSITORY)
     private readonly portalRepository: PortalRepository,
+    private readonly zoneService: ZoneService,
   ) { }
 
   public getPortalTypes(): string[] {
-    return Object.keys(PortalType)
+    return [...SUPPORTED_PORTAL_TYPES];
   }
 
-  public async findById(id: string): Promise<PortalEntity | null> {
-    return this.portalRepository.findById(id);
+  public async findById(id: string): Promise<PortalEntity> {
+    const portal = await this.portalRepository.findById(id);
+    if (portal == null) {
+      throw new NotFoundError();
+    }
+
+    this.assertOwnership(portal.ownerId);
+    return portal;
   }
 
-  public async findByIdWithTranspondersWithNode(id: string): Promise<PortalWithTranspondersWithNodeModel | null> {
-    return this.portalRepository.findByIdWithTranspondersWithNode(id);
+  public async findByIdWithTranspondersWithNode(
+    id: string,
+  ): Promise<PortalWithTranspondersWithNodeModel> {
+    const model =
+      await this.portalRepository.findByIdWithTranspondersWithNode(id);
+    if (model == null) {
+      throw new NotFoundError();
+    }
+
+    this.assertOwnership(model.portal.ownerId);
+    return model;
   }
 
-  public async findByOwnerId(ownerId: string): Promise<PortalEntity[]> {
-    return this.portalRepository.findByOwnerId(ownerId);
-  }
-
-  public create(data: CreatePortalDto): Promise<PortalEntity> {
+  public findByOwnerId(ownerId?: string): Promise<PortalEntity[]> {
     const user = getCurrentUser();
     if (user == null) {
       throw new UnauthorizedError();
     }
+
+    if (ownerId != null && ownerId !== user.companyId) {
+      throw new UnauthorizedError();
+    }
+
+    return this.portalRepository.findByOwnerId(user.companyId);
+  }
+
+  public async create(data: CreatePortalDto): Promise<PortalEntity> {
+    const user = getCurrentUser();
+    if (user == null) {
+      throw new UnauthorizedError();
+    }
+
+    await this.assertOwnedZone(data.zoneId);
 
     const portal = new PortalEntity(
       data.name,
       data.address,
       data.type,
       data.apiKey,
-      ResourceStatus.ACTIVE,
+      getEventStateTransition(EventTypeKey.PORTAL_CREATE).entry,
       user.userId,
       user.companyId,
       {
         description: data.description,
-        listenHttp: data.listenHttp,
-        listenHttps: data.listenHttps,
-        sslCertificate: data.sslCertificate,
-        sslKey: data.sslKey,
         enableCompression: data.enableCompression,
-        cacheEnabled: data.cacheEnabled,
         corsEnabled: data.corsEnabled,
-        defaultServer: data.defaultServer,
         zoneId: data.zoneId,
       },
     );
 
-    return this.save(portal);
+    return this.portalRepository.create(portal);
   }
 
-  public async update(
-    id: string,
-    data: UpdatePortalDto,
-  ): Promise<PortalEntity> {
+  public async update(id: string, data: UpdatePortalDto): Promise<PortalEntity> {
     const user = getCurrentUser();
     if (user == null) {
       throw new UnauthorizedError();
     }
 
-    const portal = await this.portalRepository.findById(id);
-    if (portal == null) {
-      throw new NotFoundError();
-    }
+    const portal = await this.findById(id);
+
+    await this.assertOwnedZone(data.zoneId);
 
     const entity = portal.clone({
       name: data.name,
       description: data.description,
-      listenHttp: data.listenHttp,
-      listenHttps: data.listenHttps,
-      sslCertificate: data.sslCertificate,
-      sslKey: data.sslKey,
+      address: data.address,
+      type: data.type,
+      apiKey: data.apiKey,
       enableCompression: data.enableCompression,
-      cacheEnabled: data.cacheEnabled,
       corsEnabled: data.corsEnabled,
-      defaultServer: data.defaultServer,
       zoneId: data.zoneId,
+      status: getEventStateTransition(EventTypeKey.PORTAL_UPDATE).entry,
+      updatedBy: user.userId,
     });
 
-    return this.save(entity);
+    return this.portalRepository.update(entity);
   }
 
   public async delete(id: string): Promise<void> {
-    return this.portalRepository.delete(id);
-  }
-
-  private save(entity: PortalEntity): Promise<PortalEntity> {
-    if (entity.id == null) {
-      return this.portalRepository.create(entity);
+    const user = getCurrentUser();
+    if (user == null) {
+      throw new UnauthorizedError();
     }
 
-    return this.portalRepository.update(entity);
+    const portal = await this.findById(id);
+
+    const deletable: ResourceStatus[] = [
+      ResourceStatus.ACTIVE,
+      ResourceStatus.FAILED,
+    ];
+    if (!deletable.includes(portal.status)) {
+      throw new Error(
+        `Portal must be ${deletable.join(' or ')} to be deleted (is ${portal.status})`,
+      );
+    }
+
+    const queued = portal.clone({
+      status: getEventStateTransition(EventTypeKey.PORTAL_DELETE).entry,
+      updatedBy: user.userId,
+    });
+
+    await this.portalRepository.update(queued);
+  }
+
+  private async assertOwnedZone(zoneId?: string): Promise<void> {
+    if (zoneId == null) {
+      return;
+    }
+
+    await this.zoneService.findById(zoneId);
+  }
+
+  private assertOwnership(ownerId: string): void {
+    const user = getCurrentUser();
+    if (user == null) {
+      throw new UnauthorizedError();
+    }
+
+    if (ownerId !== user.companyId) {
+      throw new NotFoundError();
+    }
   }
 }

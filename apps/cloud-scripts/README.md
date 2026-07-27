@@ -118,6 +118,7 @@ $USER ALL=(ALL) NOPASSWD: \
   /usr/sbin/sysctl, \
   /usr/bin/systemctl, \
   /usr/bin/caddy, \
+  /usr/bin/ddclient, \
   /usr/bin/pkill, \
   /usr/bin/cat, \
   /usr/bin/cp, \
@@ -231,9 +232,83 @@ TLS is Caddy's automatic ACME: certificates are requested and renewed on their o
 portals carry no certificate paths. The host must be reachable on 80 and 443 from the
 internet for the challenge to complete.
 
-Two portal options have no Caddy equivalent and are logged as warnings rather than
-silently dropped: per-transponder `cacheEnabled` (Caddy has no built-in cache; it needs
-a plugin) and portal `defaultServer` (the portal is served on its own address only).
+Per-transponder `cacheEnabled` has no Caddy equivalent (Caddy has no built-in cache; it
+needs a plugin) and is logged as a warning rather than silently dropped.
+
+A route is only emitted for a transponder linked to a node — the node's IP is the
+upstream. A transponder without one is skipped with a warning, and a portal whose
+transponders are all skipped gets an empty `route` block: the domain resolves and
+serves nothing.
+
+### ddclient (portal DNS)
+
+A portal's address is kept pointing at the host's public IP by `ddclient`, invoked
+one-shot per portal — never as a daemon. Each portal owns an independent config and
+cache file, so one portal's credentials or failures cannot affect another's:
+
+- `/etc/ddclient/portals/<portalId>.conf` — written by the app at mode `600` (it holds
+  the portal's API token). Regenerated on every sync; manual edits are overwritten.
+- `/var/cache/ddclient/portals/<portalId>.cache` — ddclient's own record of the last
+  value it pushed. This is what makes repeated syncs cheap: with an unchanged IP
+  ddclient skips the provider call entirely.
+
+The app runs `sudo ddclient -file <conf>`, which updates once and exits. A
+`PORTAL_UPDATE` event carrying the property `FORCE_SYNC=true` adds `-force`, which
+bypasses the cache and pushes the record even when nothing changed — use it to repair a
+record edited out-of-band at the provider.
+
+Two things trigger a sync: the `PORTAL_CREATE`/`PORTAL_UPDATE` processors, and
+`IPChecker`, which polls the host's public IP every `IP_CHECK_INTERVAL_MS` and re-syncs
+every ACTIVE portal whose stored `lastPublicIP` no longer matches. Without that poller a
+portal's record only ever moves when someone edits the portal, so it is what makes the
+DNS actually dynamic. The `lastPublicIP` filter is also what keeps the poll cheap: one
+IP lookup per cycle instead of one ddclient run per portal.
+
+**Only Cloudflare is supported.** `PortalType` still carries a `DYNU` value in the
+database enum, but `SUPPORTED_PORTAL_TYPES` (in `@marppa-cloud/api-types`) is the app's
+source of truth: the API rejects any other type on create/update, and the host service
+throws rather than writing a config it cannot honour. Widening this means adding the
+protocol block to `buildDdclientConfig` and the value to that constant — no migration.
+
+The zone is derived as the last two labels of the address (`api.foo.example.com` →
+`example.com`), which is wrong for multi-label public suffixes such as `.co.uk`. Those
+domains need the zone stored explicitly on the portal; not supported today.
+
+Install ddclient. **Leave the packaged daemon alone**: if you already keep
+`/etc/ddclient.conf` updating records for the host itself, that unit must stay enabled —
+the app does not replace it, and disabling it silently stops updating those records.
+
+The two coexist because they share nothing at runtime: the app always passes its own
+`-file`, and each generated config pins its own `cache=` under
+`/var/cache/ddclient/portals/`, so neither reads nor overwrites the daemon's default
+`/var/cache/ddclient/ddclient.cache`.
+
+```bash
+sudo apt install ddclient          # 3.10+ — the generated config uses usev4/webv4
+
+sudo mkdir -p /etc/ddclient/portals /var/cache/ddclient/portals
+```
+
+The app creates both directories on its first sync anyway (`mkdir -p` through sudo);
+creating them up front just makes the layout visible before anything runs.
+
+Verify a portal end-to-end after its first sync:
+
+```bash
+sudo ddclient -file /etc/ddclient/portals/<portalId>.conf -force -verbose
+```
+
+The generated config deliberately carries **no `daemon` line**, not even `daemon=0`.
+Setting it puts ddclient in daemon mode: it forks, the parent exits `0` immediately, and
+the update happens in a detached child. The caller sees a clean exit with empty output
+whether the record was updated or the credentials were rejected — every failure silently
+becomes a healthy portal. Without the line ddclient runs once in the foreground, exits
+`1` on failure and prints `FAILED: updating <host>: ...` on stdout, which is what the
+processor relies on.
+
+`ddclient -query` is **not** a config check: it probes the legacy `use=` methods rather
+than the `usev4`/`webv4` pair the generated file sets, and it has been observed to hang
+for minutes. Read the app's own log line instead.
 
 ### dnsmasq
 
@@ -280,6 +355,7 @@ process refuses to boot with a list of what is wrong.
 | `NFTABLES_RESET_SOURCE` | yes | Path to the pristine base ruleset (`/etc/nftables.base.conf` above). Restored by `SYSTEM_RESET`. |
 | `ALLOWED_IMAGE_DOMAINS` | yes | Comma-separated allowlist of hosts images may be downloaded from, e.g. `cloud-images.ubuntu.com`. |
 | `WORKER_BOOT_TIMEOUT_MS` | no | How long to wait for a VM's first boot before declaring it unreachable. Default `180000`. |
+| `IP_CHECK_INTERVAL_MS` | no | How often to re-check the host's public IP and re-sync portal DNS. Default `600000`. |
 | `LOG_DIR` | no | Log directory. Omit to log only to stdout. |
 | `MAX_LOG_SIZE`, `LOG_BACKUP_COUNT` | no | Log rotation. Defaults: 10 MB, 5 files. |
 | `USE_STUBS` | no | `true` replaces every host service with a no-op stub **and skips the preflight**. Development only — never set it on the host. |

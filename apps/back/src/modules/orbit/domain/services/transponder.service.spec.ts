@@ -12,6 +12,8 @@ import { CreateTransponderDto } from '../../presentation/dtos/create-transponder
 import { UpdateTransponderDto } from '../../presentation/dtos/update-transponder.dto';
 import * as SessionContext from '@/auth/infrastructure/als/session.context';
 import { TransponderMode } from '../enum/transponder-mode.enum';
+import { PortalService } from './portal.service';
+import { NodeService } from '@/mesh/domain/services/node.service';
 
 describe('TransponderService', () => {
   let service: TransponderService;
@@ -40,7 +42,14 @@ describe('TransponderService', () => {
     findByPortalId: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    delete: jest.fn(),
+  };
+
+  const mockPortalService = {
+    findById: jest.fn(),
+  };
+
+  const mockNodeService = {
+    findByIdForCaller: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -50,6 +59,14 @@ describe('TransponderService', () => {
         {
           provide: TRANSPONDER_REPOSITORY,
           useValue: mockTransponderRepository,
+        },
+        {
+          provide: PortalService,
+          useValue: mockPortalService,
+        },
+        {
+          provide: NodeService,
+          useValue: mockNodeService,
         },
       ],
     }).compile();
@@ -63,6 +80,12 @@ describe('TransponderService', () => {
       email: 'test@test.com',
       type: 'access',
     } as any);
+
+    mockPortalService.findById.mockResolvedValue({ id: 'p-000001' });
+    mockNodeService.findByIdForCaller.mockResolvedValue({
+      id: 'n-000002',
+      status: ResourceStatus.ACTIVE,
+    });
   });
 
   afterEach(() => {
@@ -114,16 +137,19 @@ describe('TransponderService', () => {
       gzipEnabled: false,
       priority: 2,
       nodeId: 'n-000002',
-      portalId: 'p-000001',
     };
 
-    it('should create a transponder successfully', async () => {
+    it('should create a transponder queued and linked to its node', async () => {
       mockTransponderRepository.create.mockResolvedValue(mockTransponderEntity);
 
       const result = await service.create('p-000001', createDto);
 
       expect(repository.create).toHaveBeenCalledWith(
-        expect.any(TransponderEntity),
+        expect.objectContaining({
+          nodeId: 'n-000002',
+          portalId: 'p-000001',
+          status: ResourceStatus.QUEUED,
+        }),
       );
       expect(result).toEqual(mockTransponderEntity);
     });
@@ -131,9 +157,39 @@ describe('TransponderService', () => {
     it('should throw UnauthorizedError if no user in session', async () => {
       jest.spyOn(SessionContext, 'getCurrentUser').mockReturnValue(null);
 
-      expect(() => service.create('p-000001', createDto)).toThrow(
+      await expect(service.create('p-000001', createDto)).rejects.toThrow(
         UnauthorizedError,
       );
+    });
+
+    it('should not create a transponder pointing at a node of another company', async () => {
+      mockNodeService.findByIdForCaller.mockRejectedValue(new NotFoundError());
+
+      await expect(service.create('p-000001', createDto)).rejects.toThrow(
+        NotFoundError,
+      );
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject a node that is not ACTIVE', async () => {
+      mockNodeService.findByIdForCaller.mockResolvedValue({
+        id: 'n-000002',
+        status: ResourceStatus.PROVISIONING,
+      });
+
+      await expect(service.create('p-000001', createDto)).rejects.toThrow(
+        /Node must be ACTIVE/,
+      );
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('should not create a transponder on a portal of another company', async () => {
+      mockPortalService.findById.mockRejectedValue(new NotFoundError());
+
+      await expect(service.create('p-000002', createDto)).rejects.toThrow(
+        NotFoundError,
+      );
+      expect(repository.create).not.toHaveBeenCalled();
     });
   });
 
@@ -147,10 +203,9 @@ describe('TransponderService', () => {
       gzipEnabled: true,
       priority: 3,
       nodeId: 'n-000001',
-      portalId: 'p-000001',
     };
 
-    it('should update a transponder successfully', async () => {
+    it('should queue the transponder with the updated fields applied', async () => {
       mockTransponderRepository.findById.mockResolvedValue(
         mockTransponderEntity,
       );
@@ -160,7 +215,12 @@ describe('TransponderService', () => {
 
       expect(repository.findById).toHaveBeenCalledWith('p-000001', 't-000001');
       expect(repository.update).toHaveBeenCalledWith(
-        expect.any(TransponderEntity),
+        expect.objectContaining({
+          path: '/api/v3',
+          port: 7070,
+          status: ResourceStatus.QUEUED,
+          updatedBy: 'u-000001',
+        }),
       );
       expect(result).toEqual(mockTransponderEntity);
     });
@@ -183,12 +243,31 @@ describe('TransponderService', () => {
   });
 
   describe('delete', () => {
-    it('should delete a transponder', async () => {
-      mockTransponderRepository.delete.mockResolvedValue(undefined);
+    it('should queue the transponder for the delete processor instead of removing the row', async () => {
+      mockTransponderRepository.findById.mockResolvedValue(
+        mockTransponderEntity,
+      );
+      mockTransponderRepository.update.mockResolvedValue(mockTransponderEntity);
 
       await service.delete('p-000001', 't-000001');
 
-      expect(repository.delete).toHaveBeenCalledWith('p-000001', 't-000001');
+      expect(repository.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 't-000001',
+          status: ResourceStatus.QUEUED,
+        }),
+      );
+    });
+
+    it('should reject a transponder that is not ACTIVE or FAILED', async () => {
+      mockTransponderRepository.findById.mockResolvedValue(
+        mockTransponderEntity.clone({ status: ResourceStatus.PROVISIONING }),
+      );
+
+      await expect(service.delete('p-000001', 't-000001')).rejects.toThrow(
+        /must be ACTIVE or FAILED/,
+      );
+      expect(repository.update).not.toHaveBeenCalled();
     });
   });
 });

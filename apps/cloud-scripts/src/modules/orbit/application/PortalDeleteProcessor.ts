@@ -8,6 +8,9 @@ import { ORBIT_SERVICE_TOKEN, OrbitService } from '../domain/services/OrbitServi
 import { AbortError } from '@/event/domain/errors/AbortError';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.PORTAL_DELETE);
 
 @EventProcessor(EventType.PORTAL_DELETE)
 export class PortalDeleteProcessor implements IEventProcessor {
@@ -32,6 +35,17 @@ export class PortalDeleteProcessor implements IEventProcessor {
       });
     };
 
+    const releasePortalAddress = async () => {
+      await this.prisma.portal.update({
+        where: { id: portal!.id },
+        data: {
+          status: STATES.ok,
+          deletedAt: new Date(),
+          updatedBy: event.createdBy,
+        },
+      });
+    };
+
     try {
       const resourcePortal = event.resources.find((r) => r.resourceType === 'Portal');
       if (!resourcePortal) {
@@ -46,16 +60,16 @@ export class PortalDeleteProcessor implements IEventProcessor {
         throw new AbortError(`Portal not found for event ID: ${event.id}`, EventType.PORTAL_DELETE_FAILED);
       }
 
-      if (portal.status !== ResourceStatus.QUEUED) {
+      if (portal.status !== STATES.entry) {
         throw new AbortError(
           `Portal status (${portal.status}) is not valid for event ID: ${event.id}`,
           EventType.PORTAL_DELETE_FAILED,
         );
       }
 
-      await updatePortalStatus(ResourceStatus.DELETING);
+      await updatePortalStatus(STATES.work);
       await this.orbitService.deletePortalConfig(portal.id);
-      await updatePortalStatus(ResourceStatus.DELETED);
+      await releasePortalAddress();
 
       const eventCreatedId = await this.repository.createEvent(EventType.PORTAL_DELETED, event.createdBy, event.companyId);
       await this.repository.addEventResource(eventCreatedId, 'Event', String(event.id));
@@ -63,7 +77,7 @@ export class PortalDeleteProcessor implements IEventProcessor {
     } catch (error) {
       if (error instanceof AbortError) throw error;
       if (portal) {
-        await updatePortalStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updatePortalStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }

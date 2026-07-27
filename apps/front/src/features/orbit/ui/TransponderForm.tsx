@@ -2,11 +2,10 @@
 
 import { Button } from "@/core/ui/Button";
 import { FormInput } from "@/core/ui/inputs/form/FormInput";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { LuSave } from "react-icons/lu";
 import { FormSelect } from "@/core/ui/inputs/form/FormSelect";
-import { FormCheckbox } from "@/core/ui/inputs/form/FormCheckbox";
 import { useTransponder } from "../models/use-transponder";
 import { useNode } from "src/features/mesh/models/use-node";
 import { TransponderMode } from "../models/transponder-mode.enum";
@@ -36,8 +35,6 @@ export function TransponderForm({
   const methods = useForm();
   const { control, handleSubmit, reset } = methods;
 
-  const [isEnabled, setIsEnabled] = useState<boolean>(false);
-
   const onSubmit = async (data: any) => {
     if (transponder) {
       await updateTransponder(
@@ -46,10 +43,7 @@ export function TransponderForm({
         data
       );
     } else {
-      await createTransponder(portalId, {
-        ...data,
-        zoneId,
-      });
+      await createTransponder(portalId, data);
     }
   };
 
@@ -57,8 +51,6 @@ export function TransponderForm({
     if (transponder) {
       reset({ ...transponder });
     }
-
-    setIsEnabled(transponder?.enabled ?? false);
   }, [transponder]);
 
   useEffect(() => {
@@ -125,15 +117,6 @@ export function TransponderForm({
             control={control}
             controlName="priority"
             type="number"
-          />
-
-          <FormCheckbox
-            className="flex-1"
-            label="Enabled"
-            control={control}
-            controlName="enabled"
-            onChangedValue={setIsEnabled}
-            text={isEnabled ? "Yes" : "No"}
           />
         </div>
 
