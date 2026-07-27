@@ -20,6 +20,7 @@ const ALIASES = {
   '@/libs/': 'libs/',
   '@/event/': 'modules/event/',
   '@/mesh/': 'modules/mesh/',
+  '@/nucleus/': 'modules/nucleus/',
   '@/orbit/': 'modules/orbit/',
   '@/shared/': 'modules/shared/',
   '@/system/': 'modules/system/',
