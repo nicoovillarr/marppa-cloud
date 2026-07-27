@@ -35,6 +35,7 @@
       // Modules
       "@/event/*": ["./src/modules/event/*"],
       "@/mesh/*": ["./src/modules/mesh/*"],
+      "@/nucleus/*": ["./src/modules/nucleus/*"],
       "@/orbit/*": ["./src/modules/orbit/*"],
       "@/shared/*": ["./src/modules/shared/*"],
       "@/system/*": ["./src/modules/system/*"],

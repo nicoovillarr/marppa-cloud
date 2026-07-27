@@ -139,6 +139,58 @@ truncated line or an indented heredoc terminator leaves a malformed file, and
 sudo then refuses every invocation host-wide. Always `visudo -cf` a copy first,
 then `install`.
 
+## Docker (Nucleus)
+
+The Nucleus module runs atoms as Docker containers. Docker's default behaviour is
+incompatible with this host: with `iptables` enabled the daemon writes its own
+chains into `ip nat` and `inet filter` — the two tables `LinuxMeshService` dumps
+and rewrites on every zone or fiber change, and which `SYSTEM_RESET` recreates
+from `NFTABLES_RESET_SOURCE` (a file that starts with `flush ruleset`, so it also
+takes fail2ban's `inet f2b-table` with it). Docker's rules would be dropped
+silently, and `saveNftConfiguration` would persist Docker's rules into
+`/etc/nftables.conf` as if the app owned them.
+
+The daemon is therefore configured never to touch packet filtering.
+`deploy/docker-daemon.json` must be installed as `/etc/docker/daemon.json`
+**before Docker is first started** — a daemon that has already run leaves chains
+behind that then have to be flushed by hand:
+
+```bash
+sudo mkdir -p /etc/docker
+sudo install -m 644 \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/docker-daemon.json \
+  /etc/docker/daemon.json
+```
+
+What each setting buys:
+
+| Setting | Why |
+| --- | --- |
+| `iptables: false`, `ip6tables: false` | the daemon never writes an nftables rule, so `inet filter`, `ip nat` and `inet f2b-table` stay exactly as their owners left them |
+| `bridge: none` | no `docker0`; the default bridge would need masquerading that no longer exists, so containers on it would silently have no egress |
+| `live-restore: true` | atoms survive a daemon restart |
+
+Connectivity then comes entirely from the mesh, not from Docker:
+
+- an atom needs a `Node` in an `ACTIVE` zone, exactly like a worker;
+- `ensureZoneNetwork` maps a Docker network onto that zone's **pre-existing**
+  bridge (`com.docker.network.bridge.name=<zoneId>`, masquerading off), so Docker
+  adopts the device instead of creating one it would later delete;
+- the container is addressed with its node's IP, and egress NAT comes from the
+  zone's `postrouting` rules — including the RFC1918 `return` carve-outs Docker's
+  own masquerade would have trampled;
+- **ports are never published with `-p`.** A port reachable from outside the zone
+  is a `Fiber`, i.e. a DNAT rule in the app's own `ip nat` table.
+
+Both `HostPreflightService` (at startup and before every reset) and
+`DockerNucleusService.ensureZoneNetwork` refuse to continue if a `DOCKER*` chain
+shows up in the live ruleset, so a daemon that silently regains its firewall
+management is caught before it can clobber anything.
+
+`cloud-script` reaches Docker through `sudo docker` (see the sudoers grant), not
+through membership of the `docker` group, so every call stays inside the same
+auditable allowlist as `virsh` and `nft`.
+
 ## Secrets / `.env`
 
 Nothing goes into GitHub secrets. The host keeps its own
