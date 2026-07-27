@@ -54,6 +54,20 @@ export class StubNucleusService extends NucleusService {
     return orphans;
   }
 
+  public async reconcileZoneNetworks(expectedZoneIds: string[]): Promise<string[]> {
+    console.log(`[STUB] reconcileZoneNetworks: keeping ${expectedZoneIds.length} zones`);
+    return [];
+  }
+
+  public async forceResetNucleus(): Promise<{
+    removedAtoms: string[];
+    removedNetworks: string[];
+  }> {
+    const removedAtoms = await this.reconcileAtoms([]);
+    console.log('[STUB] forceResetNucleus');
+    return { removedAtoms, removedNetworks: [] };
+  }
+
   public async assertFirewallIsolation(): Promise<void> {
     console.log('[STUB] assertFirewallIsolation');
   }

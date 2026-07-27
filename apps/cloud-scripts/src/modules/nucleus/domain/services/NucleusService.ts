@@ -44,6 +44,15 @@ export abstract class NucleusService {
   abstract reconcileAtoms(expectedIds: string[]): Promise<string[]>;
 
   /**
+   * Drops the Docker network mapped onto a zone bridge once that zone is gone.
+   * The bridge itself belongs to the mesh, which deletes it directly — without
+   * this the network object survives pointing at a device that no longer exists.
+   */
+  abstract reconcileZoneNetworks(expectedZoneIds: string[]): Promise<string[]>;
+
+  abstract forceResetNucleus(): Promise<{ removedAtoms: string[]; removedNetworks: string[] }>;
+
+  /**
    * Fails if the Docker daemon has started managing packet filtering. Everything
    * here assumes `iptables: false`, and a daemon that lost that setting would
    * insert its own chains into the tables the mesh rewrites on every zone change.

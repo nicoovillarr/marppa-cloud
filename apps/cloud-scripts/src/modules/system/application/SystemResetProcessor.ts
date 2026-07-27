@@ -86,9 +86,14 @@ export class SystemResetProcessor implements IEventProcessor {
       );
 
       // Only ACTIVE atoms are expected to have a container: everything else is
-      // rebuilt from the row on its next ATOM_START.
+      // rebuilt from the row on its next ATOM_START. Networks go after the
+      // containers that hold an endpoint on them, and are keyed by the zones that
+      // survived the mesh reconcile.
       const removedAtoms = await this.nucleusService.reconcileAtoms(
         atoms.map((atom) => atom.id),
+      );
+      await this.nucleusService.reconcileZoneNetworks(
+        zones.map((zone) => zone.id),
       );
 
       this.logger.log(

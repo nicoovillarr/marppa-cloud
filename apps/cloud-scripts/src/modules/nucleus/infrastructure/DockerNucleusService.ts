@@ -172,6 +172,37 @@ export class DockerNucleusService extends NucleusService {
     return orphans;
   }
 
+  public async reconcileZoneNetworks(expectedZoneIds: string[]): Promise<string[]> {
+    const output = await this.docker([
+      'network', 'ls', '--filter', `label=${ZONE_LABEL}`, '--format', '{{.Name}}',
+    ]);
+
+    const networks = output.split('\n').map((line) => line.trim()).filter(Boolean);
+    const expected = new Set(expectedZoneIds);
+    const orphans = networks.filter((name) => !expected.has(name));
+
+    for (const orphan of orphans) {
+      console.log(`Removing orphan docker network ${orphan}`);
+      await this.docker(['network', 'rm', orphan]);
+    }
+
+    return orphans;
+  }
+
+  /**
+   * Atoms are torn down before their networks: Docker refuses to remove a
+   * network that still has an endpoint attached.
+   */
+  public async forceResetNucleus(): Promise<{
+    removedAtoms: string[];
+    removedNetworks: string[];
+  }> {
+    const removedAtoms = await this.reconcileAtoms([]);
+    const removedNetworks = await this.reconcileZoneNetworks([]);
+
+    return { removedAtoms, removedNetworks };
+  }
+
   public async assertFirewallIsolation(): Promise<void> {
     const chains = await Command.runCommand('sudo', ['nft', 'list', 'chains']);
 

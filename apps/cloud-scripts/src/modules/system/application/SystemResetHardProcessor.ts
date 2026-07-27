@@ -4,6 +4,7 @@ import type { EventPayload } from '@/event/domain/models/EventPayload';
 import { MESH_SERVICE_TOKEN, MeshService } from '@/mesh/domain/services/MeshService';
 import { ORBIT_SERVICE_TOKEN, OrbitService } from '@/orbit/domain/services/OrbitService';
 import { HIVE_SERVICE_TOKEN, HiveService } from '@/worker/domain/services/HiveService';
+import { NUCLEUS_SERVICE_TOKEN, NucleusService } from '@/nucleus/domain/services/NucleusService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
@@ -33,6 +34,9 @@ export class SystemResetHardProcessor implements IEventProcessor {
 
     @Inject(ORBIT_SERVICE_TOKEN)
     private readonly orbitService: OrbitService,
+
+    @Inject(NUCLEUS_SERVICE_TOKEN)
+    private readonly nucleusService: NucleusService,
   ) {}
 
   public async handle(event: EventPayload): Promise<void> {
@@ -45,13 +49,18 @@ export class SystemResetHardProcessor implements IEventProcessor {
       );
 
       const removedWorkers = await this.hiveService.forceResetHive();
+      // Atoms first: their containers hold an endpoint on the zone bridges the
+      // mesh is about to delete, and Docker refuses to drop a network still in use.
+      const { removedAtoms, removedNetworks } =
+        await this.nucleusService.forceResetNucleus();
       const { removedZones } = await this.meshService.forceResetMesh();
       const removedPortals = await this.orbitService.forceResetOrbit();
 
       const purged = await this.purgeResourceRows();
 
       this.logger.log(
-        `Hard reset removed ${removedWorkers.length} workers, ${removedZones.length} zones and ` +
+        `Hard reset removed ${removedWorkers.length} workers, ${removedAtoms.length} atoms, ` +
+        `${removedNetworks.length} atom networks, ${removedZones.length} zones and ` +
         `${removedPortals.length} portals from the host, and ${purged} resource rows from the database.`,
       );
 
@@ -84,6 +93,8 @@ export class SystemResetHardProcessor implements IEventProcessor {
         await tx.node.deleteMany(),
         await tx.zone.deleteMany(),
         await tx.worker.deleteMany(),
+        // After nodes: a node's `atomId` references these rows.
+        await tx.atom.deleteMany(),
       ];
 
       return deletions.reduce((total, result) => total + result.count, 0);
