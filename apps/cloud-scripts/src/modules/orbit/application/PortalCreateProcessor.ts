@@ -46,6 +46,12 @@ export class PortalCreateProcessor implements IEventProcessor {
 
       portal = await this.prisma.portal.findUnique({
         where: { id: resourcePortal.resourceId, status: { not: ResourceStatus.DELETED } },
+        include: {
+          transponders: {
+            where: { status: { not: ResourceStatus.DELETED } },
+            include: { node: true },
+          },
+        },
       });
 
       if (!portal) {
@@ -61,12 +67,16 @@ export class PortalCreateProcessor implements IEventProcessor {
 
       await updatePortalStatus(STATES.work);
 
-      await this.orbitService.syncPortalDns({
+      const dnsRecord = {
         id: portal.id,
         address: portal.address,
         type: portal.type,
         apiKey: portal.apiKey,
-      });
+      };
+
+      await this.orbitService.generatePortalConfig(portal);
+      await this.orbitService.ensurePortalDnsRecord(dnsRecord);
+      await this.orbitService.syncPortalDns(dnsRecord);
 
       await updatePortalStatus(STATES.ok);
 

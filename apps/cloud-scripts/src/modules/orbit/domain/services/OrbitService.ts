@@ -12,6 +12,8 @@ export interface PortalDnsSyncOptions {
 }
 
 export abstract class OrbitService {
+  abstract ensurePortalDnsRecord(portal: PortalDnsRecord): Promise<void>;
+
   abstract syncPortalDns(portal: PortalDnsRecord, options?: PortalDnsSyncOptions): Promise<void>;
 
   abstract batchSyncPortalDns(

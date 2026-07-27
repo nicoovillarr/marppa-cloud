@@ -7,6 +7,12 @@ import { Injectable } from '@/decorators/Injectable';
 
 @Injectable()
 export class StubOrbitService extends OrbitService {
+  public async ensurePortalDnsRecord(portal: PortalDnsRecord): Promise<void> {
+    console.log(
+      `[STUB] ensurePortalDnsRecord: id=${portal.id} address=${portal.address}`,
+    );
+  }
+
   public async syncPortalDns(
     portal: PortalDnsRecord,
     options: PortalDnsSyncOptions = {},

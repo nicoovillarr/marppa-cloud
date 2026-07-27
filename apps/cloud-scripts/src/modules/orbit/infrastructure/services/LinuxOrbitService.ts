@@ -14,6 +14,7 @@ import path from 'path';
 import os from 'os';
 
 const PUBLIC_IP_URL = 'https://api.ipify.org';
+const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
 const DDCLIENT_TTL_SECONDS = 120;
 const DDCLIENT_TIMEOUT_MS = 30_000;
 
@@ -43,6 +44,99 @@ interface TransponderConfig {
 export class LinuxOrbitService extends OrbitService {
   constructor(private readonly prisma: PrismaService) {
     super();
+  }
+
+  public async ensurePortalDnsRecord(portal: PortalDnsRecord): Promise<void> {
+    if (portal.type !== PortalType.CLOUDFLARE) {
+      throw new Error(
+        `Unsupported portal type ${portal.type} for portal ${portal.id}; only ${PortalType.CLOUDFLARE} is supported`,
+      );
+    }
+
+    const address = this.sanitizeServerName(portal.address);
+
+    if (await this.findCloudflareRecordId(portal.apiKey, address)) {
+      console.log(`A record for ${address} already exists, leaving it to ddclient`);
+      return;
+    }
+
+    const ip = await this.getPublicIPAddress();
+    if (!ip) {
+      throw new Error(`No public IP found, cannot create the A record for ${address}`);
+    }
+
+    await this.createCloudflareRecord(portal.apiKey, address, ip);
+    console.log(`Created A record ${address} → ${ip}`);
+  }
+
+  private async cloudflareZoneId(apiToken: string, address: string): Promise<string> {
+    const zoneName = this.cloudflareZoneOf(address);
+    const data = await this.cloudflareRequest(
+      apiToken,
+      `/zones?name=${encodeURIComponent(zoneName)}`,
+    );
+
+    const zoneId = data.result?.[0]?.id;
+    if (!zoneId) {
+      throw new Error(`Cloudflare zone not found for ${zoneName}`);
+    }
+
+    return zoneId;
+  }
+
+  private async findCloudflareRecordId(
+    apiToken: string,
+    address: string,
+  ): Promise<string | null> {
+    const zoneId = await this.cloudflareZoneId(apiToken, address);
+    const data = await this.cloudflareRequest(
+      apiToken,
+      `/zones/${zoneId}/dns_records?type=A&name=${encodeURIComponent(address)}`,
+    );
+
+    return data.result?.[0]?.id ?? null;
+  }
+
+  private async createCloudflareRecord(
+    apiToken: string,
+    address: string,
+    ip: string,
+  ): Promise<void> {
+    const zoneId = await this.cloudflareZoneId(apiToken, address);
+
+    await this.cloudflareRequest(apiToken, `/zones/${zoneId}/dns_records`, {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'A',
+        name: address,
+        content: ip,
+        ttl: DDCLIENT_TTL_SECONDS,
+        proxied: false,
+      }),
+    });
+  }
+
+  private async cloudflareRequest(
+    apiToken: string,
+    path: string,
+    init: RequestInit = {},
+  ): Promise<any> {
+    const response = await fetch(`${CLOUDFLARE_API}${path}`, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiToken}`,
+      },
+    });
+
+    const data: any = await response.json();
+    if (!data.success) {
+      throw new Error(
+        `Cloudflare ${init.method ?? 'GET'} ${path} failed: ${JSON.stringify(data.errors)}`,
+      );
+    }
+
+    return data;
   }
 
   public async syncPortalDns(
