@@ -13,6 +13,8 @@ import { TransponderPrismaRepository } from './infrastructure/repositories/trans
 import { TRANSPONDER_REPOSITORY } from './domain/repositories/transponder.repository';
 import { EventModule } from '@/event/event.module';
 import { MeshModule } from '@/mesh/mesh.module';
+import { DNS_PROVIDER } from './domain/services/dns-provider.service';
+import { CloudflareDnsProvider } from './infrastructure/services/cloudflare-dns-provider.service';
 
 @Module({
   imports: [SharedModule, AuthModule, EventModule, MeshModule],
@@ -23,6 +25,10 @@ import { MeshModule } from '@/mesh/mesh.module';
     {
       provide: PORTAL_REPOSITORY,
       useClass: PortalPrismaRepository,
+    },
+    {
+      provide: DNS_PROVIDER,
+      useClass: CloudflareDnsProvider,
     },
 
     TransponderApiService,

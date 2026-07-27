@@ -17,6 +17,7 @@ import {
 } from '@marppa-cloud/api-types';
 import { PortalWithTranspondersWithNodeModel } from '../models/portal-with-transponders-with-node.model';
 import { ZoneService } from '@/mesh/domain/services/zone.service';
+import { DNS_PROVIDER, DnsProvider } from './dns-provider.service';
 
 @Injectable()
 export class PortalService {
@@ -24,6 +25,9 @@ export class PortalService {
     @Inject(PORTAL_REPOSITORY)
     private readonly portalRepository: PortalRepository,
     private readonly zoneService: ZoneService,
+
+    @Inject(DNS_PROVIDER)
+    private readonly dnsProvider: DnsProvider,
   ) { }
 
   public getPortalTypes(): string[] {
@@ -73,6 +77,7 @@ export class PortalService {
     }
 
     await this.assertOwnedZone(data.zoneId);
+    await this.dnsProvider.assertCanManage(data.type, data.address, data.apiKey);
 
     const portal = new PortalEntity(
       data.name,
@@ -102,6 +107,14 @@ export class PortalService {
     const portal = await this.findById(id);
 
     await this.assertOwnedZone(data.zoneId);
+
+    if (data.address != null || data.apiKey != null) {
+      await this.dnsProvider.assertCanManage(
+        data.type ?? portal.type,
+        data.address ?? portal.address,
+        data.apiKey ?? portal.apiKey,
+      );
+    }
 
     const entity = portal.clone({
       name: data.name,

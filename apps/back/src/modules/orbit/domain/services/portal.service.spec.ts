@@ -13,6 +13,8 @@ import { UpdatePortalDto } from '../../presentation/dtos/update-portal.dto';
 import { PortalType } from '../enum/portal-type.enum';
 import * as SessionContext from '@/auth/infrastructure/als/session.context';
 import { ZoneService } from '@/mesh/domain/services/zone.service';
+import { DNS_PROVIDER } from './dns-provider.service';
+import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
 
 describe('PortalService', () => {
   let service: PortalService;
@@ -48,6 +50,10 @@ describe('PortalService', () => {
     findById: jest.fn(),
   };
 
+  const mockDnsProvider = {
+    assertCanManage: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -59,6 +65,10 @@ describe('PortalService', () => {
         {
           provide: ZoneService,
           useValue: mockZoneService,
+        },
+        {
+          provide: DNS_PROVIDER,
+          useValue: mockDnsProvider,
         },
       ],
     }).compile();
@@ -74,6 +84,7 @@ describe('PortalService', () => {
     } as any);
 
     mockZoneService.findById.mockResolvedValue({ id: 'z-000002' });
+    mockDnsProvider.assertCanManage.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -152,6 +163,25 @@ describe('PortalService', () => {
       await expect(service.create(createDto)).rejects.toThrow(
         UnauthorizedError,
       );
+    });
+
+    it('should verify the token can manage the address before inserting', async () => {
+      mockPortalRepository.create.mockResolvedValue(mockPortalEntity);
+
+      await service.create(createDto);
+
+      expect(mockDnsProvider.assertCanManage).toHaveBeenCalledWith(
+        createDto.type,
+        createDto.address,
+        createDto.apiKey,
+      );
+    });
+
+    it('should not create a portal for a zone the token cannot manage', async () => {
+      mockDnsProvider.assertCanManage.mockRejectedValue(new ForbiddenError());
+
+      await expect(service.create(createDto)).rejects.toThrow(ForbiddenError);
+      expect(repository.create).not.toHaveBeenCalled();
     });
 
     it('should not create a portal on a zone of another company', async () => {
@@ -242,6 +272,28 @@ describe('PortalService', () => {
       await expect(service.update('p-999999', updateDto)).rejects.toThrow(
         NotFoundError,
       );
+    });
+
+    it('should re-verify the token when the address changes', async () => {
+      mockPortalRepository.findById.mockResolvedValue(mockPortalEntity);
+      mockPortalRepository.update.mockResolvedValue(mockPortalEntity);
+
+      await service.update('p-000001', { address: 'otro.marppa.cloud' });
+
+      expect(mockDnsProvider.assertCanManage).toHaveBeenCalledWith(
+        mockPortalEntity.type,
+        'otro.marppa.cloud',
+        mockPortalEntity.apiKey,
+      );
+    });
+
+    it('should not verify anything when neither address nor apiKey change', async () => {
+      mockPortalRepository.findById.mockResolvedValue(mockPortalEntity);
+      mockPortalRepository.update.mockResolvedValue(mockPortalEntity);
+
+      await service.update('p-000001', { name: 'Renamed' });
+
+      expect(mockDnsProvider.assertCanManage).not.toHaveBeenCalled();
     });
 
     it('should not move a portal to a zone of another company', async () => {
