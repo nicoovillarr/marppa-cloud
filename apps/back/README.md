@@ -110,15 +110,17 @@ Three consequences shape the module:
   (`capabilities`, `sysctls`) live on the catalog row too, so approving an image
   approves what it may ask of the host. The processors resolve the image through
   the relation, never from event data.
-- **Privilege is defended three times over.** A capability that is root on the
-  host by another name (`SYS_MODULE`, `SYS_ADMIN`, …) is refused by the runtime
-  whatever the catalog says — one `insmod` would unload the nftables rules that
-  isolate every zone. Any image that asks for *any* capability is restricted to
-  the root company, a rule derived from `capabilities` rather than a flag, so a
-  privileged image cannot be added and left ungated by omission. And every
-  container runs `--cap-drop ALL` plus a minimal baseline, which notably excludes
-  Docker's default `NET_RAW`: atoms sharing a zone bridge cannot forge ARP or
-  scan each other with raw sockets.
+- **Capabilities are graded by blast radius** (`@marppa-cloud/shared`, enforced by
+  both the backend and the worker). Forbidden ones are root on the host by
+  another name (`SYS_MODULE`, `SYS_ADMIN`, …) and are refused whatever the
+  catalog says — one `insmod` unloads the nftables rules that isolate every zone.
+  Tenant-safe ones stop at the container's network namespace and the zone around
+  it, which only ever holds one company's resources, so the worst case is
+  self-inflicted. **Everything else is root-company only by default**, so a
+  capability nobody classified is restricted rather than overlooked. On top of
+  that every container runs `--cap-drop ALL` plus a minimal baseline that excludes
+  Docker's default `NET_RAW`, which is what keeps `NET_ADMIN` tenant-safe: without
+  `AF_PACKET` an atom cannot capture packets or forge ARP on its zone bridge.
 - **Docker never manages the firewall.** The daemon runs with `iptables: false`;
   egress NAT and port publishing come from the mesh's own nftables rules, so
   Docker cannot clobber `inet filter` / `ip nat` (rewritten on every zone and

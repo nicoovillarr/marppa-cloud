@@ -17,6 +17,7 @@ import { AtomImageEntity } from '../entities/atom-image.entity';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import { EventTypeKey, getEventStateTransition } from '@marppa-cloud/api-types';
+import { forbiddenCapabilities, rootOnlyCapabilities } from '@marppa-cloud/shared';
 
 @Injectable()
 export class AtomService {
@@ -164,19 +165,25 @@ export class AtomService {
   }
 
   /**
-   * An image that asks for extra kernel capabilities is reserved for the root
-   * company, the same bar `SYSTEM_RESET` uses. The rule is derived from the
-   * catalog row rather than a flag on it, so a privileged image cannot be added
-   * and left ungated by omission.
+   * Capabilities are graded by blast radius, not counted. A tenant-safe one
+   * stops at the container's network namespace and the zone around it — a zone
+   * only ever holds one company's resources, so the worst case is self-inflicted
+   * — while anything unclassified is root-company only by default, the same bar
+   * `SYSTEM_RESET` uses. Grading here rather than reading a flag off the row
+   * means a capability nobody reviewed is restricted instead of overlooked.
    */
   private async assertImageAllowed(image: AtomImageEntity): Promise<void> {
-    if (!image.isPrivileged) {
-      return;
+    const forbidden = forbiddenCapabilities(image.capabilities);
+    if (forbidden.length) {
+      throw new ForbiddenError(
+        `Image "${image.name}" requests capabilities that are never granted: ${forbidden.join(', ')}.`,
+      );
     }
 
-    if (!(await this.isRootCompany())) {
+    const rootOnly = rootOnlyCapabilities(image.capabilities);
+    if (rootOnly.length && !(await this.isRootCompany())) {
       throw new ForbiddenError(
-        `Image "${image.name}" requests host capabilities (${image.capabilities.join(', ')}) ` +
+        `Image "${image.name}" requests host capabilities (${rootOnly.join(', ')}) ` +
         'and can only be used by the root company.',
       );
     }

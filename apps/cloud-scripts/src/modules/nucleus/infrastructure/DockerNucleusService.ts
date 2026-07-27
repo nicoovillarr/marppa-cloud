@@ -1,3 +1,4 @@
+import { forbiddenCapabilities } from '@marppa-cloud/shared';
 import { Command } from '@/libs/Command';
 import { Injectable } from '@/decorators/Injectable';
 import {
@@ -25,12 +26,6 @@ const SAFE_SYSCTL_VALUE = /^[A-Za-z0-9._\-]+$/;
 const SAFE_LIMIT = /^[0-9]+(\.[0-9]+)?[a-z]?$/;
 
 /**
- * Capabilities that hand the container the host. They are refused even when the
- * catalog asks for them: `SYS_MODULE` alone is a kernel module away from
- * disabling the very nftables rules that isolate every zone, so no approval
- * workflow upstream can make them safe.
- */
-/**
  * What is added back after dropping everything: the set an image needs to run
  * its entrypoint as root and step down to its own user. Notably absent from
  * Docker's default set are `NET_RAW` (raw sockets — the ARP spoofing and port
@@ -46,19 +41,6 @@ const BASELINE_CAPABILITIES = [
   'KILL',
 ];
 
-const FORBIDDEN_CAPABILITIES = new Set([
-  'SYS_MODULE',
-  'SYS_ADMIN',
-  'SYS_RAWIO',
-  'SYS_PTRACE',
-  'SYS_BOOT',
-  'DAC_READ_SEARCH',
-  'MAC_ADMIN',
-  'MAC_OVERRIDE',
-  'BPF',
-  'PERFMON',
-  'ALL',
-]);
 
 /**
  * Every container is attached to its zone's bridge with its node's IP and no
@@ -279,18 +261,19 @@ export class DockerNucleusService extends NucleusService {
       capability,
     ]);
 
-    const requested = (image.capabilities ?? []).flatMap((capability) => {
-      const validated = this.assertMatches(capability, SAFE_CAPABILITY, 'capability');
+    const capabilities = (image.capabilities ?? []).map((capability) =>
+      this.assertMatches(capability, SAFE_CAPABILITY, 'capability'),
+    );
 
-      if (FORBIDDEN_CAPABILITIES.has(validated)) {
-        throw new Error(
-          `Refusing to grant ${validated}: it is equivalent to root on the host, ` +
-          'which would let this container disable the nftables rules isolating every zone.',
-        );
-      }
+    const forbidden = forbiddenCapabilities(capabilities);
+    if (forbidden.length) {
+      throw new Error(
+        `Refusing to grant ${forbidden.join(', ')}: equivalent to root on the host, ` +
+        'which would let this container disable the nftables rules isolating every zone.',
+      );
+    }
 
-      return ['--cap-add', validated];
-    });
+    const requested = capabilities.flatMap((capability) => ['--cap-add', capability]);
 
     return [...baseline, ...requested];
   }

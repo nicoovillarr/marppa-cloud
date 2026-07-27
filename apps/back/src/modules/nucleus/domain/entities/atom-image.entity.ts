@@ -32,10 +32,6 @@ export class AtomImageEntity extends PatchableEntity {
     this.capabilities = optionals.capabilities ?? [];
   }
 
-  get isPrivileged(): boolean {
-    return this.capabilities.length > 0;
-  }
-
   toObject(): Record<string, any> {
     return {
       id: this.id ?? undefined,

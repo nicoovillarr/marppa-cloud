@@ -250,6 +250,27 @@ const createAtomImages = async () => {
       sysctls: undefined,
     },
 
+    {
+      // NET_ADMIN is tenant-safe: it only reconfigures the container's own
+      // network namespace, and without NET_RAW (dropped by the runtime baseline)
+      // it cannot capture packets or forge ARP on the zone bridge. The image also
+      // documents SYS_MODULE to insmod wireguard, which is refused outright —
+      // load it on the host instead:
+      //   sudo modprobe wireguard
+      //   echo wireguard | sudo tee /etc/modules-load.d/wireguard.conf
+      name: 'wg-easy-14',
+      description:
+        'wg-easy 14 (WireGuard + web UI). Publish one UDP fiber for the VPN and reach the rest of the zone through it. Requires WG_HOST and PASSWORD_HASH.',
+      registry: 'ghcr.io',
+      repository: 'wg-easy/wg-easy',
+      tag: '14',
+      architecture: 'amd64',
+      capabilities: ['NET_ADMIN'],
+      sysctls: {
+        'net.ipv4.ip_forward': '1',
+        'net.ipv4.conf.all.src_valid_mark': '1',
+      },
+    },
   ];
 
   for (const image of images) {
