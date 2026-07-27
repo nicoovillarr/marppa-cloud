@@ -11,7 +11,7 @@ import { CaptchaWidget } from "./CaptchaWidget";
 import { Button } from "@/core/ui/Button";
 
 const inputClassName =
-  "rounded-lg border border-border bg-surface-raised p-2 text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-amber";
+  "rounded-lg border border-border bg-surface-raised p-2 text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent";
 
 interface RequestFormValues {
   email: string;
@@ -56,7 +56,7 @@ function RequestForm() {
           If an account exists for that email, we sent a link to reset your
           password.
         </p>
-        <Link href="/login" className="text-amber-ink text-sm text-center hover:brightness-90">
+        <Link href="/login" className="text-accent-ink text-sm text-center hover:brightness-90">
           Back to login
         </Link>
       </div>
@@ -90,7 +90,7 @@ function RequestForm() {
         className="w-full justify-center"
       />
 
-      <Link href="/login" className="text-amber-ink text-sm text-center hover:brightness-90">
+      <Link href="/login" className="text-accent-ink text-sm text-center hover:brightness-90">
         Back to login
       </Link>
     </form>
@@ -115,7 +115,7 @@ function ConfirmForm({ token }: { token: string }) {
       <div className="flex flex-col gap-4">
         <h1 className="font-display font-bold text-2xl">Password updated</h1>
         <p className="text-sm text-ink-muted">Your password has been updated.</p>
-        <Link href="/login" className="text-amber-ink text-sm text-center hover:brightness-90">
+        <Link href="/login" className="text-accent-ink text-sm text-center hover:brightness-90">
           Go to login
         </Link>
       </div>

@@ -2,35 +2,28 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { redirect } from "next/navigation";
 import { useAuth } from "@/auth/models/useAuth";
 import { LuMenu, LuX } from "react-icons/lu";
-
-const MODULE_LINKS = [
-  { href: "/dashboard/hive/workers", label: "Hive" },
-  { href: "/dashboard/mesh/zones", label: "Mesh" },
-  { href: "/dashboard/nucleus/atoms", label: "Nucleus" },
-  { href: "/dashboard/orbit/portals", label: "Orbit" },
-];
+import { MODULE_LINKS } from "./Sidebar";
 
 function BrandMark() {
   return (
     <svg
-      width="22"
-      height="22"
+      width="20"
+      height="20"
       viewBox="0 0 22 22"
       fill="none"
       className="shrink-0"
       aria-hidden="true"
     >
-      <circle cx="11" cy="11" r="1.8" className="fill-amber" />
+      <circle cx="11" cy="11" r="1.8" className="fill-accent" />
       <ellipse
         cx="11"
         cy="11"
         rx="9.5"
         ry="4"
-        className="stroke-amber"
+        className="stroke-accent"
         strokeWidth="1.2"
       />
       <ellipse
@@ -48,7 +41,6 @@ function BrandMark() {
 
 export function AppBar() {
   const { isLoading, isLoggedIn, logout } = useAuth();
-  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const onLogout = async () => {
@@ -62,45 +54,25 @@ export function AppBar() {
   };
 
   return (
-    <div className="relative h-16 flex items-center justify-between px-4 sm:px-6 bg-surface-raised border-b border-border">
+    <div className="relative h-12 flex items-center justify-between px-4 sm:px-6 bg-sidebar">
       <Link href="/" className="flex items-center gap-2 shrink-0" onClick={() => setMenuOpen(false)}>
         <BrandMark />
-        <span className="font-display font-bold text-lg tracking-wide">
+        <span className="font-display font-bold text-base tracking-wide text-sidebar-ink-active">
           Marppa
         </span>
       </Link>
 
-      {isLoggedIn && (
-        <nav className="hidden md:flex items-center gap-1 font-mono text-xs uppercase tracking-wide">
-          {MODULE_LINKS.map((link) => {
-            const active = pathname?.startsWith(link.href.split("/").slice(0, 3).join("/"));
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`px-3 py-1.5 rounded-full transition-colors ${active
-                  ? "bg-amber-tint text-amber-ink"
-                  : "text-ink-muted hover:text-ink"
-                  }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
-      )}
-
       <div className="hidden md:flex items-center gap-4">
         {isLoggedIn ? (
           <button
-            className="text-sm text-ink-muted hover:text-ink transition-colors"
+            className="text-sm text-sidebar-ink hover:text-sidebar-ink-active transition-colors"
             onClick={onLogout}
           >
             Log out
           </button>
         ) : (
           !isLoading && (
-            <Link href="/login" className="text-sm text-ink hover:text-amber-ink transition-colors">
+            <Link href="/login" className="text-sm text-sidebar-ink hover:text-sidebar-ink-active transition-colors">
               Log in
             </Link>
           )
@@ -108,30 +80,31 @@ export function AppBar() {
       </div>
 
       <button
-        className="md:hidden shrink-0 text-ink p-2 -mr-2"
+        className="md:hidden shrink-0 text-sidebar-ink-active p-2 -mr-2"
         onClick={() => setMenuOpen((v) => !v)}
         aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
         aria-expanded={menuOpen}
       >
-        {menuOpen ? <LuX size={22} /> : <LuMenu size={22} />}
+        {menuOpen ? <LuX size={20} /> : <LuMenu size={20} />}
       </button>
 
       {menuOpen && (
-        <nav className="absolute top-16 left-0 right-0 z-40 flex flex-col bg-surface-raised border-b border-border shadow-lg md:hidden">
+        <nav className="absolute top-12 left-0 right-0 z-40 flex flex-col bg-sidebar shadow-lg md:hidden">
           {isLoggedIn &&
-            MODULE_LINKS.map((link) => (
+            MODULE_LINKS.map(({ href, label, icon: Icon }) => (
               <Link
-                key={link.href}
-                href={link.href}
-                className="px-6 py-3 text-sm border-b border-border text-ink"
+                key={href}
+                href={href}
+                className="flex items-center gap-3 px-6 py-3 text-sm border-t border-sidebar-hover text-sidebar-ink"
                 onClick={() => setMenuOpen(false)}
               >
-                {link.label}
+                <Icon className="h-4 w-4 shrink-0" />
+                {label}
               </Link>
             ))}
           {isLoggedIn ? (
             <button
-              className="px-6 py-3 text-sm text-left text-ink-muted"
+              className="px-6 py-3 text-sm text-left text-sidebar-ink border-t border-sidebar-hover"
               onClick={() => {
                 setMenuOpen(false);
                 onLogout();
@@ -143,7 +116,7 @@ export function AppBar() {
             !isLoading && (
               <Link
                 href="/login"
-                className="px-6 py-3 text-sm text-ink"
+                className="px-6 py-3 text-sm text-sidebar-ink border-t border-sidebar-hover"
                 onClick={() => setMenuOpen(false)}
               >
                 Log in

@@ -131,7 +131,7 @@ export function HomeLanding() {
       <section className="w-full border-b border-border">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16 sm:py-24 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-16 items-center">
           <div>
-            <span className="font-mono text-xs uppercase tracking-widest text-amber-ink">
+            <span className="font-mono text-xs uppercase tracking-widest text-accent-ink">
               Self-hosted infrastructure
             </span>
             <h1 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] mt-4 mb-6">
@@ -146,7 +146,7 @@ export function HomeLanding() {
             <div className="flex flex-wrap gap-3">
               <Link
                 href={primaryHref}
-                className="inline-flex items-center gap-2 rounded-lg bg-amber text-amber-ink px-5 py-3 font-medium hover:brightness-95 transition"
+                className="inline-flex items-center gap-2 rounded-lg bg-accent text-white px-5 py-3 font-medium hover:brightness-95 transition"
               >
                 {isLoggedIn ? "Go to dashboard" : "Enter the console"}
                 <LuArrowRight />
@@ -181,7 +181,7 @@ export function HomeLanding() {
                 key={module}
                 className="rounded-xl border border-border bg-surface-raised p-5 flex flex-col gap-3"
               >
-                <Icon className="h-5 w-5 text-amber" />
+                <Icon className="h-5 w-5 text-accent" />
                 <div>
                   <p className="font-mono text-xs uppercase tracking-wide text-ink-faint">
                     {module}
@@ -206,7 +206,7 @@ export function HomeLanding() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {STORY_STEPS.map(({ step, title, copy }) => (
               <div key={step}>
-                <span className="font-display text-3xl text-amber">
+                <span className="font-display text-3xl text-accent">
                   {step}
                 </span>
                 <h3 className="font-semibold text-lg mt-2 mb-1">{title}</h3>
@@ -225,7 +225,7 @@ export function HomeLanding() {
           </h2>
           <Link
             href={primaryHref}
-            className="inline-flex items-center gap-2 rounded-lg bg-amber text-amber-ink px-6 py-3 font-medium hover:brightness-95 transition"
+            className="inline-flex items-center gap-2 rounded-lg bg-accent text-white px-6 py-3 font-medium hover:brightness-95 transition"
           >
             {isLoggedIn ? "Go to dashboard" : "Enter the console"}
             <LuArrowRight />

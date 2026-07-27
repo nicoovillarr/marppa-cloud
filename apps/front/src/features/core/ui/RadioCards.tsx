@@ -63,7 +63,7 @@ export const RadioCardsWrapper = ({
         <RadioCards.Item
           key={opt.value}
           value={opt.value.toString()}
-          className="bg-surface-raised border border-border p-4 rounded-xl shadow-sm hover:border-amber cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-amber text-ink flex gap-x-3 items-center"
+          className="bg-surface-raised border border-border p-4 rounded-xl shadow-sm hover:border-accent cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-accent text-ink flex gap-x-3 items-center"
         >
           <div
             className={`w-4 h-4 shrink-0 rounded-full bg-surface-sunken border border-border flex items-center justify-center ${
@@ -71,7 +71,7 @@ export const RadioCardsWrapper = ({
             }`}
           >
             {opt.value === selectedValue && (
-              <div className="w-2 h-2 rounded-full bg-amber" />
+              <div className="w-2 h-2 rounded-full bg-accent" />
             )}
           </div>
           {renderFn ? renderFn(opt) : <RadioCard {...opt} />}

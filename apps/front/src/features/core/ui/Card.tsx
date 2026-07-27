@@ -16,11 +16,11 @@ export function Card({
   subtitle,
 }: CardProps) {
   return (
-    <div className={`border border-border rounded-xl p-4 bg-surface-raised ${className}`}>
+    <div className={`border border-border rounded-md p-4 bg-surface-raised ${className}`}>
       {title && (
         <header className="mb-4">
           <div className="flex items-center gap-2 mb-1">
-            {Icon && <Icon className="h-5 w-5 shrink-0 text-amber" />}
+            {Icon && <Icon className="h-5 w-5 shrink-0 text-accent" />}
             <h3 className="font-display font-semibold w-full line-clamp-1 text-xl">
               {title}
             </h3>

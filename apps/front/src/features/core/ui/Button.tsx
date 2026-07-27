@@ -116,7 +116,7 @@ export const Button = forwardRef<ButtonRef, ButtonProps>(
     }));
 
     const buttonStyles = {
-      primary: "border-none bg-amber text-amber-ink hover:brightness-95",
+      primary: "border-none bg-accent text-white hover:brightness-95",
       secondary:
         "border-border bg-surface-raised text-ink hover:bg-surface-sunken",
       danger:
@@ -166,7 +166,7 @@ export const Button = forwardRef<ButtonRef, ButtonProps>(
 
     useEffect(() => {
       const classList = [
-        "border relative flex shrink-0 items-center justify-center gap-2 rounded-lg p-3 transition-colors overflow-hidden md:px-4 md:py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
+        "border relative flex shrink-0 items-center justify-center gap-2 rounded-md p-3 transition-colors overflow-hidden md:px-4 md:py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
       ];
 
       if (disabled) {

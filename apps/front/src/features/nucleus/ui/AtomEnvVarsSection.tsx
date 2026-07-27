@@ -91,7 +91,7 @@ export function AtomEnvVarsSection({ atomId, editable }: AtomEnvVarsSectionProps
                 <span className="font-medium font-mono">{envVar.key}</span>
                 <button
                   type="button"
-                  className="text-xs text-ink-muted truncate text-left font-mono hover:text-amber-ink"
+                  className="text-xs text-ink-muted truncate text-left font-mono hover:text-accent-ink"
                   onClick={() => toggleReveal(envVar.id)}
                 >
                   {revealed.has(envVar.id) ? envVar.value : "•••••••• (click to reveal)"}

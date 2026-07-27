@@ -25,7 +25,7 @@ import { useUser } from "src/features/users/model/useUser";
 const CardLink = ({ href, label }: { href: string; label: string }) => (
   <Link
     href={href}
-    className="flex text-sm items-center gap-2 mt-4 border border-border rounded-lg justify-center p-2 text-ink hover:text-amber-ink hover:bg-surface-sunken transition-colors"
+    className="flex text-sm items-center gap-2 mt-4 border border-border rounded-lg justify-center p-2 text-ink hover:text-accent-ink hover:bg-surface-sunken transition-colors"
   >
     {label}
   </Link>
@@ -54,7 +54,7 @@ const Overview = ({
         <Card>
           <header className="flex items-center gap-2 mb-4">
             <h3 className="font-medium w-full line-clamp-1">Workers</h3>
-            <LuServer className="h-4 w-4 shrink-0 text-amber" />
+            <LuServer className="h-4 w-4 shrink-0 text-accent" />
           </header>
 
           <h4 className="font-display font-bold text-3xl">
@@ -84,7 +84,7 @@ const Overview = ({
         <Card>
           <header className="flex items-center gap-2 mb-4">
             <h3 className="font-medium w-full line-clamp-1">Zones</h3>
-            <LuNetwork className="h-4 w-4 shrink-0 text-amber" />
+            <LuNetwork className="h-4 w-4 shrink-0 text-accent" />
           </header>
 
           <h4 className="font-display font-bold text-3xl">
@@ -111,7 +111,7 @@ const Overview = ({
         <Card>
           <header className="flex items-center gap-2 mb-4">
             <h3 className="font-medium w-full line-clamp-1">Atoms</h3>
-            <LuBox className="h-4 w-4 shrink-0 text-amber" />
+            <LuBox className="h-4 w-4 shrink-0 text-accent" />
           </header>
 
           <h4 className="font-display font-bold text-3xl">
@@ -140,7 +140,7 @@ const Overview = ({
         <Card className="md:col-span-2 lg:col-span-1">
           <header className="flex items-center gap-2 mb-4">
             <h3 className="font-medium w-full line-clamp-1">Orbit</h3>
-            <LuContainer className="h-4 w-4 shrink-0 text-amber" />
+            <LuContainer className="h-4 w-4 shrink-0 text-accent" />
           </header>
 
           <h4 className="font-display font-bold text-3xl">

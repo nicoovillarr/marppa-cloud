@@ -161,7 +161,7 @@ export function NodesList({ zoneId }: { zoneId: string }) {
         const { pointsTo, link } = getPointsToInfo(node);
 
         return (
-          <span className={link ? "text-amber-ink underline" : ""}>
+          <span className={link ? "text-accent-ink underline" : ""}>
             {pointsTo}
           </span>
         );
@@ -176,7 +176,7 @@ export function NodesList({ zoneId }: { zoneId: string }) {
           ? node.fibers.length
           : node.fibers || 0;
         return (
-          <span className="text-amber-ink underline">{count} — manage</span>
+          <span className="text-accent-ink underline">{count} — manage</span>
         );
       },
     },

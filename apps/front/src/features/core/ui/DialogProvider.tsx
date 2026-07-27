@@ -76,7 +76,7 @@ const DialogContent = ({
       case "danger":
         return "bg-status-danger text-white hover:brightness-90";
       default:
-        return "bg-amber text-amber-ink hover:brightness-95";
+        return "bg-accent text-white hover:brightness-95";
     }
   };
 

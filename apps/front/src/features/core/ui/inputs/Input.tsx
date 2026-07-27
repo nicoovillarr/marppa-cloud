@@ -109,7 +109,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <div
-        className={`relative flex w-full items-center justify-center gap-x-2 overflow-hidden rounded-lg border border-border bg-surface-raised p-2 pl-3 focus-within:outline-none focus-within:ring-2 focus-within:ring-amber ${className}`}
+        className={`relative flex w-full items-center justify-center gap-x-2 overflow-hidden rounded-lg border border-border bg-surface-raised p-2 pl-3 focus-within:outline-none focus-within:ring-2 focus-within:ring-accent ${className}`}
       >
         {disabled && (
           <div className="absolute left-0 top-0 h-full w-full cursor-not-allowed bg-surface-sunken opacity-50">

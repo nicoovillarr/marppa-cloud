@@ -5,10 +5,10 @@ export function Footer() {
         Marppa Cloud — your infrastructure, in view.
       </p>
       <nav className="flex items-center gap-4">
-        <a href="/privacy" className="text-sm text-ink-muted hover:text-amber-ink">
+        <a href="/privacy" className="text-sm text-ink-muted hover:text-accent-ink">
           Privacy
         </a>
-        <a href="/terms" className="text-sm text-ink-muted hover:text-amber-ink">
+        <a href="/terms" className="text-sm text-ink-muted hover:text-accent-ink">
           Terms
         </a>
       </nav>

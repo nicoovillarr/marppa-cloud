@@ -181,7 +181,7 @@ export function Select({
         disabled={isLoading}
       >
         <RadixSelect.Trigger
-          className={`inline-flex ${width} h-[42px] items-center gap-x-2 rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm text-ink shadow-sm hover:bg-surface-sunken focus:border-amber focus:outline-none focus:ring-2 focus:ring-amber disabled:cursor-not-allowed`}
+          className={`inline-flex ${width} h-[42px] items-center gap-x-2 rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm text-ink shadow-sm hover:bg-surface-sunken focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent disabled:cursor-not-allowed`}
           disabled={isLoading || disabled}
         >
           {isLoading ? (
@@ -216,7 +216,7 @@ export function Select({
                 <div className="p-2">
                   <input
                     type="text"
-                    className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-amber focus:outline-none focus:ring-1 focus:ring-amber"
+                    className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                     placeholder="Buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -233,7 +233,7 @@ export function Select({
                         key={item.value ?? item.displayText ?? "item"}
                         value={String(item.value)}
                         className={`cursor-pointer select-none rounded-md px-4 py-2 text-sm text-ink overflow-hidden hover:bg-surface-sunken focus:bg-surface-sunken focus:outline-none relative ${isSelected
-                          ? "before:content-[''] before:absolute before:w-8 before:h-8 before:rounded-full before:-left-6 before:top-1/2 before:-translate-y-1/2 before:mt-[1px] before:bg-amber"
+                          ? "before:content-[''] before:absolute before:w-8 before:h-8 before:rounded-full before:-left-6 before:top-1/2 before:-translate-y-1/2 before:mt-[1px] before:bg-accent"
                           : ""
                           }`}
                       >

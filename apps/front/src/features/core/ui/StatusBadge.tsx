@@ -47,7 +47,7 @@ export function StatusBadge({ status }: { status: ResourceStatus }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-xs uppercase tracking-wide ${BUCKET_CLASSES[bucket]}`}
+      className={`inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 font-mono text-xs uppercase tracking-wide ${BUCKET_CLASSES[bucket]}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${DOT_CLASSES[bucket]}`} />
       {LABEL_BY_STATUS[status]}

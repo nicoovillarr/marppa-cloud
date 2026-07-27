@@ -1,26 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --surface: #f3efe6;
-  --surface-raised: #fffdf8;
-  --surface-sunken: #e9e3d4;
-  --border: #ddd4bd;
-  --ink: #1c1b19;
-  --ink-muted: #6b6558;
-  --ink-faint: #a39c8c;
+  --surface: #f4f6f8;
+  --surface-raised: #ffffff;
+  --surface-sunken: #eaedf1;
+  --border: #d5dbe3;
+  --ink: #16191d;
+  --ink-muted: #5a6472;
+  --ink-faint: #8b95a3;
 
-  --amber: #e29000;
-  --amber-ink: #3d2600;
-  --amber-tint: #fbe6b8;
+  --accent: #0972d3;
+  --accent-ink: #06304f;
+  --accent-tint: #e6f1fb;
 
-  --status-active: #1f9d5c;
-  --status-active-tint: #d8f0e2;
-  --status-progress: #e29000;
-  --status-progress-tint: #fbe6b8;
-  --status-danger: #d0393f;
-  --status-danger-tint: #f8dcdd;
-  --status-idle: #8a8272;
-  --status-idle-tint: #e9e3d4;
+  --sidebar: #0f1b2d;
+  --sidebar-hover: #16273d;
+  --sidebar-ink: #a9bccf;
+  --sidebar-ink-active: #ffffff;
+
+  --status-active: #1a7f4f;
+  --status-active-tint: #dcf1e6;
+  --status-progress: #b7791f;
+  --status-progress-tint: #f8ecd4;
+  --status-danger: #d13212;
+  --status-danger-tint: #fbe4de;
+  --status-idle: #7d8894;
+  --status-idle-tint: #eaedf1;
 }
 
 @theme inline {
@@ -32,9 +37,14 @@
   --color-ink-muted: var(--ink-muted);
   --color-ink-faint: var(--ink-faint);
 
-  --color-amber: var(--amber);
-  --color-amber-ink: var(--amber-ink);
-  --color-amber-tint: var(--amber-tint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-tint: var(--accent-tint);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-ink: var(--sidebar-ink);
+  --color-sidebar-ink-active: var(--sidebar-ink-active);
 
   --color-status-active: var(--status-active);
   --color-status-active-tint: var(--status-active-tint);
@@ -47,7 +57,7 @@
 
   --font-sans: var(--font-plex-sans);
   --font-mono: var(--font-plex-mono);
-  --font-display: var(--font-shoulders-display);
+  --font-display: var(--font-plex-sans);
 
   --breakpoint-xs: 480px;
 
@@ -65,6 +75,6 @@ body {
 }
 
 ::selection {
-  background: var(--amber-tint);
-  color: var(--amber-ink);
+  background: var(--accent-tint);
+  color: var(--accent-ink);
 }

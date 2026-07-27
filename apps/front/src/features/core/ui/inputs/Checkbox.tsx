@@ -57,7 +57,7 @@ export function Checkbox({
         className={`inline-flex items-center justify-center w-5 h-5 rounded-full border border-border bg-surface-raised`}
       >
         {checkedValue === true ? (
-          <div className="w-3 h-3 bg-amber rounded-full"></div>
+          <div className="w-3 h-3 bg-accent rounded-full"></div>
         ) : null}
       </aside>
 

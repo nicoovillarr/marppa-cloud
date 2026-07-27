@@ -61,12 +61,12 @@ export function Slider({
       >
         <RadixSlider.Track className="bg-surface-sunken relative grow rounded-full h-1">
           <RadixSlider.Range
-            className={`absolute rounded-full h-full ${disabled ? "bg-amber/40" : "bg-amber"
+            className={`absolute rounded-full h-full ${disabled ? "bg-accent/40" : "bg-accent"
               }`}
           />
         </RadixSlider.Track>
         <RadixSlider.Thumb
-          className={`block w-5 h-5 bg-surface-raised border-2 rounded-full shadow outline-none ${disabled ? "border-amber/40" : "border-amber"
+          className={`block w-5 h-5 bg-surface-raised border-2 rounded-full shadow outline-none ${disabled ? "border-accent/40" : "border-accent"
             }`}
           style={{
             cursor: disabled ? "not-allowed" : cursor,

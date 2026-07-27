@@ -88,7 +88,7 @@ export function PortalTranspondersList({
       <header className="flex justify-between items-center gap-x-4">
         <FormLabel text="Transponders" />
         <button
-          className="text-ink-muted hover:text-amber-ink cursor-pointer transition-colors"
+          className="text-ink-muted hover:text-accent-ink cursor-pointer transition-colors"
           onClick={onAddTransponder}
           type="button"
         >

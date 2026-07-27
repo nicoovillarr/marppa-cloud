@@ -11,7 +11,7 @@ import { CaptchaWidget } from "./CaptchaWidget";
 import { Button } from "@/core/ui/Button";
 
 const inputClassName =
-  "rounded-lg border border-border bg-surface-raised p-2 text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-amber";
+  "rounded-lg border border-border bg-surface-raised p-2 text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-accent";
 
 interface FormValues {
   email: string;
@@ -74,7 +74,7 @@ export function LoginForm() {
 
       <Link
         href="/reset-password"
-        className="text-amber-ink text-sm text-center hover:brightness-90"
+        className="text-accent-ink text-sm text-center hover:brightness-90"
       >
         Forgot your password?
       </Link>

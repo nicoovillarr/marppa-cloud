@@ -47,7 +47,7 @@ const BreadcrumbItem = (
     <>
       <Link
         href={href}
-        className="text-sm hover:text-amber-ink"
+        className="text-sm hover:text-accent-ink"
       >
         {node.label}
       </Link>

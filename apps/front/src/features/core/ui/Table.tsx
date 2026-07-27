@@ -72,10 +72,7 @@ const RowInner = <T, K>(
   };
 
   return (
-    <tr
-      className={`cursor-pointer ${rowIndex % 2 === 0 ? "bg-surface-raised" : "bg-surface"
-        } hover:bg-amber-tint/60`}
-    >
+    <tr className="cursor-pointer bg-surface-raised border-b border-border hover:bg-accent-tint/60">
       {Object.keys(columnMapping).map((key) => {
         const col = columnMapping[key];
         const { canCopy = false } = col;
@@ -83,7 +80,7 @@ const RowInner = <T, K>(
         return (
           <td
             key={key}
-            className="border border-border px-4 py-2"
+            className="px-4 py-2"
             onClick={(e) => {
               if (!rowHref) handleClick(e, key, rowData);
             }}
@@ -483,7 +480,7 @@ function TableInner<T, K>(
               {Object.entries(actualColumns).map(([key, col]) => (
                 <th
                   key={key}
-                  className="border border-border px-4 py-2 text-left font-mono text-xs uppercase tracking-wide text-ink-muted"
+                  className="border-b-2 border-border px-4 py-2 text-left font-mono text-xs uppercase tracking-wide text-ink-muted"
                 >
                   {col.label ?? key}
                 </th>
