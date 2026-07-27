@@ -3,6 +3,7 @@ import { SharedModule } from '@/shared/shared.module';
 import { AuthModule } from '@/auth/auth.module';
 import { EventModule } from '@/event/event.module';
 import { MeshModule } from '@/mesh/mesh.module';
+import { CompanyModule } from '@/company/company.module';
 import { AtomController } from './presentation/controllers/atom.controller';
 import { AtomImageController } from './presentation/controllers/atom-image.controller';
 import { AtomApiService } from './application/services/atom.api-service';
@@ -18,7 +19,7 @@ import { AtomImagePrismaRepository } from './infrastructure/repositories/atom-im
 import { AtomEnvVarPrismaRepository } from './infrastructure/repositories/atom-env-var.prisma-repository';
 
 @Module({
-  imports: [SharedModule, AuthModule, EventModule, MeshModule],
+  imports: [SharedModule, AuthModule, EventModule, MeshModule, CompanyModule],
   controllers: [AtomController, AtomImageController],
   providers: [
     AtomImageApiService,

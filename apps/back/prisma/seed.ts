@@ -251,16 +251,20 @@ const createAtomImages = async () => {
     },
 
     {
-      // WireGuard runs in the container's own network namespace, so it needs the
-      // kernel-level grants the image documents. They are pinned here rather than
-      // requested per atom: the privileges are part of what gets approved.
+      // NET_ADMIN only affects the container's own network namespace. The image
+      // also documents SYS_MODULE, but that one loads kernel modules on the
+      // *host* — it is root by another name and the runtime refuses it outright.
+      // Load the module on the host instead:
+      //   sudo modprobe wireguard
+      //   echo wireguard | sudo tee /etc/modules-load.d/wireguard.conf
+      // Any image with capabilities is restricted to the root company.
       name: 'wg-easy-14',
       description: 'wg-easy 14 (WireGuard + web UI). Requires WG_HOST and PASSWORD_HASH.',
       registry: 'ghcr.io',
       repository: 'wg-easy/wg-easy',
       tag: '14',
       architecture: 'amd64',
-      capabilities: ['NET_ADMIN', 'SYS_MODULE'],
+      capabilities: ['NET_ADMIN'],
       sysctls: {
         'net.ipv4.ip_forward': '1',
         'net.ipv4.conf.all.src_valid_mark': '1',

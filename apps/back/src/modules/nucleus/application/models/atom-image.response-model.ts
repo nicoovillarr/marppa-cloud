@@ -9,4 +9,5 @@ export class AtomImageResponseModel {
   @Expose() tag: string;
   @Expose() digest: string | null;
   @Expose() architecture: string;
+  @Expose() capabilities: string[];
 }

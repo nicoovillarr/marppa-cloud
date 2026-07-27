@@ -5,6 +5,7 @@ interface AtomImageOptionalProps {
   id?: number;
   description?: string;
   digest?: string;
+  capabilities?: string[];
 }
 
 export class AtomImageEntity extends PatchableEntity {
@@ -13,6 +14,7 @@ export class AtomImageEntity extends PatchableEntity {
 
   public readonly description?: string;
   public readonly digest?: string;
+  public readonly capabilities: string[];
 
   constructor(
     public readonly name: string,
@@ -27,6 +29,11 @@ export class AtomImageEntity extends PatchableEntity {
     this.id = optionals.id ?? undefined;
     this.description = optionals.description ?? undefined;
     this.digest = optionals.digest ?? undefined;
+    this.capabilities = optionals.capabilities ?? [];
+  }
+
+  get isPrivileged(): boolean {
+    return this.capabilities.length > 0;
   }
 
   toObject(): Record<string, any> {
@@ -39,6 +46,7 @@ export class AtomImageEntity extends PatchableEntity {
       tag: this.tag,
       digest: this.digest,
       architecture: this.architecture,
+      capabilities: this.capabilities,
     };
   }
 
@@ -53,6 +61,7 @@ export class AtomImageEntity extends PatchableEntity {
         id: data.id,
         description: data.description,
         digest: data.digest,
+        capabilities: data.capabilities,
       },
     );
   }

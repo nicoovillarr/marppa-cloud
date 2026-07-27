@@ -22,6 +22,43 @@ const SAFE_DIGEST = /^sha256:[a-f0-9]{64}$/;
 const SAFE_CAPABILITY = /^[A-Z_]+$/;
 const SAFE_SYSCTL_KEY = /^[a-z0-9._]+$/;
 const SAFE_SYSCTL_VALUE = /^[A-Za-z0-9._\-]+$/;
+const SAFE_LIMIT = /^[0-9]+(\.[0-9]+)?[a-z]?$/;
+
+/**
+ * Capabilities that hand the container the host. They are refused even when the
+ * catalog asks for them: `SYS_MODULE` alone is a kernel module away from
+ * disabling the very nftables rules that isolate every zone, so no approval
+ * workflow upstream can make them safe.
+ */
+/**
+ * What is added back after dropping everything: the set an image needs to run
+ * its entrypoint as root and step down to its own user. Notably absent from
+ * Docker's default set are `NET_RAW` (raw sockets — the ARP spoofing and port
+ * scanning primitive between atoms sharing a zone bridge), `MKNOD`, `SYS_CHROOT`
+ * and `SETFCAP`.
+ */
+const BASELINE_CAPABILITIES = [
+  'CHOWN',
+  'DAC_OVERRIDE',
+  'FOWNER',
+  'SETGID',
+  'SETUID',
+  'KILL',
+];
+
+const FORBIDDEN_CAPABILITIES = new Set([
+  'SYS_MODULE',
+  'SYS_ADMIN',
+  'SYS_RAWIO',
+  'SYS_PTRACE',
+  'SYS_BOOT',
+  'DAC_READ_SEARCH',
+  'MAC_ADMIN',
+  'MAC_OVERRIDE',
+  'BPF',
+  'PERFMON',
+  'ALL',
+]);
 
 /**
  * Every container is attached to its zone's bridge with its node's IP and no
@@ -96,6 +133,7 @@ export class DockerNucleusService extends NucleusService {
       '--ip', net.ipAddress,
       '--network-alias', alias,
       '--restart', 'unless-stopped',
+      ...this.hardeningArgs(),
       ...this.envArgs(env),
       ...this.capabilityArgs(image),
       ...this.sysctlArgs(image),
@@ -211,11 +249,50 @@ export class DockerNucleusService extends NucleusService {
     ]);
   }
 
+  /**
+   * Atoms of different companies live in different zones, but the host is
+   * shared: an unbounded container starves the workers and every other zone's
+   * atoms long before anyone notices.
+   */
+  private hardeningArgs(): string[] {
+    return [
+      '--security-opt', 'no-new-privileges',
+      '--cap-drop', 'ALL',
+      '--pids-limit', this.limit('ATOM_PIDS_LIMIT', '512'),
+      '--memory', this.limit('ATOM_MEMORY_LIMIT', '1g'),
+      '--cpus', this.limit('ATOM_CPU_LIMIT', '1'),
+    ];
+  }
+
+  private limit(variable: string, fallback: string): string {
+    const configured = process.env[variable]?.trim();
+    if (!configured) {
+      return fallback;
+    }
+
+    return this.assertMatches(configured, SAFE_LIMIT, variable);
+  }
+
   private capabilityArgs(image: AtomImageSource): string[] {
-    return (image.capabilities ?? []).flatMap((capability) => [
+    const baseline = BASELINE_CAPABILITIES.flatMap((capability) => [
       '--cap-add',
-      this.assertMatches(capability, SAFE_CAPABILITY, 'capability'),
+      capability,
     ]);
+
+    const requested = (image.capabilities ?? []).flatMap((capability) => {
+      const validated = this.assertMatches(capability, SAFE_CAPABILITY, 'capability');
+
+      if (FORBIDDEN_CAPABILITIES.has(validated)) {
+        throw new Error(
+          `Refusing to grant ${validated}: it is equivalent to root on the host, ` +
+          'which would let this container disable the nftables rules isolating every zone.',
+        );
+      }
+
+      return ['--cap-add', validated];
+    });
+
+    return [...baseline, ...requested];
   }
 
   private sysctlArgs(image: AtomImageSource): string[] {

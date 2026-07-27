@@ -7,4 +7,5 @@ export type AtomImageResponseDto = {
     tag: string;
     digest: string | null;
     architecture: string;
+    capabilities: string[];
 }

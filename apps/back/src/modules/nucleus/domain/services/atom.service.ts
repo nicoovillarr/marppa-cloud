@@ -11,6 +11,9 @@ import { CreateAtomDto } from '@/nucleus/presentation/dtos/create-atom.dto';
 import { UpdateAtomDto } from '@/nucleus/presentation/dtos/update-atom.dto';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
+import { CompanyService } from '@/company/domain/services/company.service';
+import { AtomImageEntity } from '../entities/atom-image.entity';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import { EventTypeKey, getEventStateTransition } from '@marppa-cloud/api-types';
@@ -22,6 +25,8 @@ export class AtomService {
     private readonly atomRepository: AtomRepository,
 
     private readonly atomImageService: AtomImageService,
+
+    private readonly companyService: CompanyService,
   ) { }
 
   async findById(id: string): Promise<AtomEntity> {
@@ -72,6 +77,7 @@ export class AtomService {
     }
 
     const image = await this.atomImageService.findById(data.imageId);
+    await this.assertImageAllowed(image);
 
     const entity = new AtomEntity(
       data.name,
@@ -155,6 +161,34 @@ export class AtomService {
     });
 
     await this.save(updated);
+  }
+
+  /**
+   * An image that asks for extra kernel capabilities is reserved for the root
+   * company, the same bar `SYSTEM_RESET` uses. The rule is derived from the
+   * catalog row rather than a flag on it, so a privileged image cannot be added
+   * and left ungated by omission.
+   */
+  private async assertImageAllowed(image: AtomImageEntity): Promise<void> {
+    if (!image.isPrivileged) {
+      return;
+    }
+
+    if (!(await this.isRootCompany())) {
+      throw new ForbiddenError(
+        `Image "${image.name}" requests host capabilities (${image.capabilities.join(', ')}) ` +
+        'and can only be used by the root company.',
+      );
+    }
+  }
+
+  private async isRootCompany(): Promise<boolean> {
+    const user = getCurrentUser();
+    if (!user) return false;
+
+    const company = await this.companyService.findById(user.companyId);
+
+    return !!company && !company.parentCompanyId;
   }
 
   assertStatus(atom: AtomEntity, expected: ResourceStatus): void {

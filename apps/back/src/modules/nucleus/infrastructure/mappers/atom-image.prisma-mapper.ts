@@ -13,6 +13,7 @@ export class AtomImagePrismaMapper {
         id: raw.id,
         description: raw.description ?? undefined,
         digest: raw.digest ?? undefined,
+        capabilities: raw.capabilities,
       },
     );
   }

@@ -41,6 +41,7 @@ export interface AtomImageResponse {
   tag: string;
   digest: string | null;
   architecture: string;
+  capabilities: string[];
 }
 
 export interface AtomEnvVarResponse {
