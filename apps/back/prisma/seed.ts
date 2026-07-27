@@ -250,26 +250,6 @@ const createAtomImages = async () => {
       sysctls: undefined,
     },
 
-    {
-      // NET_ADMIN only affects the container's own network namespace. The image
-      // also documents SYS_MODULE, but that one loads kernel modules on the
-      // *host* — it is root by another name and the runtime refuses it outright.
-      // Load the module on the host instead:
-      //   sudo modprobe wireguard
-      //   echo wireguard | sudo tee /etc/modules-load.d/wireguard.conf
-      // Any image with capabilities is restricted to the root company.
-      name: 'wg-easy-14',
-      description: 'wg-easy 14 (WireGuard + web UI). Requires WG_HOST and PASSWORD_HASH.',
-      registry: 'ghcr.io',
-      repository: 'wg-easy/wg-easy',
-      tag: '14',
-      architecture: 'amd64',
-      capabilities: ['NET_ADMIN'],
-      sysctls: {
-        'net.ipv4.ip_forward': '1',
-        'net.ipv4.conf.all.src_valid_mark': '1',
-      },
-    },
   ];
 
   for (const image of images) {
@@ -280,7 +260,35 @@ const createAtomImages = async () => {
     });
   }
 
+  await pruneUnapprovedAtomImages(images.map((image) => image.name));
+
   console.log('Atom images created successfully!');
+};
+
+/**
+ * The list above is the approval, so a row that is no longer in it is no longer
+ * approved and must stop being selectable. Images still referenced by an atom
+ * are reported instead of deleted — the foreign key would reject it anyway, and
+ * silently tearing down a running service is worse than saying so.
+ */
+const pruneUnapprovedAtomImages = async (approved: string[]) => {
+  const stale = await prisma.atomImage.findMany({
+    where: { name: { notIn: approved } },
+    include: { _count: { select: { atoms: true } } },
+  });
+
+  for (const image of stale) {
+    if (image._count.atoms > 0) {
+      console.warn(
+        `Image "${image.name}" is no longer approved but ${image._count.atoms} atom(s) still use it. ` +
+        'Delete those atoms first, then re-run the seed.',
+      );
+      continue;
+    }
+
+    await prisma.atomImage.delete({ where: { id: image.id } });
+    console.log(`Removed unapproved atom image "${image.name}"`);
+  }
 };
 
 const main = async () => {

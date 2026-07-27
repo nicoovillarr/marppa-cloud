@@ -105,10 +105,20 @@ on the zone bridge, and a port is reachable from outside only through a `Fiber`.
 Three consequences shape the module:
 
 - **Only approved images run.** `Atom.imageId` is a foreign key into `AtomImage`,
-  a catalog with no write endpoints — rows come from the seed or a migration. An
-  image's extra kernel privileges (`capabilities`, `sysctls`) live on the catalog
-  row too, so approving an image approves what it may ask of the host. The
-  processors resolve the image through the relation, never from event data.
+  a catalog with no write endpoints — the seed's list *is* the approval, and it
+  prunes any row that has dropped off it. An image's extra kernel privileges
+  (`capabilities`, `sysctls`) live on the catalog row too, so approving an image
+  approves what it may ask of the host. The processors resolve the image through
+  the relation, never from event data.
+- **Privilege is defended three times over.** A capability that is root on the
+  host by another name (`SYS_MODULE`, `SYS_ADMIN`, …) is refused by the runtime
+  whatever the catalog says — one `insmod` would unload the nftables rules that
+  isolate every zone. Any image that asks for *any* capability is restricted to
+  the root company, a rule derived from `capabilities` rather than a flag, so a
+  privileged image cannot be added and left ungated by omission. And every
+  container runs `--cap-drop ALL` plus a minimal baseline, which notably excludes
+  Docker's default `NET_RAW`: atoms sharing a zone bridge cannot forge ARP or
+  scan each other with raw sockets.
 - **Docker never manages the firewall.** The daemon runs with `iptables: false`;
   egress NAT and port publishing come from the mesh's own nftables rules, so
   Docker cannot clobber `inet filter` / `ip nat` (rewritten on every zone and
@@ -126,6 +136,16 @@ Three consequences shape the module:
 `AtomEnvVar` values are stored in clear text, like `Portal.apiKey`: they are
 secrets to the guest, not to the platform operator, and the processor needs them
 verbatim to build the container.
+
+**The isolation boundary is the zone, not the atom.** `br_netfilter` is not
+loaded on the host, so traffic between containers on the same bridge never
+reaches nftables and no rule can filter it: atoms sharing a zone see each other's
+ports, and Docker's `enable_icc` is inert under `iptables: false`. Different
+companies never share a zone (`Zone.ownerId`, and `NodeService.create` checks the
+atom's owner), and zone-to-zone is dropped by the mesh's RFC1918 rules — so this
+is a within-company property. Two workloads that must not see each other belong
+in different zones. Related known gap: a `Fiber` accepts any source address, so
+publishing a port publishes it to everyone who can route to the host.
 
 # Conventions
 
