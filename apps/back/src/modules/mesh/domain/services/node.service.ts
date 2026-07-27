@@ -27,6 +27,20 @@ export class NodeService {
     return entity;
   }
 
+  public async findByIdForCaller(id: string): Promise<NodeEntity> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const model = await this.repository.findByIdWithZone(id);
+    if (model == null || model.zone.ownerId !== user.companyId) {
+      throw new NotFoundError();
+    }
+
+    return model.node;
+  }
+
   public findByZoneId(zoneId: string): Promise<NodeEntity[]> {
     return this.repository.findByZoneId(zoneId);
   }
@@ -39,7 +53,7 @@ export class NodeService {
     return this.repository.findByWorkerIds(workerIds);
   }
 
-  public create(
+  public async create(
     zoneId: string,
     data: CreateNodeDto,
     ipAddress: string,
@@ -57,6 +71,8 @@ export class NodeService {
     if (workerId != null && atomId != null) {
       throw new Error('Worker ID and Atom ID cannot be provided together');
     }
+
+    await this.assertOwnedWorker(workerId);
 
     const node = new NodeEntity(
       ipAddress,
@@ -139,5 +155,21 @@ export class NodeService {
 
   public delete(zoneId: string, id: string): Promise<void> {
     return this.repository.delete(zoneId, id);
+  }
+
+  private async assertOwnedWorker(workerId?: string): Promise<void> {
+    if (workerId == null) {
+      return;
+    }
+
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const ownerId = await this.repository.findWorkerOwnerId(workerId);
+    if (ownerId !== user.companyId) {
+      throw new NotFoundError();
+    }
   }
 }

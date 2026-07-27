@@ -179,7 +179,7 @@ describe('WorkerService', () => {
       expect(result).toEqual(mockWorker);
     });
 
-    it('should use provided ownerId if specified', async () => {
+    it('should reject an ownerId of another company', async () => {
       const dto: CreateWorkerDto = {
         name: 'New Worker',
         imageId: 1,
@@ -193,12 +193,32 @@ describe('WorkerService', () => {
         companyId: 'c-000001',
       } as any);
 
+      await expect(service.createWorker(dto)).rejects.toThrow(
+        UnauthorizedError,
+      );
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('should accept an ownerId matching the caller company', async () => {
+      const dto: CreateWorkerDto = {
+        name: 'New Worker',
+        imageId: 1,
+        flavorId: 1,
+        ownerId: 'c-000001',
+        publicSSH: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest test@test',
+      };
+
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000001',
+        companyId: 'c-000001',
+      } as any);
+
       mockWorkerRepository.create.mockResolvedValue(mockWorker);
 
       await service.createWorker(dto);
 
       const createdEntity = (repository.create as jest.Mock).mock.calls[0][0];
-      expect(createdEntity.ownerId).toBe('c-custom');
+      expect(createdEntity.ownerId).toBe('c-000001');
     });
   });
 

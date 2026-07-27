@@ -30,6 +30,8 @@ describe('NodeService', () => {
 
   const mockNodeRepository = {
     findById: jest.fn(),
+    findByIdWithZone: jest.fn(),
+    findWorkerOwnerId: jest.fn(),
     findByZoneId: jest.fn(),
     create: jest.fn(),
     delete: jest.fn(),
@@ -55,6 +57,8 @@ describe('NodeService', () => {
       email: 'test@test.com',
       type: 'access',
     } as any);
+
+    mockNodeRepository.findWorkerOwnerId.mockResolvedValue('c-000001');
   });
 
   afterEach(() => {
@@ -102,9 +106,27 @@ describe('NodeService', () => {
 
     it('should throw UnauthorizedError if no user in session', async () => {
       jest.spyOn(SessionContext, 'getCurrentUser').mockReturnValue(null);
-      expect(() => service.create('z-000001', createDto, ipAddress)).toThrow(
-        UnauthorizedError,
-      );
+      await expect(
+        service.create('z-000001', createDto, ipAddress),
+      ).rejects.toThrow(UnauthorizedError);
+    });
+
+    it('should not attach a worker of another company', async () => {
+      mockNodeRepository.findWorkerOwnerId.mockResolvedValue('c-000002');
+
+      await expect(
+        service.create('z-000001', createDto, ipAddress),
+      ).rejects.toThrow(NotFoundError);
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('should not attach a worker that does not exist', async () => {
+      mockNodeRepository.findWorkerOwnerId.mockResolvedValue(null);
+
+      await expect(
+        service.create('z-000001', createDto, ipAddress),
+      ).rejects.toThrow(NotFoundError);
+      expect(repository.create).not.toHaveBeenCalled();
     });
 
     it('should throw Error if neither workerId nor atomId is provided', async () => {
@@ -112,9 +134,9 @@ describe('NodeService', () => {
         workerId: undefined as any,
         atomId: undefined as any,
       };
-      expect(() => service.create('z-000001', invalidDto, ipAddress)).toThrow(
-        'Worker ID or Atom ID must be provided',
-      );
+      await expect(
+        service.create('z-000001', invalidDto, ipAddress),
+      ).rejects.toThrow('Worker ID or Atom ID must be provided');
     });
 
     it('should throw Error if both workerId and atomId are provided', async () => {
@@ -122,9 +144,9 @@ describe('NodeService', () => {
         workerId: 'w-000001',
         atomId: 'a-000001',
       };
-      expect(() => service.create('z-000001', invalidDto, ipAddress)).toThrow(
-        'Worker ID and Atom ID cannot be provided together',
-      );
+      await expect(
+        service.create('z-000001', invalidDto, ipAddress),
+      ).rejects.toThrow('Worker ID and Atom ID cannot be provided together');
     });
   });
 
