@@ -68,16 +68,16 @@ export class PortalUpdateProcessor implements IEventProcessor {
 
       await updatePortalStatus(STATES.work);
 
+      const dnsRecord = {
+        id: portal.id,
+        address: portal.address,
+        type: portal.type,
+        apiKey: portal.apiKey,
+      };
+
+      await this.orbitService.ensurePortalDnsRecord(dnsRecord);
+      await this.orbitService.syncPortalDns(dnsRecord, { force: forceSync });
       await this.orbitService.generatePortalConfig(portal);
-      await this.orbitService.syncPortalDns(
-        {
-          id: portal.id,
-          address: portal.address,
-          type: portal.type,
-          apiKey: portal.apiKey,
-        },
-        { force: forceSync },
-      );
 
       await updatePortalStatus(STATES.ok);
 

@@ -74,9 +74,9 @@ export class PortalCreateProcessor implements IEventProcessor {
         apiKey: portal.apiKey,
       };
 
-      await this.orbitService.generatePortalConfig(portal);
       await this.orbitService.ensurePortalDnsRecord(dnsRecord);
       await this.orbitService.syncPortalDns(dnsRecord);
+      await this.orbitService.generatePortalConfig(portal);
 
       await updatePortalStatus(STATES.ok);
 

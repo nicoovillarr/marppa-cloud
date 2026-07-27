@@ -257,6 +257,22 @@ The app runs `sudo ddclient -file <conf>`, which updates once and exits. A
 bypasses the cache and pushes the record even when nothing changed — use it to repair a
 record edited out-of-band at the provider.
 
+DNS comes first and the site file second, in that order, on both create and update.
+The app has no way to prove a tenant owns the hostname it asked for, but writing an A
+record in the zone requires an API token that can write that zone — so a successful
+`ensurePortalDnsRecord` is the proof, and nothing lands under `/etc/caddy/sites/` until
+it passes. Reversing the two would let anyone drop a site block for a hostname they do
+not control, with no credentials at all.
+
+That matters because `Caddyfile` ends in `import sites/*.caddy`, so a single bad file
+there breaks the **whole** configuration, not just its own portal — Caddy refuses a
+duplicate hostname with `ambiguous site definition` and adapts nothing. The running
+process keeps its last good config in memory, so the damage stays invisible until
+something restarts Caddy and every site goes down at once. `generatePortalConfig`
+therefore rolls back: if `caddy validate` rejects the new file it is removed (or the
+previous version restored) and Caddy reloaded again, so a rejected portal can never
+leave the include directory poisoned.
+
 Two things trigger a sync: the `PORTAL_CREATE`/`PORTAL_UPDATE` processors, and
 `IPChecker`, which polls the host's public IP every `IP_CHECK_INTERVAL_MS` and re-syncs
 every ACTIVE portal whose stored `lastPublicIP` no longer matches. Without that poller a

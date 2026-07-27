@@ -416,12 +416,50 @@ export class LinuxOrbitService extends OrbitService {
     );
 
     const configPath = this.caddySitePath(portal.id);
+    const previous = await this.readCaddySite(configPath);
+
     await this.writeRootFile(configPath, config);
 
     console.log(config);
     console.log(`Caddy config for portal ${portal.id} written to ${configPath}`);
 
-    await this.reloadCaddy();
+    try {
+      await this.reloadCaddy();
+    } catch (error) {
+      await this.rollbackCaddySite(configPath, previous);
+      throw error;
+    }
+  }
+
+  private async readCaddySite(configPath: string): Promise<string | null> {
+    try {
+      return await fsPromises.readFile(configPath, 'utf8');
+    } catch {
+      return null;
+    }
+  }
+
+  private async rollbackCaddySite(
+    configPath: string,
+    previous: string | null,
+  ): Promise<void> {
+    console.warn(
+      `Caddy rejected the config for ${configPath}; restoring the previous state`,
+    );
+
+    if (previous == null) {
+      await this.removeRootFile(configPath);
+    } else {
+      await this.writeRootFile(configPath, previous);
+    }
+
+    try {
+      await this.reloadCaddy();
+    } catch (error) {
+      console.error(
+        `Caddy is still rejecting its configuration after the rollback: ${error.message}`,
+      );
+    }
   }
 
   public async deletePortalConfig(portalId) {

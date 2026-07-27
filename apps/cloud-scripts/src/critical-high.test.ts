@@ -357,3 +357,60 @@ test('event job ids are never bare integers', () => {
   assert.equal(eventJobId(91), 'event-91');
   assert.ok(!/^\d+$/.test(eventJobId(91)), 'BullMQ rejects a fully numeric custom id');
 });
+
+
+test('a Caddy config Caddy rejects is rolled back instead of left behind', async () => {
+  const service = new LinuxOrbitService({} as any);
+  const writes: Array<{ path: string; content: string | null }> = [];
+
+  (service as any).readCaddySite = async () => null;
+  (service as any).writeRootFile = async (path: string, content: string) => {
+    writes.push({ path, content });
+  };
+  (service as any).removeRootFile = async (path: string) => {
+    writes.push({ path, content: null });
+  };
+  (service as any).reloadCaddy = async () => {
+    throw new Error('ambiguous site definition: ws.cloud.marppa.com');
+  };
+
+  await assert.rejects(
+    () =>
+      service.generatePortalConfig({
+        id: 'p-evil',
+        address: 'ws.cloud.marppa.com',
+        transponders: [],
+      }),
+    /ambiguous site definition/,
+  );
+
+  assert.equal(writes.length, 2, 'the file is written and then withdrawn');
+  assert.equal(writes[1].content, null, 'a portal with no previous config leaves none');
+});
+
+test('a rejected update restores the previous Caddy config', async () => {
+  const service = new LinuxOrbitService({} as any);
+  const previous = ['old.marppa.com {', '}', ''].join('\n');
+  const writes: Array<string | null> = [];
+
+  (service as any).readCaddySite = async () => previous;
+  (service as any).writeRootFile = async (_path: string, content: string) => {
+    writes.push(content);
+  };
+  (service as any).removeRootFile = async () => {
+    writes.push(null);
+  };
+  (service as any).reloadCaddy = async () => {
+    throw new Error('rejected');
+  };
+
+  await assert.rejects(() =>
+    service.generatePortalConfig({
+      id: 'p-1',
+      address: 'new.marppa.com',
+      transponders: [],
+    }),
+  );
+
+  assert.equal(writes[writes.length - 1], previous, 'the last write restores the old site');
+});
