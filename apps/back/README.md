@@ -82,6 +82,13 @@ transponders) follows one rule, encoded in `EVENT_STATE_MACHINE`
   `workerId`; `NodeRepository.findWorkerOwnerId` reads that one column directly instead
   of introducing a `forwardRef` cycle, mirroring how hive's repository already joins
   `Node` rows.
+- a rule enforced in more than one process belongs in `@marppa-cloud/shared`, never
+  copy-pasted. Two of them had already drifted: the OpenSSH public key pattern existed in
+  four places, and the strictest copy rejected keys the API had accepted, so the worker
+  only failed once its event was queued; and the BullMQ job id was built as `event-<id>`
+  by the backend but as a bare number by the worker, which BullMQ rejects outright
+  ("Custom Id cannot be integers"), silently breaking every follow-up enqueue including
+  the one that marks a job failed.
 - a soft delete cannot free a `@unique` column. `Portal.address` pairs with a
   `deletedAt` sentinel (`@@unique([address, deletedAt])`, live rows share the epoch
   default) so a deleted portal stops reserving its domain. Any model that soft-deletes

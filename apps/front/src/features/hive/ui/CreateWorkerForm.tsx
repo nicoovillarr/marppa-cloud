@@ -18,8 +18,8 @@ import { WorkerFlavorResponseDto } from "../api/worker-flavor.api.types";
 import { useWorkerFamily } from "../models/use-worker-family";
 import { useDialog } from "@/core/ui/DialogProvider";
 import { ColumnMapping } from "@/core/ui/Table";
+import { isValidSshPublicKey } from "@marppa-cloud/shared";
 
-const OPENSSH_PUBLIC_KEY = /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+)[ \t]+[A-Za-z0-9+/=]+([ \t]+[^\r\n]*)?$/;
 
 export function CreateWorkerForm() {
   const [flavors, setFlavors] = useState<WorkerFlavorResponseDto[]>([]);
@@ -141,7 +141,7 @@ export function CreateWorkerForm() {
 
     const ownPublicKey = (data.ownPublicKey ?? "").trim();
 
-    if (ownPublicKey && !OPENSSH_PUBLIC_KEY.test(ownPublicKey)) {
+    if (ownPublicKey && !isValidSshPublicKey(ownPublicKey)) {
       setError("ownPublicKey", {
         type: "manual",
         message:

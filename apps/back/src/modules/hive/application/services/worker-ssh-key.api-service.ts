@@ -9,9 +9,8 @@ import {
 } from '@/hive/domain/repositories/worker-ssh-key.repository';
 import { WorkerSshKeyModel } from '@/hive/domain/models/worker-ssh-key.model';
 import { CreateWorkerSshKeyDto } from '@/hive/presentation/dtos/create-worker-ssh-key.dto';
+import { isValidSshPublicKey } from '@marppa-cloud/shared';
 
-const OPENSSH_PUBLIC_KEY =
-  /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+)[ \t]+[A-Za-z0-9+/=]+([ \t]+[^\r\n]*)?$/;
 
 @Injectable()
 export class WorkerSshKeyApiService {
@@ -36,7 +35,7 @@ export class WorkerSshKeyApiService {
     await this.workerService.findById(workerId);
 
     const publicKey = data.publicKey.trim();
-    if (!OPENSSH_PUBLIC_KEY.test(publicKey)) {
+    if (!isValidSshPublicKey(publicKey)) {
       throw new BadRequestException(
         'Not an OpenSSH public key. Expected ssh-ed25519, ssh-rsa or ecdsa-sha2-*.',
       );

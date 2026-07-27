@@ -7,6 +7,7 @@ import { LinuxOrbitService } from '@/orbit/infrastructure/services/LinuxOrbitSer
 import { LinuxHiveService } from '@/worker/infrastructure/LinuxHiveService';
 import { WorkerStartProcessor } from '@/worker/application/WorkerStartProcessor';
 import { Command } from '@/libs/Command';
+import { isValidSshPublicKey, eventJobId } from '@marppa-cloud/shared';
 import { AppContainer } from '@/libs/Container';
 import { IPChecker } from '@/system/application/IPChecker';
 
@@ -334,4 +335,25 @@ test('IPChecker constructor params all resolve to injectable tokens', () => {
       `IPChecker has a primitive constructor param (${String(token)}); it cannot be injected`,
     );
   }
+});
+
+
+test('the shared SSH key rule accepts what the API accepts', () => {
+  const body = 'AAAAB3NzaC1yc2EAAAADAQABAAABgQCv';
+
+  assert.ok(isValidSshPublicKey(`ssh-rsa ${body}`), 'no comment');
+  assert.ok(isValidSshPublicKey(`ssh-rsa ${body} nico@laptop`), 'plain comment');
+  assert.ok(isValidSshPublicKey(`ssh-rsa ${body} mi notebook vieja`), 'comment with spaces');
+  assert.ok(isValidSshPublicKey(`  ssh-ed25519 ${body}  `), 'surrounding whitespace');
+  assert.ok(isValidSshPublicKey(`ecdsa-sha2-nistp521 ${body} x`), 'any ecdsa curve');
+
+  assert.ok(!isValidSshPublicKey(`ssh-rsa ${body}
+ssh-rsa ${body}`), 'embedded newline');
+  assert.ok(!isValidSshPublicKey(`not-a-type ${body}`), 'unknown key type');
+  assert.ok(!isValidSshPublicKey('ssh-rsa'), 'no body');
+});
+
+test('event job ids are never bare integers', () => {
+  assert.equal(eventJobId(91), 'event-91');
+  assert.ok(!/^\d+$/.test(eventJobId(91)), 'BullMQ rejects a fully numeric custom id');
 });

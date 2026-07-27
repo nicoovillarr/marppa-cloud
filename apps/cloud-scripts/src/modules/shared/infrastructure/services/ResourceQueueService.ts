@@ -3,6 +3,7 @@ import { RedisService } from './RedisService';
 import { Queue } from 'bullmq';
 import { LoggerService } from './LoggerService';
 import { OnModuleInit, OnModuleDestroy } from '@/libs/Container';
+import { eventJobId } from '@marppa-cloud/shared';
 import type {
   EventJobData,
   PrimaryResourceRef,
@@ -71,7 +72,7 @@ export class ResourceQueueService implements OnModuleInit, OnModuleDestroy {
     const jobData: EventJobData = { eventId: nextEventId, primary };
 
     await this.queue.add('process-event', jobData, {
-      jobId: String(nextEventId),
+      jobId: eventJobId(nextEventId),
     });
 
     this.logger.info(
@@ -84,7 +85,7 @@ export class ResourceQueueService implements OnModuleInit, OnModuleDestroy {
 
     const jobData: EventJobData = { eventId, primary };
     await this.queue.add('process-event', jobData, {
-      jobId: String(eventId),
+      jobId: eventJobId(eventId),
     });
   }
 

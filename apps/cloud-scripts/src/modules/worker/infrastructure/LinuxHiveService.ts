@@ -3,6 +3,7 @@ import fsPromises from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
+import { isValidSshPublicKey } from '@marppa-cloud/shared';
 import { Command } from '@/libs/Command';
 import { sleep } from '@/libs/sleep';
 import {
@@ -35,7 +36,6 @@ const SHUTDOWN_POLL_MS = 2_000;
 
 const SAFE_VM_NAME = /^[a-zA-Z0-9_-]+$/;
 const ALLOWED_IMAGE_URL = /^https?:\/\/[a-zA-Z0-9.\-]+(:\d+)?\//;
-const VALID_SSH_KEY = /^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521) [A-Za-z0-9+\/=]+ \S+$/;
 const SAFE_USERNAME = /^[a-z_][a-z0-9_-]{0,31}$/;
 
 @Injectable()
@@ -338,7 +338,7 @@ export class LinuxHiveService extends HiveService {
     }
 
     for (const key of sshPublicKeys) {
-      if (!VALID_SSH_KEY.test(key.trim())) {
+      if (!isValidSshPublicKey(key)) {
         throw new Error(`Invalid SSH public key format: ${key.substring(0, 40)}...`);
       }
     }
@@ -611,7 +611,7 @@ local-hostname: ${name}
 
   private assertPublicKeys(publicKeys: string[]): void {
     for (const key of publicKeys) {
-      if (!HiveService.OPENSSH_PUBLIC_KEY.test(key.trim())) {
+      if (!isValidSshPublicKey(key)) {
         throw new Error(`Refusing to write a malformed SSH public key: ${key}`);
       }
     }
