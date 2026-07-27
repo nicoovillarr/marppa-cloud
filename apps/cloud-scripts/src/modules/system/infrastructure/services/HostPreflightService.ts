@@ -34,6 +34,8 @@ const REQUIRED_DIRS = [
 
 const DNSMASQ_RESET_SCRIPT = '/usr/local/sbin/reset-dnsmasq.sh';
 
+const DOCKER_DAEMON_CONFIG = '/etc/docker/daemon.json';
+
 const NFT_CONF = '/etc/nftables.conf';
 
 const IP_FORWARD_PROC = '/proc/sys/net/ipv4/ip_forward';
@@ -71,6 +73,7 @@ export class HostPreflightService {
     await this.checkUplink(problems);
     await this.checkVirtualization(problems);
     await this.checkDnsmasqConfDir(problems);
+    await this.checkDockerIsolation(problems);
 
     if (problems.length) {
       throw new Error(
@@ -359,6 +362,73 @@ export class HostPreflightService {
       }
     } catch (err) {
       problems.push(`Could not read /etc/dnsmasq.conf: ${this.message(err)}`);
+    }
+  }
+
+  /**
+   * Docker is optional (only the Nucleus module needs it), but a daemon that
+   * manages packet filtering is not: its chains land in the same `ip nat` /
+   * `inet filter` tables the mesh rewrites on every zone and fiber change, and
+   * a `SYSTEM_RESET` would wipe them along with fail2ban's. Checked whenever the
+   * binary is installed, not only when atoms exist.
+   */
+  private async checkDockerIsolation(problems: string[]): Promise<void> {
+    try {
+      await Command.runCommand('which', ['docker']);
+    } catch {
+      return;
+    }
+
+    let config: { iptables?: boolean; ip6tables?: boolean; bridge?: string };
+    try {
+      config = JSON.parse(await Command.runCommand('sudo', ['cat', DOCKER_DAEMON_CONFIG]));
+    } catch (err) {
+      problems.push(
+        `Docker is installed but ${DOCKER_DAEMON_CONFIG} could not be read as JSON ` +
+        `(${this.message(err)}). It must set "iptables": false so the daemon never ` +
+        'writes into the nftables tables this app and fail2ban own.',
+      );
+      return;
+    }
+
+    if (config.iptables !== false) {
+      problems.push(
+        `${DOCKER_DAEMON_CONFIG} does not set "iptables": false — the Docker daemon ` +
+        'would insert its own chains into "ip nat" and "inet filter" and they would be ' +
+        'dropped on the next zone or fiber change.',
+      );
+    }
+
+    if (config.ip6tables !== false) {
+      problems.push(
+        `${DOCKER_DAEMON_CONFIG} does not set "ip6tables": false.`,
+      );
+    }
+
+    if (config.bridge !== 'none') {
+      problems.push(
+        `${DOCKER_DAEMON_CONFIG} does not set "bridge": "none" — the default docker0 ` +
+        'bridge needs masquerading the app does not provide, so containers on it would ' +
+        'silently have no egress.',
+      );
+    }
+
+    try {
+      const chains = await Command.runCommand('sudo', ['nft', 'list', 'chains']);
+      const dockerChains = [
+        ...new Set(
+          [...chains.matchAll(/^\s*chain\s+(DOCKER[\w-]*)\b/gm)].map(([, chain]) => chain),
+        ),
+      ];
+
+      if (dockerChains.length) {
+        problems.push(
+          `The live nftables ruleset still has Docker chains (${dockerChains.join(', ')}). ` +
+          'Restart the daemon after fixing daemon.json and flush the leftovers.',
+        );
+      }
+    } catch (err) {
+      problems.push(`Could not list nftables chains: ${this.message(err)}`);
     }
   }
 

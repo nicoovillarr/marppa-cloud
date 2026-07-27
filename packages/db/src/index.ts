@@ -9,6 +9,9 @@ export {
 } from '@prisma/client';
 
 export type {
+  Atom,
+  AtomEnvVar,
+  AtomImage,
   Company,
   Event,
   EventProperty,

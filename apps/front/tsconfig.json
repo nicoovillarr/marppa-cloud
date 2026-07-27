@@ -47,6 +47,9 @@
       "@/mesh/*": [
         "src/features/mesh/*"
       ],
+      "@/nucleus/*": [
+        "src/features/nucleus/*"
+      ],
       "@/system/*": [
         "src/features/system/*"
       ],

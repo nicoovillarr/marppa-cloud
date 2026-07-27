@@ -55,6 +55,13 @@ export class ParentStateService {
         });
         return row?.status ?? null;
       }
+      case 'Atom': {
+        const row = await this.prisma.atom.findUnique({
+          where: { id: resourceId },
+          select: { status: true },
+        });
+        return row?.status ?? null;
+      }
       case 'Node': {
         const row = await this.prisma.node.findUnique({
           where: { id: resourceId },

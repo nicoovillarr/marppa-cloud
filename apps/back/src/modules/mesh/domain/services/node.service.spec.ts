@@ -32,6 +32,8 @@ describe('NodeService', () => {
     findById: jest.fn(),
     findByIdWithZone: jest.fn(),
     findWorkerOwnerId: jest.fn(),
+    findAtomOwnerId: jest.fn(),
+    findAtomStatus: jest.fn(),
     findByZoneId: jest.fn(),
     create: jest.fn(),
     delete: jest.fn(),
@@ -59,6 +61,7 @@ describe('NodeService', () => {
     } as any);
 
     mockNodeRepository.findWorkerOwnerId.mockResolvedValue('c-000001');
+    mockNodeRepository.findAtomOwnerId.mockResolvedValue('c-000001');
   });
 
   afterEach(() => {

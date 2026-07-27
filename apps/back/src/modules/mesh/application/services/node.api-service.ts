@@ -103,8 +103,12 @@ export class NodeApiService {
     const node = await this.nodeService.findById(zoneId, id);
 
     if (node.workerId == null) {
-      // No worker attached (atom or never-assigned node): nothing exists on
-      // the host for it, a plain row delete is safe.
+      // No worker attached: nothing was materialised on the host by an assign
+      // processor, so a plain row delete is safe once nothing is using the IP.
+      if (node.atomId != null) {
+        await this.nodeService.assertAtomReleasable(node.atomId);
+      }
+
       await this.nodeService.delete(zoneId, id);
       return;
     }

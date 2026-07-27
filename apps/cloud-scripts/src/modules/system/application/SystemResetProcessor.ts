@@ -4,6 +4,7 @@ import type { EventPayload } from '@/event/domain/models/EventPayload';
 import { MESH_SERVICE_TOKEN, MeshService } from '@/mesh/domain/services/MeshService';
 import { ORBIT_SERVICE_TOKEN, OrbitService } from '@/orbit/domain/services/OrbitService';
 import { HIVE_SERVICE_TOKEN, HiveService } from '@/worker/domain/services/HiveService';
+import { NUCLEUS_SERVICE_TOKEN, NucleusService } from '@/nucleus/domain/services/NucleusService';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
@@ -33,6 +34,9 @@ export class SystemResetProcessor implements IEventProcessor {
 
     @Inject(ORBIT_SERVICE_TOKEN)
     private readonly orbitService: OrbitService,
+
+    @Inject(NUCLEUS_SERVICE_TOKEN)
+    private readonly nucleusService: NucleusService,
   ) {}
 
   public async handle(event: EventPayload): Promise<void> {
@@ -42,8 +46,9 @@ export class SystemResetProcessor implements IEventProcessor {
       const alive = { status: { not: ResourceStatus.DELETED } };
       const active = { status: ResourceStatus.ACTIVE };
 
-      const [workers, zones, protectedZones, fibers, portals] = await Promise.all([
+      const [workers, atoms, zones, protectedZones, fibers, portals] = await Promise.all([
         this.prisma.worker.findMany({ where: alive, select: { id: true } }),
+        this.prisma.atom.findMany({ where: active, select: { id: true } }),
         this.prisma.zone.findMany({
           where: active,
           select: { id: true, cidr: true, gateway: true },
@@ -80,11 +85,17 @@ export class SystemResetProcessor implements IEventProcessor {
         portals.map((portal) => portal.id),
       );
 
+      // Only ACTIVE atoms are expected to have a container: everything else is
+      // rebuilt from the row on its next ATOM_START.
+      const removedAtoms = await this.nucleusService.reconcileAtoms(
+        atoms.map((atom) => atom.id),
+      );
+
       this.logger.log(
         `System reset reconciled the host against the database. ` +
         `Removed ${removedWorkers.length} orphan workers, ${removedZones.length} orphan zones, ` +
-        `${removedPortals.length} orphan portals. Rebuilt nftables for ${zones.length} zones ` +
-        `and ${fibers.length} fibers.`,
+        `${removedPortals.length} orphan portals, ${removedAtoms.length} orphan atoms. ` +
+        `Rebuilt nftables for ${zones.length} zones and ${fibers.length} fibers.`,
       );
 
       await this.repository.createEvent(

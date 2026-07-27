@@ -221,8 +221,72 @@ const createWorkerImages = async () => {
   console.log('Worker images created successfully!');
 }
 
+const createAtomImages = async () => {
+  console.log('Creating atom images...');
+
+  // This table *is* the approval: an Atom can only reference a row that exists
+  // here, so a container image (and the privileges it may ask the host for)
+  // enters the platform through a reviewed change, never through the API.
+  const images = [
+    {
+      name: 'redis-7',
+      description: 'Redis 7 (Alpine)',
+      registry: 'docker.io',
+      repository: 'library/redis',
+      tag: '7-alpine',
+      architecture: 'amd64',
+      capabilities: [],
+      sysctls: undefined,
+    },
+
+    {
+      name: 'postgresql-17',
+      description: 'PostgreSQL 17 (Alpine). Requires POSTGRES_PASSWORD.',
+      registry: 'docker.io',
+      repository: 'library/postgres',
+      tag: '17-alpine',
+      architecture: 'amd64',
+      capabilities: [],
+      sysctls: undefined,
+    },
+
+    {
+      // WireGuard runs in the container's own network namespace, so it needs the
+      // kernel-level grants the image documents. They are pinned here rather than
+      // requested per atom: the privileges are part of what gets approved.
+      name: 'wg-easy-14',
+      description: 'wg-easy 14 (WireGuard + web UI). Requires WG_HOST and PASSWORD_HASH.',
+      registry: 'ghcr.io',
+      repository: 'wg-easy/wg-easy',
+      tag: '14',
+      architecture: 'amd64',
+      capabilities: ['NET_ADMIN', 'SYS_MODULE'],
+      sysctls: {
+        'net.ipv4.ip_forward': '1',
+        'net.ipv4.conf.all.src_valid_mark': '1',
+      },
+    },
+  ];
+
+  for (const image of images) {
+    await prisma.atomImage.upsert({
+      where: { name: image.name },
+      create: image,
+      update: image,
+    });
+  }
+
+  console.log('Atom images created successfully!');
+};
+
 const main = async () => {
-  const calls = [createCompany, createUsers, createWorkerFamilies, createWorkerImages];
+  const calls = [
+    createCompany,
+    createUsers,
+    createWorkerFamilies,
+    createWorkerImages,
+    createAtomImages,
+  ];
   for (const call of calls) {
     await call();
   }

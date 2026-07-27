@@ -3,6 +3,7 @@ import { SharedModule } from '@/shared/SharedModule';
 import { EventModule } from '@/event/EventModule';
 import { WorkerModule } from '@/worker/WorkerModule';
 import { MeshModule } from '@/mesh/MeshModule';
+import { NucleusModule } from '@/nucleus/NucleusModule';
 import { OrbitModule } from '@/orbit/OrbitModule';
 import { SystemResetProcessor } from './application/SystemResetProcessor';
 import { SystemResetHardProcessor } from './application/SystemResetHardProcessor';
@@ -11,7 +12,14 @@ import { HostPreflightService } from './infrastructure/services/HostPreflightSer
 import { IPChecker } from './application/IPChecker';
 
 @Module({
-  imports: [SharedModule, EventModule, WorkerModule, MeshModule, OrbitModule],
+  imports: [
+    SharedModule,
+    EventModule,
+    WorkerModule,
+    MeshModule,
+    NucleusModule,
+    OrbitModule,
+  ],
   providers: [DeleteProcessor, HostPreflightService, IPChecker],
   processors: [SystemResetProcessor, SystemResetHardProcessor],
   exports: [HostPreflightService],

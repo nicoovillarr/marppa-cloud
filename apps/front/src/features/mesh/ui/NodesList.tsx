@@ -16,6 +16,7 @@ import { TableSkeleton } from "@/core/ui/AsyncTable";
 import { closeCurrentDialog, useDialog } from "@/core/ui/DialogProvider";
 import { useWebSocket } from "@/core/ui/WebsocketProvider";
 import { useUser } from "src/features/users/model/useUser";
+import { AssignAtomDialog } from "./AssignAtomDialog";
 import { AssignWorkerDialog } from "./AssignWorkerDialog";
 import { FiberCreateDialog } from "./FiberCreateDialog";
 import { FibersDialog } from "./FibersDialog";
@@ -29,7 +30,7 @@ const getPointsToInfo = (node: NodeWithFibers) => {
     link = `/dashboard/hive/workers`;
   } else if (!!node.atomId) {
     pointsTo = `Atom ${node.atomId}`;
-    link = `/dashboard/hive/atoms/${node.atomId}`;
+    link = `/dashboard/nucleus/atoms`;
   }
 
   return { pointsTo, link };
@@ -57,6 +58,14 @@ export function NodesList({ zoneId }: { zoneId: string }) {
       title: "Assign Worker",
       description: "Reserve an IP in this zone and attach the worker to it.",
       content: <AssignWorkerDialog zoneId={zoneId} onAssigned={refresh} />,
+    });
+  };
+
+  const openAssignAtomDialog = () => {
+    showDialog({
+      title: "Assign Atom",
+      description: "Reserve an IP in this zone for a container.",
+      content: <AssignAtomDialog zoneId={zoneId} onAssigned={refresh} />,
     });
   };
 
@@ -117,8 +126,9 @@ export function NodesList({ zoneId }: { zoneId: string }) {
     showDialog({
       type: "confirm",
       title: "Unassign Node",
-      description:
-        "Release this IP reservation and detach the worker's NIC from the zone. The worker must be stopped (INACTIVE).",
+      description: node.atomId
+        ? "Release this IP reservation. The atom must be stopped (INACTIVE), or its container would still be holding the address."
+        : "Release this IP reservation and detach the worker's NIC from the zone. The worker must be stopped (INACTIVE).",
       confirmText: "Unassign",
       confirmButtonStyle: "danger",
       onConfirm: async () => {
@@ -173,10 +183,15 @@ export function NodesList({ zoneId }: { zoneId: string }) {
   };
 
   const contextMenuGroups = (node: NodeWithFibers) => {
+    // Start/stop materialise a worker's NIC on the bridge. An atom-backed node
+    // is only an IP reservation until its container starts, so the backend
+    // rejects both for it.
+    const isWorkerNode = !!node.workerId;
     const canStart =
-      node.status === ResourceStatus.INACTIVE ||
-      node.status === ResourceStatus.FAILED;
-    const canStop = node.status === ResourceStatus.ACTIVE;
+      isWorkerNode &&
+      (node.status === ResourceStatus.INACTIVE ||
+        node.status === ResourceStatus.FAILED);
+    const canStop = isWorkerNode && node.status === ResourceStatus.ACTIVE;
 
     return [
       {
@@ -240,6 +255,15 @@ export function NodesList({ zoneId }: { zoneId: string }) {
           icon={<LuListPlus />}
           onClick={openAssignWorkerDialog}
         />
+
+        <Button
+          type="button"
+          className="ml-2"
+          text="Assign Atom"
+          icon={<LuListPlus />}
+          style="secondary"
+          onClick={openAssignAtomDialog}
+        />
       </header>
 
       {zone.nodes.length > 0 ? (
@@ -252,7 +276,7 @@ export function NodesList({ zoneId }: { zoneId: string }) {
         />
       ) : (
         <p className="text-sm text-gray-500">
-          No nodes yet. Assign a worker to reserve its IP in this zone.
+          No nodes yet. Assign a worker or an atom to reserve its IP in this zone.
         </p>
       )}
     </section>

@@ -69,6 +69,15 @@ export const EVENT_STATE_MACHINE: Partial<
   // pre-set a status before dispatch for this transition).
   [EventTypeKey.NODE_UNASSIGN_WORKER]: { entry: ACTIVE, work: TERMINATING, ok: INACTIVE, fail: FAILED },
 
+  // --- nucleus ---
+  // ATOM_CREATE only pulls the approved image; the container itself is built
+  // from scratch on every ATOM_START, so create ends at INACTIVE and there is
+  // no update transition — a rename or an env change applies on the next start.
+  [EventTypeKey.ATOM_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.ATOM_START]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.ATOM_TERMINATE]: { entry: QUEUED, work: TERMINATING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.ATOM_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+
   // --- orbit (verified) ---
   [EventTypeKey.PORTAL_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
   [EventTypeKey.PORTAL_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },

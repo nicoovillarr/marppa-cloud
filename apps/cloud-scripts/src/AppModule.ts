@@ -4,6 +4,7 @@ import { EventModule } from '@/event/EventModule';
 import { SystemModule } from '@/system/SystemModule';
 import { WorkerModule } from '@/worker/WorkerModule';
 import { MeshModule } from '@/mesh/MeshModule';
+import { NucleusModule } from '@/nucleus/NucleusModule';
 import { OrbitModule } from '@/orbit/OrbitModule';
 
 @Module({
@@ -13,6 +14,7 @@ import { OrbitModule } from '@/orbit/OrbitModule';
     SystemModule,
     WorkerModule,
     MeshModule,
+    NucleusModule,
     OrbitModule,
   ],
 })

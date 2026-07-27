@@ -9,6 +9,7 @@ import { CompanyModule } from '@/company/company.module';
 import { EventModule } from '@/event/event.module';
 import { HiveModule } from '@/hive/hive.module';
 import { MeshModule } from '@/mesh/mesh.module';
+import { NucleusModule } from '@/nucleus/nucleus.module';
 import { OrbitModule } from '@/orbit/orbit.module';
 import { SystemModule } from '@/system/system.module';
 import { ConfigModule } from '@nestjs/config';
@@ -37,6 +38,7 @@ const env = process.env.NODE_ENV ?? 'development';
     EventModule,
     HiveModule,
     MeshModule,
+    NucleusModule,
     OrbitModule,
     SystemModule,
   ],

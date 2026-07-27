@@ -29,6 +29,7 @@
       "@/event/*": ["./src/modules/event/*"],
       "@/hive/*": ["./src/modules/hive/*"],
       "@/mesh/*": ["./src/modules/mesh/*"],
+      "@/nucleus/*": ["./src/modules/nucleus/*"],
       "@/orbit/*": ["./src/modules/orbit/*"],
       "@/system/*": ["./src/modules/system/*"],
     }

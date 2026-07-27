@@ -38,7 +38,7 @@ export function AssignWorkerDialog({
     }
 
     setIsSubmitting(true);
-    const node = await createNode(zoneId, selectedWorkerId);
+    const node = await createNode(zoneId, { workerId: selectedWorkerId });
     setIsSubmitting(false);
 
     if (node) {

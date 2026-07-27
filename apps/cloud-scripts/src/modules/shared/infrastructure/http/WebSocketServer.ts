@@ -238,6 +238,14 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       return node?.zone.ownerId === companyId;
     }
 
+    if (parts[0] === 'nucleus' && parts[1] === 'atom' && parts[2]) {
+      const atom = await this.prisma.atom.findUnique({
+        where: { id: parts[2] },
+        select: { ownerId: true },
+      });
+      return atom?.ownerId === companyId;
+    }
+
     if (parts[0] === 'hive' && parts[1] === 'worker' && parts[2]) {
       const worker = await this.prisma.worker.findUnique({
         where: { id: parts[2] },
@@ -281,6 +289,20 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     if (worker.ownerId) {
       this.sendMessage(`company:${worker.ownerId}:hive`, type, {
         workerId: worker.id,
+        data,
+      });
+    }
+  }
+
+  public sendAtomMessage(
+    atom: { id: string; ownerId?: string },
+    type: string,
+    data: unknown,
+  ): void {
+    this.sendMessage(`nucleus:atom:${atom.id}`, type, data);
+    if (atom.ownerId) {
+      this.sendMessage(`company:${atom.ownerId}:nucleus`, type, {
+        atomId: atom.id,
         data,
       });
     }

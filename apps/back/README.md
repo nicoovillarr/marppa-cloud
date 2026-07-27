@@ -97,6 +97,36 @@ transponders) follows one rule, encoded in `EVENT_STATE_MACHINE`
 Portal `apiKey` and `sslKey` are write-only: accepted on create/update, never exposed
 in a response model.
 
+### Nucleus (atoms)
+
+An `Atom` is a Docker container, and it sits in the mesh exactly where a worker
+does: it needs a `Node` in an `ACTIVE` zone, it is addressed with that node's IP
+on the zone bridge, and a port is reachable from outside only through a `Fiber`.
+Three consequences shape the module:
+
+- **Only approved images run.** `Atom.imageId` is a foreign key into `AtomImage`,
+  a catalog with no write endpoints — rows come from the seed or a migration. An
+  image's extra kernel privileges (`capabilities`, `sysctls`) live on the catalog
+  row too, so approving an image approves what it may ask of the host. The
+  processors resolve the image through the relation, never from event data.
+- **Docker never manages the firewall.** The daemon runs with `iptables: false`;
+  egress NAT and port publishing come from the mesh's own nftables rules, so
+  Docker cannot clobber `inet filter` / `ip nat` (rewritten on every zone and
+  fiber change) or fail2ban's `inet f2b-table` (wiped by `SYSTEM_RESET`'s base
+  ruleset). `-p` / `--publish` must never appear in a `docker run`. See
+  `apps/cloud-scripts/deploy/README.md` for the daemon config and the checks that
+  enforce it.
+- **The container is rebuilt from the row on every `ATOM_START`.** That is why
+  there is no `ATOM_UPDATE`: a rename or an env change is a plain DB write that
+  applies on the next start, and both are refused while the atom is not
+  `INACTIVE`. It also means an atom-backed `Node` has no host work to do at
+  assign time, so it is created `ACTIVE` with no assign event — but it cannot be
+  deleted while its atom is live, or its IP would be handed out twice.
+
+`AtomEnvVar` values are stored in clear text, like `Portal.apiKey`: they are
+secrets to the guest, not to the platform operator, and the processor needs them
+verbatim to build the container.
+
 # Conventions
 
 ## Naming
