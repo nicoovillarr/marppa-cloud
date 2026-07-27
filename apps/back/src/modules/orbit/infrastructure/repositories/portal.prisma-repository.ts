@@ -8,6 +8,7 @@ import { PortalWithTranspondersWithNodeModel } from '@/orbit/domain/models/porta
 import { TransponderPrismaMapper } from '../mappers/transponder.prisma-mapper';
 import { NodePrismaMapper } from '@/mesh/infrastructure/mappers/node.prisma-mapper';
 import { TransponderWithNodeModel } from '@/orbit/domain/models/transponder-with-node.model';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 @Injectable()
 export class PortalPrismaRepository implements PortalRepository {
@@ -15,7 +16,7 @@ export class PortalPrismaRepository implements PortalRepository {
 
   async findById(portalId: string): Promise<PortalEntity | null> {
     const portal = await this.prisma.portal.findUnique({
-      where: { id: portalId },
+      where: { id: portalId, status: { not: ResourceStatus.DELETED } },
     });
 
     if (portal == null) {
@@ -27,9 +28,10 @@ export class PortalPrismaRepository implements PortalRepository {
 
   async findByIdWithTranspondersWithNode(id: string): Promise<PortalWithTranspondersWithNodeModel | null> {
     const portal = await this.prisma.portal.findUnique({
-      where: { id },
+      where: { id, status: { not: ResourceStatus.DELETED } },
       include: {
         transponders: {
+          where: { status: { not: ResourceStatus.DELETED } },
           include: {
             node: true,
           },
@@ -56,6 +58,7 @@ export class PortalPrismaRepository implements PortalRepository {
     const list = await this.prisma.portal.findMany({
       where: {
         ownerId,
+        status: { not: ResourceStatus.DELETED },
       },
     });
 
@@ -81,11 +84,5 @@ export class PortalPrismaRepository implements PortalRepository {
     });
 
     return PortalPrismaMapper.toEntity(portal);
-  }
-
-  async delete(portalId: string): Promise<void> {
-    await this.prisma.portal.delete({
-      where: { id: portalId },
-    });
   }
 }

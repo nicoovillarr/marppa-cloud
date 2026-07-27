@@ -12,9 +12,10 @@ import { TransponderService } from './domain/services/transponder.service';
 import { TransponderPrismaRepository } from './infrastructure/repositories/transponder.prisma-repository';
 import { TRANSPONDER_REPOSITORY } from './domain/repositories/transponder.repository';
 import { EventModule } from '@/event/event.module';
+import { MeshModule } from '@/mesh/mesh.module';
 
 @Module({
-  imports: [SharedModule, AuthModule, EventModule],
+  imports: [SharedModule, AuthModule, EventModule, MeshModule],
   controllers: [PortalController, TransponderController],
   providers: [
     PortalApiService,

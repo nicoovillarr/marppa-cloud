@@ -155,14 +155,14 @@ test('LinuxOrbitService rejects injected proxy config values', () => {
     port: 8080,
     priority: 1,
     status: ResourceStatus.ACTIVE,
-    customIPAddress: '10.0.0.10',
+    node: { ipAddress: '10.0.0.10' },
   };
 
   assert.throws(
     () =>
       (service as any).buildTransponderRoute({
         ...transponder,
-        customIPAddress: '10.0.0.10\nrespond "pwned"',
+        node: { ipAddress: '10.0.0.10\nrespond "pwned"' },
       }),
     /Invalid proxy target IP/,
   );
@@ -177,12 +177,8 @@ test('LinuxOrbitService rejects injected proxy config values', () => {
   );
 
   assert.throws(
-    () =>
-      (service as any).buildTransponderRoute({
-        ...transponder,
-        addHeaders: { 'X-Bad\nrespond': 'value' },
-      }),
-    /Invalid header name/,
+    () => (service as any).buildTransponderRoute({ ...transponder, port: 99999 }),
+    /Invalid proxy port/,
   );
 });
 
@@ -288,4 +284,36 @@ test('WorkerStartProcessor does not mark unreachable workers as ACTIVE', async (
     ResourceStatus.PROVISIONING,
     ResourceStatus.FAILED,
   ]);
+});
+
+
+test('Command kills a child that outlives its timeout', async () => {
+  const started = Date.now();
+
+  await assert.rejects(
+    () => Command.runCommand('node', ['-e', 'setTimeout(() => {}, 60000)'], false, 300),
+    /timed out after 300ms/,
+  );
+
+  assert.ok(
+    Date.now() - started < 10000,
+    'the timeout must settle the promise instead of waiting for the child',
+  );
+});
+
+test('Command without a timeout still resolves normally', async () => {
+  const output = await Command.runCommand('node', ['-e', 'process.stdout.write("ok")']);
+
+  assert.equal(output, 'ok');
+});
+
+test('Command timeout does not fire for a command that finishes in time', async () => {
+  const output = await Command.runCommand(
+    'node',
+    ['-e', 'process.stdout.write("fast")'],
+    false,
+    10000,
+  );
+
+  assert.equal(output, 'fast');
 });

@@ -8,6 +8,9 @@ import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/reposito
 import { ORBIT_SERVICE_TOKEN, OrbitService } from '../domain/services/OrbitService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.TRANSPONDER_DELETE);
 
 @EventProcessor(EventType.TRANSPONDER_DELETE)
 export class TransponderDeleteProcessor implements IEventProcessor {
@@ -53,14 +56,14 @@ export class TransponderDeleteProcessor implements IEventProcessor {
         );
       }
 
-      if (transponder.status !== ResourceStatus.QUEUED) {
+      if (transponder.status !== STATES.entry) {
         throw new AbortError(
           `Transponder status (${transponder.status}) is not valid for event ID: ${event.id}`,
           EventType.TRANSPONDER_DELETE_FAILED,
         );
       }
 
-      await updateTransponderStatus(ResourceStatus.DELETING);
+      await updateTransponderStatus(STATES.work);
 
       await this.orbitService.generatePortalConfig({
         ...transponder.portal,
@@ -69,7 +72,7 @@ export class TransponderDeleteProcessor implements IEventProcessor {
         ),
       });
 
-      await updateTransponderStatus(ResourceStatus.DELETED);
+      await updateTransponderStatus(STATES.ok);
 
       const eventCreatedId = await this.repository.createEvent(EventType.TRANSPONDER_DELETED, event.createdBy, event.companyId);
       await this.repository.addEventResource(eventCreatedId, 'Event', String(event.id));
@@ -77,7 +80,7 @@ export class TransponderDeleteProcessor implements IEventProcessor {
     } catch (error) {
       if (error instanceof AbortError) throw error;
       if (transponder) {
-        await updateTransponderStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updateTransponderStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }

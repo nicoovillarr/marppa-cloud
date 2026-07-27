@@ -51,7 +51,7 @@ describe('TransponderPrismaRepository (Integration)', () => {
       },
     });
 
-    await prisma.portal.delete({
+    await prisma.portal.deleteMany({
       where: {
         address: 'integration-test.marppa.cloud',
       },
@@ -133,14 +133,25 @@ describe('TransponderPrismaRepository (Integration)', () => {
       expect(result.priority).toBe(2);
     });
 
-    it('should delete a transponder', async () => {
-      await repository.delete(testPortalId, createdTransponderId);
-
-      const result = await repository.findById(
+    it('should hide a transponder marked as deleted', async () => {
+      const transponder = await repository.findById(
         testPortalId,
         createdTransponderId,
       );
-      expect(result).toBeNull();
+      if (!transponder) throw new Error('Transponder not found');
+
+      await repository.update(
+        transponder.clone({ status: ResourceStatus.DELETED }),
+      );
+
+      expect(
+        await repository.findById(testPortalId, createdTransponderId),
+      ).toBeNull();
+      expect(
+        (await repository.findByPortalId(testPortalId)).some(
+          (t) => t.id === createdTransponderId,
+        ),
+      ).toBe(false);
     });
   });
 });

@@ -41,6 +41,7 @@ export function PortalForm({
     const form = {
       id: portal?.id,
       name: data.name,
+      description: data.description,
       address: data.address,
       type: data.type,
       apiKey: portal != null && disableApiKey ? undefined : data.apiKey,
@@ -69,6 +70,7 @@ export function PortalForm({
     if (portal) {
       reset({
         name: portal.name,
+        description: portal.description,
         address: portal.address,
         type: portal.type,
         zoneId: portal.zoneId,
@@ -90,6 +92,12 @@ export function PortalForm({
           control={control}
           label="Portal Name"
           required
+        />
+
+        <FormInput
+          controlName="description"
+          control={control}
+          label="Description"
         />
 
         <FormInput

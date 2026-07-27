@@ -4,6 +4,7 @@ import { TransponderPrismaMapper } from '../mappers/transponder.prisma-mapper';
 import { TransponderEntity } from '../../domain/entities/transponder.entity';
 import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 import { Injectable } from '@nestjs/common';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 @Injectable()
 export class TransponderPrismaRepository implements TransponderRepository {
@@ -17,6 +18,7 @@ export class TransponderPrismaRepository implements TransponderRepository {
       where: {
         id: transponderId,
         portalId,
+        status: { not: ResourceStatus.DELETED },
       },
     });
 
@@ -31,6 +33,7 @@ export class TransponderPrismaRepository implements TransponderRepository {
     const list = await this.prisma.transponder.findMany({
       where: {
         portalId,
+        status: { not: ResourceStatus.DELETED },
       },
     });
 
@@ -56,11 +59,5 @@ export class TransponderPrismaRepository implements TransponderRepository {
     });
 
     return TransponderPrismaMapper.toEntity(transponder);
-  }
-
-  public async delete(portalId: string, transponderId: string): Promise<void> {
-    await this.prisma.transponder.delete({
-      where: { id: transponderId, portalId },
-    });
   }
 }

@@ -42,7 +42,7 @@ export class IPChecker implements OnModuleInit, OnModuleDestroy {
         if (portals.length > 0) {
           this.logger.log(`[IPChecker] Portals needing DNS update: ${portals.length}`);
 
-          await this.orbitService.batchUpdateDynamicDNS(
+          await this.orbitService.batchSyncPortalDns(
             portals.map((p: { id: string; address: string; type: string; apiKey: string }) => ({
               id: p.id,
               address: p.address,

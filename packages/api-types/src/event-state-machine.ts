@@ -69,16 +69,18 @@ export const EVENT_STATE_MACHINE: Partial<
   // pre-set a status before dispatch for this transition).
   [EventTypeKey.NODE_UNASSIGN_WORKER]: { entry: ACTIVE, work: TERMINATING, ok: INACTIVE, fail: FAILED },
 
-  // --- pending per-processor verification (convention defaults) ---
-  [EventTypeKey.WORKER_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
-  [EventTypeKey.WORKER_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
-  [EventTypeKey.NODE_UPDATE_FIBER]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
+  // --- orbit (verified) ---
   [EventTypeKey.PORTAL_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
   [EventTypeKey.PORTAL_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
   [EventTypeKey.PORTAL_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
   [EventTypeKey.TRANSPONDER_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
   [EventTypeKey.TRANSPONDER_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
   [EventTypeKey.TRANSPONDER_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+
+  // --- pending per-processor verification (convention defaults) ---
+  [EventTypeKey.WORKER_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.WORKER_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+  [EventTypeKey.NODE_UPDATE_FIBER]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
 };
 
 /** Returns the canonical transition for a command event, or throws if none is defined. */

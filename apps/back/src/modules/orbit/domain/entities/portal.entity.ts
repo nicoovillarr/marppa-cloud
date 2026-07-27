@@ -8,14 +8,8 @@ interface PortalOptionalProps {
   description?: string;
   lastSyncAt?: Date;
   lastPublicIP?: string;
-  listenHttp?: boolean;
-  listenHttps?: boolean;
-  sslCertificate?: string;
-  sslKey?: string;
   enableCompression?: boolean;
-  cacheEnabled?: boolean;
   corsEnabled?: boolean;
-  defaultServer?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
   updatedBy?: string;
@@ -29,14 +23,8 @@ export class PortalEntity extends PatchableEntity {
   public readonly description?: string;
   public readonly lastSyncAt?: Date;
   public readonly lastPublicIP?: string;
-  public readonly listenHttp?: boolean;
-  public readonly listenHttps?: boolean;
-  public readonly sslCertificate?: string;
-  public readonly sslKey?: string;
   public readonly enableCompression?: boolean;
-  public readonly cacheEnabled?: boolean;
   public readonly corsEnabled?: boolean;
-  public readonly defaultServer?: boolean;
   public readonly createdAt?: Date;
   public readonly updatedAt?: Date;
   public readonly updatedBy?: string;
@@ -58,14 +46,8 @@ export class PortalEntity extends PatchableEntity {
     this.description = optionals.description;
     this.lastSyncAt = optionals.lastSyncAt;
     this.lastPublicIP = optionals.lastPublicIP;
-    this.listenHttp = optionals.listenHttp;
-    this.listenHttps = optionals.listenHttps;
-    this.sslCertificate = optionals.sslCertificate;
-    this.sslKey = optionals.sslKey;
     this.enableCompression = optionals.enableCompression;
-    this.cacheEnabled = optionals.cacheEnabled;
     this.corsEnabled = optionals.corsEnabled;
-    this.defaultServer = optionals.defaultServer;
     this.createdAt = optionals.createdAt;
     this.updatedAt = optionals.updatedAt;
     this.updatedBy = optionals.updatedBy;
@@ -83,14 +65,8 @@ export class PortalEntity extends PatchableEntity {
       lastSyncAt: this.lastSyncAt,
       lastPublicIP: this.lastPublicIP,
       status: this.status,
-      listenHttp: this.listenHttp,
-      listenHttps: this.listenHttps,
-      sslCertificate: this.sslCertificate,
-      sslKey: this.sslKey,
       enableCompression: this.enableCompression,
-      cacheEnabled: this.cacheEnabled,
       corsEnabled: this.corsEnabled,
-      defaultServer: this.defaultServer,
       createdAt: this.createdAt,
       createdBy: this.createdBy,
       updatedAt: this.updatedAt,
@@ -114,14 +90,8 @@ export class PortalEntity extends PatchableEntity {
         description: object.description,
         lastSyncAt: object.lastSyncAt,
         lastPublicIP: object.lastPublicIP,
-        listenHttp: object.listenHttp,
-        listenHttps: object.listenHttps,
-        sslCertificate: object.sslCertificate,
-        sslKey: object.sslKey,
         enableCompression: object.enableCompression,
-        cacheEnabled: object.cacheEnabled,
         corsEnabled: object.corsEnabled,
-        defaultServer: object.defaultServer,
         createdAt: object.createdAt,
         updatedAt: object.updatedAt,
         updatedBy: object.updatedBy,

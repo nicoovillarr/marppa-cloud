@@ -9,5 +9,4 @@ export abstract class PortalRepository {
   abstract findByOwnerId(ownerId: string): Promise<PortalEntity[]>;
   abstract create(entity: PortalEntity): Promise<PortalEntity>;
   abstract update(entity: PortalEntity): Promise<PortalEntity>;
-  abstract delete(id: string): Promise<void>;
 }

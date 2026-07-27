@@ -8,6 +8,9 @@ import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/reposito
 import { ORBIT_SERVICE_TOKEN, OrbitService } from '../domain/services/OrbitService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.PORTAL_UPDATE);
 
 @EventProcessor(EventType.PORTAL_UPDATE)
 export class PortalUpdateProcessor implements IEventProcessor {
@@ -40,28 +43,43 @@ export class PortalUpdateProcessor implements IEventProcessor {
 
       portal = await this.prisma.portal.findUnique({
         where: { id: resourcePortal.resourceId, status: { not: ResourceStatus.DELETED } },
+        include: {
+          transponders: {
+            where: { status: { not: ResourceStatus.DELETED } },
+            include: { node: true },
+          },
+        },
       });
 
       if (!portal) {
         throw new AbortError(`Portal not found for event ID: ${event.id}`, EventType.PORTAL_UPDATE_FAILED);
       }
 
-      const forceSync = event.properties.find(
+      if (portal.status !== STATES.entry) {
+        throw new AbortError(
+          `Portal status (${portal.status}) is not valid for event ID: ${event.id}`,
+          EventType.PORTAL_UPDATE_FAILED,
+        );
+      }
+
+      const forceSync = event.properties.some(
         (p) => p.key === 'FORCE_SYNC' && ['true', '1', 'yes'].includes(p.value.toLowerCase()),
       );
 
-      if (forceSync) {
-        if (portal.status !== ResourceStatus.QUEUED) {
-          throw new AbortError(
-            `Portal status (${portal.status}) is not valid for event ID: ${event.id}`,
-            EventType.PORTAL_UPDATE_FAILED,
-          );
-        }
+      await updatePortalStatus(STATES.work);
 
-        await updatePortalStatus(ResourceStatus.PROVISIONING);
-        await this.orbitService.updateDynamicDNS(portal.id, portal.address, portal.type, portal.apiKey);
-        await updatePortalStatus(ResourceStatus.ACTIVE);
-      }
+      await this.orbitService.generatePortalConfig(portal);
+      await this.orbitService.syncPortalDns(
+        {
+          id: portal.id,
+          address: portal.address,
+          type: portal.type,
+          apiKey: portal.apiKey,
+        },
+        { force: forceSync },
+      );
+
+      await updatePortalStatus(STATES.ok);
 
       const eventCreatedId = await this.repository.createEvent(EventType.PORTAL_UPDATED, event.createdBy, event.companyId);
       await this.repository.addEventResource(eventCreatedId, 'Event', String(event.id));
@@ -69,10 +87,9 @@ export class PortalUpdateProcessor implements IEventProcessor {
     } catch (error) {
       if (error instanceof AbortError) throw error;
       if (portal) {
-        await updatePortalStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updatePortalStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }
   }
 }
-

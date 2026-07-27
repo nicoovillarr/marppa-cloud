@@ -2,9 +2,10 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsEnum,
+  IsIn,
   IsBoolean,
 } from 'class-validator';
+import { SUPPORTED_PORTAL_TYPES } from '@marppa-cloud/api-types';
 import { PortalType } from '../../domain/enum/portal-type.enum';
 
 export class CreatePortalDto {
@@ -20,7 +21,7 @@ export class CreatePortalDto {
   @IsNotEmpty()
   address: string;
 
-  @IsEnum(PortalType)
+  @IsIn(SUPPORTED_PORTAL_TYPES)
   type: PortalType;
 
   @IsString()
@@ -29,35 +30,11 @@ export class CreatePortalDto {
 
   @IsBoolean()
   @IsOptional()
-  listenHttp?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  listenHttps?: boolean;
-
-  @IsString()
-  @IsOptional()
-  sslCertificate?: string;
-
-  @IsString()
-  @IsOptional()
-  sslKey?: string;
-
-  @IsBoolean()
-  @IsOptional()
   enableCompression?: boolean;
 
   @IsBoolean()
   @IsOptional()
-  cacheEnabled?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
   corsEnabled?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  defaultServer?: boolean;
 
   @IsString()
   @IsOptional()

@@ -359,21 +359,20 @@ model Portal {
   name        String
   description String?
 
-  address      String         @unique
+  address      String
   type         PortalType
   apiKey       String
   lastSyncAt   DateTime?
   lastPublicIP String?
   status       ResourceStatus @default(QUEUED)
 
-  listenHttp        Boolean @default(true)
-  listenHttps       Boolean @default(false)
-  sslCertificate    String?
-  sslKey            String?
+  // Sentinel, not a plain timestamp: live rows all share the epoch default, so the
+  // composite unique below enforces one live portal per address. PORTAL_DELETE
+  // stamps the real time, which frees the address for a new portal.
+  deletedAt DateTime @default(dbgenerated("'epoch'::timestamp"))
+
   enableCompression Boolean @default(true)
-  cacheEnabled      Boolean @default(true)
   corsEnabled       Boolean @default(true)
-  defaultServer     Boolean @default(false)
 
   createdAt DateTime @default(now())
   createdBy String
@@ -387,6 +386,8 @@ model Portal {
   owner   Company @relation(fields: [ownerId], references: [id])
 
   transponders Transponder[]
+
+  @@unique([address, deletedAt])
 }
 
 model Transponder {
@@ -396,14 +397,10 @@ model Transponder {
   mode   TransponderMode @default(PROXY)
   status ResourceStatus  @default(QUEUED)
 
-  cacheEnabled     Boolean  @default(false)
-  addHeaders       Json?
-  proxyHeaders     Json?
-  proxyReadTimeout Int      @default(60)
-  removeHeaders    String[] @default([])
-  allowCookies     Boolean  @default(true)
-  gzipEnabled      Boolean  @default(false)
-  customIPAddress  String?
+  cacheEnabled     Boolean @default(false)
+  proxyReadTimeout Int     @default(60)
+  allowCookies     Boolean @default(true)
+  gzipEnabled      Boolean @default(false)
 
   priority Int @default(0)
 

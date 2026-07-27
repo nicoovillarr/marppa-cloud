@@ -8,6 +8,9 @@ import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/reposito
 import { ORBIT_SERVICE_TOKEN, OrbitService } from '../domain/services/OrbitService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.TRANSPONDER_UPDATE);
 
 @EventProcessor(EventType.TRANSPONDER_UPDATE)
 export class TransponderUpdateProcessor implements IEventProcessor {
@@ -62,18 +65,18 @@ export class TransponderUpdateProcessor implements IEventProcessor {
         );
       }
 
-      if (transponder.status !== ResourceStatus.QUEUED) {
+      if (transponder.status !== STATES.entry) {
         throw new AbortError(
           `Transponder status (${transponder.status}) is not valid for event ID: ${event.id}`,
           EventType.TRANSPONDER_UPDATE_FAILED,
         );
       }
 
-      await updateTransponderStatus(ResourceStatus.PROVISIONING);
+      await updateTransponderStatus(STATES.work);
 
       await this.orbitService.generatePortalConfig(transponder.portal);
 
-      await updateTransponderStatus(ResourceStatus.ACTIVE);
+      await updateTransponderStatus(STATES.ok);
 
       const eventCreatedId = await this.repository.createEvent(EventType.TRANSPONDER_UPDATED, event.createdBy, event.companyId);
       await this.repository.addEventResource(eventCreatedId, 'Event', String(event.id));
@@ -81,7 +84,7 @@ export class TransponderUpdateProcessor implements IEventProcessor {
     } catch (error) {
       if (error instanceof AbortError) throw error;
       if (transponder) {
-        await updateTransponderStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updateTransponderStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }

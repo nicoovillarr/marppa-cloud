@@ -59,11 +59,9 @@ export function PortalTranspondersList({
       label: "Mode",
       minWidth: "150px",
     },
-    enabled: {
-      label: "Enabled",
+    status: {
+      label: "Status",
       minWidth: "150px",
-      renderFn: (value: TransponderWithNodeResponseModel) =>
-        value.enabled ? "Yes" : "No",
     },
     priority: {
       label: "Priority",

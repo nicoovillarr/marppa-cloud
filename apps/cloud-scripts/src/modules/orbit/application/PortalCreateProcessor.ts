@@ -8,6 +8,9 @@ import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/reposito
 import { AbortError } from '@/event/domain/errors/AbortError';
 import { Inject } from '@/decorators/Inject';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
+import { getEventStates } from '@/shared/domain/EventStateMachine';
+
+const STATES = getEventStates(EventType.PORTAL_CREATE);
 
 @EventProcessor(EventType.PORTAL_CREATE)
 export class PortalCreateProcessor implements IEventProcessor {
@@ -49,18 +52,23 @@ export class PortalCreateProcessor implements IEventProcessor {
         throw new AbortError(`Portal not found for event ID: ${event.id}`, EventType.PORTAL_CREATE_FAILED);
       }
 
-      if (portal.status !== ResourceStatus.QUEUED) {
+      if (portal.status !== STATES.entry) {
         throw new AbortError(
-          `Portal is not in QUEUED status for event ID: ${event.id}`,
+          `Portal is not in ${STATES.entry} status for event ID: ${event.id}`,
           EventType.PORTAL_CREATE_FAILED,
         );
       }
 
-      await updatePortalStatus(ResourceStatus.PROVISIONING);
+      await updatePortalStatus(STATES.work);
 
-      await this.orbitService.createPortal(portal.id, portal.address, portal.type, portal.apiKey);
+      await this.orbitService.syncPortalDns({
+        id: portal.id,
+        address: portal.address,
+        type: portal.type,
+        apiKey: portal.apiKey,
+      });
 
-      await updatePortalStatus(ResourceStatus.ACTIVE);
+      await updatePortalStatus(STATES.ok);
 
       const eventCreatedId = await this.repository.createEvent(EventType.PORTAL_CREATED, event.createdBy, event.companyId);
       await this.repository.addEventResource(eventCreatedId, 'Event', String(event.id));
@@ -68,7 +76,7 @@ export class PortalCreateProcessor implements IEventProcessor {
     } catch (error) {
       if (error instanceof AbortError) throw error;
       if (portal) {
-        await updatePortalStatus(event.retries >= 4 ? ResourceStatus.FAILED : ResourceStatus.QUEUED);
+        await updatePortalStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }
       throw error;
     }

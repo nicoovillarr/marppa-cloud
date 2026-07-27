@@ -10,5 +10,4 @@ export abstract class TransponderRepository {
   abstract findByPortalId(portalId: string): Promise<TransponderEntity[]>;
   abstract create(entity: TransponderEntity): Promise<TransponderEntity>;
   abstract update(entity: TransponderEntity): Promise<TransponderEntity>;
-  abstract delete(portalId: string, transponderId: string): Promise<void>;
 }

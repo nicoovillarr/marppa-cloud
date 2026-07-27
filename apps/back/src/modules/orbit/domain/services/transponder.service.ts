@@ -10,26 +10,33 @@ import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { EventTypeKey, getEventStateTransition } from '@marppa-cloud/api-types';
+import { PortalService } from './portal.service';
+import { NodeService } from '@/mesh/domain/services/node.service';
 
 @Injectable()
 export class TransponderService {
   constructor(
     @Inject(TRANSPONDER_REPOSITORY)
     private readonly repository: TransponderRepository,
+    private readonly portalService: PortalService,
+    private readonly nodeService: NodeService,
   ) { }
 
-  public findById(
+  public async findById(
     portalId: string,
     transponderId: string,
   ): Promise<TransponderEntity | null> {
+    await this.portalService.findById(portalId);
     return this.repository.findById(portalId, transponderId);
   }
 
-  public findByPortalId(portalId: string): Promise<TransponderEntity[]> {
+  public async findByPortalId(portalId: string): Promise<TransponderEntity[]> {
+    await this.portalService.findById(portalId);
     return this.repository.findByPortalId(portalId);
   }
 
-  public create(
+  public async create(
     portalId: string,
     dto: CreateTransponderDto,
   ): Promise<TransponderEntity> {
@@ -38,10 +45,13 @@ export class TransponderService {
       throw new UnauthorizedError();
     }
 
+    await this.portalService.findById(portalId);
+    await this.assertUsableNode(dto.nodeId);
+
     const entity = new TransponderEntity(
       dto.path,
       dto.port,
-      ResourceStatus.ACTIVE,
+      getEventStateTransition(EventTypeKey.TRANSPONDER_CREATE).entry,
       user.userId,
       portalId,
       {
@@ -50,6 +60,7 @@ export class TransponderService {
         allowCookies: dto.allowCookies,
         gzipEnabled: dto.gzipEnabled,
         priority: dto.priority,
+        nodeId: dto.nodeId,
       },
     );
 
@@ -71,6 +82,8 @@ export class TransponderService {
       throw new NotFoundError();
     }
 
+    await this.assertUsableNode(dto.nodeId);
+
     const updated = transponder.clone({
       path: dto.path,
       port: dto.port,
@@ -79,13 +92,53 @@ export class TransponderService {
       allowCookies: dto.allowCookies,
       gzipEnabled: dto.gzipEnabled,
       priority: dto.priority,
+      nodeId: dto.nodeId,
+      status: getEventStateTransition(EventTypeKey.TRANSPONDER_UPDATE).entry,
       updatedBy: user.userId,
     });
 
     return this.repository.update(updated);
   }
 
-  public delete(portalId: string, transponderId: string): Promise<void> {
-    return this.repository.delete(portalId, transponderId);
+  public async delete(portalId: string, transponderId: string): Promise<void> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const transponder = await this.findById(portalId, transponderId);
+    if (!transponder) {
+      throw new NotFoundError();
+    }
+
+    const deletable: ResourceStatus[] = [
+      ResourceStatus.ACTIVE,
+      ResourceStatus.FAILED,
+    ];
+    if (!deletable.includes(transponder.status)) {
+      throw new Error(
+        `Transponder must be ${deletable.join(' or ')} to be deleted (is ${transponder.status})`,
+      );
+    }
+
+    const queued = transponder.clone({
+      status: getEventStateTransition(EventTypeKey.TRANSPONDER_DELETE).entry,
+      updatedBy: user.userId,
+    });
+
+    await this.repository.update(queued);
+  }
+
+  private async assertUsableNode(nodeId?: string): Promise<void> {
+    if (nodeId == null) {
+      return;
+    }
+
+    const node = await this.nodeService.findByIdForCaller(nodeId);
+    if (node.status !== ResourceStatus.ACTIVE) {
+      throw new Error(
+        `Node must be ACTIVE to receive traffic from a transponder (is ${node.status})`,
+      );
+    }
   }
 }
