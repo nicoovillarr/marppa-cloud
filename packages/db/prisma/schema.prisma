@@ -366,9 +366,6 @@ model Portal {
   lastPublicIP String?
   status       ResourceStatus @default(QUEUED)
 
-  // Sentinel, not a plain timestamp: live rows all share the epoch default, so the
-  // composite unique below enforces one live portal per address. PORTAL_DELETE
-  // stamps the real time, which frees the address for a new portal.
   deletedAt DateTime @default(dbgenerated("'epoch'::timestamp"))
 
   enableCompression Boolean @default(true)

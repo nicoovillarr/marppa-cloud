@@ -19,7 +19,6 @@ export class IPChecker implements OnModuleInit, OnModuleDestroy {
     private readonly orbitService: OrbitService,
   ) {}
 
-  /** How often to re-check the host's public IP, in ms. */
   private get intervalMs(): number {
     const configured = Number(process.env.IP_CHECK_INTERVAL_MS);
     return Number.isFinite(configured) && configured > 0 ? configured : 600_000;
