@@ -71,7 +71,7 @@ occurrence with `cloud-script` — or just follow §3.2, which does exactly that
 ```bash
 # libvirt access for the user running this app
 sudo usermod -aG libvirt,kvm $USER
-sudo systemctl enable --now libvirtd systemd-networkd nftables
+sudo systemctl enable --now libvirtd.socket systemd-networkd nftables
 
 # Image and cloud-init working directories (owned by the app user)
 sudo mkdir -p /var/lib/libvirt/images /var/lib/libvirt/cloud-init
@@ -572,6 +572,14 @@ row) → delete worker → delete zone.
 
 **The app exits at startup with a list of problems.** That is the preflight. Every line
 says what is missing and how to fix it. It also runs before `SYSTEM_RESET`.
+
+**`libvirt is unreachable at qemu:///system`.** The preflight probes libvirt with
+`sudo virsh -c qemu:///system version`, not with `systemctl is-active libvirtd`. On
+Debian `libvirtd` is socket-activated: it is started on demand by `libvirtd.socket` and
+exits again after a couple of idle minutes, so `is-active` reports `inactive (dead)` on
+a perfectly healthy host and the service would crashloop every time libvirt went idle.
+The probe both tests what the app actually needs — a working connection — and wakes the
+daemon through its socket. Enable `libvirtd.socket`, not `libvirtd.service`.
 
 **Everything stays `QUEUED` and nothing happens.** The backend and cloud-scripts are on
 different Redis instances, or cloud-scripts is not running. Check

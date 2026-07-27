@@ -38,6 +38,8 @@ const DOCKER_DAEMON_CONFIG = '/etc/docker/daemon.json';
 
 const NFT_CONF = '/etc/nftables.conf';
 
+const LIBVIRT_URI = 'qemu:///system';
+
 const IP_FORWARD_PROC = '/proc/sys/net/ipv4/ip_forward';
 const SYSCTL_DROPIN = '/etc/sysctl.d/99-cloud-scripts.conf';
 const SYSCTL_DROPIN_CONTENT = `# Managed by marppa cloud-scripts.
@@ -329,17 +331,13 @@ export class HostPreflightService {
     }
 
     try {
-      const state = await Command.runCommand('systemctl', [
-        'is-active', 'libvirtd',
+      await Command.runCommand('sudo', [
+        'virsh', '-c', LIBVIRT_URI, 'version',
       ]);
-      if (state.trim() !== 'active') {
-        problems.push(
-          `libvirtd is not active (${state.trim()}). Run 'sudo systemctl enable --now libvirtd'.`,
-        );
-      }
-    } catch {
+    } catch (err) {
       problems.push(
-        "libvirtd is not active. Run 'sudo systemctl enable --now libvirtd'.",
+        `libvirt is unreachable at ${LIBVIRT_URI}: ${this.message(err)}. ` +
+        "Run 'sudo systemctl enable --now libvirtd.socket'.",
       );
     }
   }

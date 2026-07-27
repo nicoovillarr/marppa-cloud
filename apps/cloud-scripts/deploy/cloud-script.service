@@ -1,7 +1,7 @@
 [Unit]
 Description=Marppa Cloud Scripts (infrastructure event worker + WS server)
-After=network-online.target libvirtd.service systemd-networkd.service
-Wants=network-online.target
+After=network-online.target libvirtd.socket systemd-networkd.service
+Wants=network-online.target libvirtd.socket
 
 [Service]
 Type=simple
