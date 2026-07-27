@@ -5,4 +5,5 @@ export * from './company';
 export * from './event';
 export * from './hive';
 export * from './mesh';
+export * from './nucleus';
 export * from './orbit';

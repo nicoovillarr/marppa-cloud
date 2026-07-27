@@ -45,6 +45,22 @@ enum EventType {
   WORKER_IMAGE_CREATE_FAILED
   WORKER_IMAGE_CREATED
 
+  ATOM_CREATE
+  ATOM_CREATE_FAILED
+  ATOM_CREATED
+
+  ATOM_START
+  ATOM_START_FAILED
+  ATOM_STARTED
+
+  ATOM_TERMINATE
+  ATOM_TERMINATE_FAILED
+  ATOM_TERMINATED
+
+  ATOM_DELETE
+  ATOM_DELETE_FAILED
+  ATOM_DELETED
+
   ZONE_CREATE
   ZONE_CREATE_FAILED
   ZONE_CREATED
@@ -273,19 +289,57 @@ model WorkerDisk {
 model Atom {
   id     String         @id @default(dbgenerated())
   name   String
-  image  String
-  status ResourceStatus @default(INACTIVE)
+  status ResourceStatus @default(QUEUED)
+
+  createdAt DateTime @default(now())
+  createdBy String
+
+  updatedAt DateTime  @updatedAt
+  updatedBy String?
+
+  ownerId String
+  owner   Company @relation(fields: [ownerId], references: [id])
+
+  imageId Int
+  image   AtomImage @relation(fields: [imageId], references: [id])
+
+  envVars AtomEnvVar[]
+
+  node Node?
+}
+
+model AtomImage {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+
+  registry     String  @default("docker.io")
+  repository   String
+  tag          String
+  digest       String?
+  architecture String  @default("amd64")
+
+  capabilities String[] @default([])
+  sysctls      Json?
+
+  atoms Atom[]
+}
+
+model AtomEnvVar {
+  id    Int    @id @default(autoincrement())
+  key   String
+  value String
 
   createdAt DateTime @default(now())
   createdBy String
 
   updatedAt DateTime @updatedAt
-  updatedBy String
+  updatedBy String?
 
-  ownerId String
-  owner   Company @relation(fields: [ownerId], references: [id])
+  atomId String
+  atom   Atom   @relation(fields: [atomId], references: [id], onDelete: Cascade)
 
-  node Node?
+  @@unique([atomId, key])
 }
 
 // Mesh
