@@ -51,6 +51,24 @@ export class NodePrismaRepository implements NodeRepository {
     return worker?.ownerId ?? null;
   }
 
+  public async findAtomOwnerId(atomId: string): Promise<string | null> {
+    const atom = await this.prisma.atom.findUnique({
+      where: { id: atomId },
+      select: { ownerId: true },
+    });
+
+    return atom?.ownerId ?? null;
+  }
+
+  public async findAtomStatus(atomId: string): Promise<string | null> {
+    const atom = await this.prisma.atom.findUnique({
+      where: { id: atomId },
+      select: { status: true },
+    });
+
+    return atom?.status ?? null;
+  }
+
   public async findByZoneId(zoneId: string): Promise<NodeEntity[]> {
     const models = await this.prisma.node.findMany({
       where: { zoneId },

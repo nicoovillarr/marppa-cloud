@@ -73,10 +73,11 @@ export class NodeService {
     }
 
     await this.assertOwnedWorker(workerId);
+    await this.assertOwnedAtom(atomId);
 
     const node = new NodeEntity(
       ipAddress,
-      getEventStateTransition(EventTypeKey.NODE_ASSIGN_WORKER).entry,
+      this.entryStatusFor(atomId),
       zoneId,
       user.userId,
       {
@@ -157,17 +158,58 @@ export class NodeService {
     return this.repository.delete(zoneId, id);
   }
 
+  /**
+   * A running atom's container holds this node's IP on the zone bridge; dropping
+   * the row would leak the address to the next node created in the zone.
+   */
+  public async assertAtomReleasable(atomId: string): Promise<void> {
+    const status = await this.repository.findAtomStatus(atomId);
+    if (status !== ResourceStatus.INACTIVE && status !== ResourceStatus.FAILED) {
+      throw new Error(
+        `Atom must be INACTIVE or FAILED to release its node (is ${status})`,
+      );
+    }
+  }
+
+  /**
+   * A worker-backed node is materialised on the host by NODE_ASSIGN_WORKER (DHCP
+   * reservation + NIC attach), so it starts at that transition's entry status.
+   * An atom-backed node is only an IP reservation until its container starts —
+   * nothing to do on the host, and no processor that would ever move it out of
+   * QUEUED — so it is born ACTIVE.
+   */
+  private entryStatusFor(atomId?: string): ResourceStatus {
+    if (atomId != null) {
+      return ResourceStatus.ACTIVE;
+    }
+
+    return getEventStateTransition(EventTypeKey.NODE_ASSIGN_WORKER).entry;
+  }
+
   private async assertOwnedWorker(workerId?: string): Promise<void> {
     if (workerId == null) {
       return;
     }
 
+    await this.assertOwnedBy(
+      await this.repository.findWorkerOwnerId(workerId),
+    );
+  }
+
+  private async assertOwnedAtom(atomId?: string): Promise<void> {
+    if (atomId == null) {
+      return;
+    }
+
+    await this.assertOwnedBy(await this.repository.findAtomOwnerId(atomId));
+  }
+
+  private async assertOwnedBy(ownerId: string | null): Promise<void> {
     const user = getCurrentUser();
     if (!user) {
       throw new UnauthorizedError();
     }
 
-    const ownerId = await this.repository.findWorkerOwnerId(workerId);
     if (ownerId !== user.companyId) {
       throw new NotFoundError();
     }

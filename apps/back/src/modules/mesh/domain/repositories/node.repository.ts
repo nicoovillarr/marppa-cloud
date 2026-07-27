@@ -7,6 +7,8 @@ export abstract class NodeRepository {
   abstract findById(zoneId: string, id: string): Promise<NodeEntity | null>;
   abstract findByIdWithZone(id: string): Promise<NodeWithZoneModel | null>;
   abstract findWorkerOwnerId(workerId: string): Promise<string | null>;
+  abstract findAtomOwnerId(atomId: string): Promise<string | null>;
+  abstract findAtomStatus(atomId: string): Promise<string | null>;
   abstract findByZoneId(zoneId: string): Promise<NodeEntity[]>;
   abstract findByWorkerId(workerId: string): Promise<NodeEntity | null>;
   abstract findByWorkerIds(workerIds: string[]): Promise<NodeEntity[]>;

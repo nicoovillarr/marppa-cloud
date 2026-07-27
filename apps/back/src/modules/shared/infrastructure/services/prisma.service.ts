@@ -66,6 +66,7 @@ export class PrismaService
       Company: 'c-',
       User: 'u-',
       Worker: 'w-',
+      Atom: 'a-',
       Bit: 'b-',
       Zone: 'z-',
       Node: 'n-',

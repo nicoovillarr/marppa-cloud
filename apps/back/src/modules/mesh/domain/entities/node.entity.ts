@@ -49,6 +49,7 @@ export class NodeEntity extends PatchableEntity {
       updatedBy: this.updatedBy,
       zoneId: this.zoneId,
       workerId: this.workerId,
+      atomId: this.atomId,
     };
   }
 
@@ -61,6 +62,7 @@ export class NodeEntity extends PatchableEntity {
       {
         id: object.id,
         workerId: object.workerId,
+        atomId: object.atomId,
         createdAt: object.createdAt,
         updatedAt: object.updatedAt,
         updatedBy: object.updatedBy,

@@ -26,6 +26,7 @@ export default {
         "^@/event/(.*)$": "<rootDir>/modules/event/$1",
         "^@/hive/(.*)$": "<rootDir>/modules/hive/$1",
         "^@/mesh/(.*)$": "<rootDir>/modules/mesh/$1",
+        "^@/nucleus/(.*)$": "<rootDir>/modules/nucleus/$1",
         "^@/orbit/(.*)$": "<rootDir>/modules/orbit/$1",
         "^src/(.*)$": "<rootDir>/$1"
     }
