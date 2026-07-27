@@ -44,7 +44,7 @@ export function FormFieldBase({
           {render(field)}
 
           {fieldState.error && (
-            <span className="mt-1 text-xs text-red-500">
+            <span className="mt-1 text-xs text-status-danger">
               {fieldState.error.message}
             </span>
           )}

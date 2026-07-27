@@ -20,6 +20,7 @@ import { AssignAtomDialog } from "./AssignAtomDialog";
 import { AssignWorkerDialog } from "./AssignWorkerDialog";
 import { FiberCreateDialog } from "./FiberCreateDialog";
 import { FibersDialog } from "./FibersDialog";
+import { StatusBadge } from "@/core/ui/StatusBadge";
 
 const getPointsToInfo = (node: NodeWithFibers) => {
   let pointsTo = "N/A";
@@ -160,7 +161,7 @@ export function NodesList({ zoneId }: { zoneId: string }) {
         const { pointsTo, link } = getPointsToInfo(node);
 
         return (
-          <span className={link ? "text-blue-500 underline" : ""}>
+          <span className={link ? "text-amber-ink underline" : ""}>
             {pointsTo}
           </span>
         );
@@ -175,11 +176,15 @@ export function NodesList({ zoneId }: { zoneId: string }) {
           ? node.fibers.length
           : node.fibers || 0;
         return (
-          <span className="text-blue-500 underline">{count} — manage</span>
+          <span className="text-amber-ink underline">{count} — manage</span>
         );
       },
     },
-    status: { label: "Status", minWidth: 100 },
+    status: {
+      label: "Status",
+      minWidth: 100,
+      renderFn: (node: NodeWithFibers) => <StatusBadge status={node.status} />,
+    },
   };
 
   const contextMenuGroups = (node: NodeWithFibers) => {
@@ -275,7 +280,7 @@ export function NodesList({ zoneId }: { zoneId: string }) {
           getKey={(node: NodeWithFibers) => node.id}
         />
       ) : (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ink-muted">
           No nodes yet. Assign a worker or an atom to reserve its IP in this zone.
         </p>
       )}

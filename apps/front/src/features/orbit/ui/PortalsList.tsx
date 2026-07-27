@@ -11,6 +11,7 @@ import { usePortal } from "../models/use-portal";
 import { PortalWithTranspondersResponseDto } from "../api/portal.api.types";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { useDialog } from "@/core/ui/DialogProvider";
+import { StatusBadge } from "@/core/ui/StatusBadge";
 
 const COLUMNS: ColumnMapping<PortalWithTranspondersResponseDto> = {
   id: {
@@ -29,6 +30,9 @@ const COLUMNS: ColumnMapping<PortalWithTranspondersResponseDto> = {
   status: {
     label: "Status",
     minWidth: "150px",
+    renderFn: (value: PortalWithTranspondersResponseDto) => (
+      <StatusBadge status={value.status} />
+    ),
   },
   lastSyncAt: {
     label: "Last Synced",
@@ -142,14 +146,14 @@ export function PortalsList() {
             getKey={(rowData: PortalWithTranspondersResponseDto) => rowData.id}
           />
           <div className="flex justify-between items-center gap-4 mt-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-ink-muted">
               Selected portals:
               <span className="font-bold ml-1">{selectedPortals.size}</span>
             </p>
           </div>
         </>
       ) : (
-        <p className="text-sm text-gray-500">No portals found.</p>
+        <p className="text-sm text-ink-muted">No portals found.</p>
       )}
     </section>
   );

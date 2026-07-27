@@ -20,7 +20,7 @@ const BreadcrumbItem = (
 
   if (isLastOne) {
     return (
-      <span className="text-sm font-medium text-gray-800">
+      <span className="text-sm font-medium text-ink">
         {node.label}
       </span>
     );
@@ -47,7 +47,7 @@ const BreadcrumbItem = (
     <>
       <Link
         href={href}
-        className="text-sm hover:text-blue-600"
+        className="text-sm hover:text-amber-ink"
       >
         {node.label}
       </Link>
@@ -64,7 +64,7 @@ export function BreadCrumb() {
   );
 
   return (
-    <ul className="flex items-center space-x-2 text-gray-600">
+    <ul className="flex items-center space-x-2 text-ink-muted">
       {breadcrumbNodes?.map((node, index) =>
         <li key={index} className="flex items-center">
           <BreadcrumbItem

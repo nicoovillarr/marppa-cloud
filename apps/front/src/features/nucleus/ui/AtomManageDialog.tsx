@@ -17,7 +17,7 @@ interface AtomManageDialogProps {
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex justify-between gap-4 text-sm">
-    <span className="text-gray-500">{label}</span>
+    <span className="text-ink-muted">{label}</span>
     <span className="text-right break-all">{value}</span>
   </div>
 );
@@ -55,7 +55,7 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
 
   return (
     <div className="space-y-6">
-      <section className="space-y-1 rounded border border-gray-200 dark:border-gray-700 p-3">
+      <section className="space-y-1 rounded border border-border dark: p-3">
         <InfoRow label="Name" value={atom.name} />
         <InfoRow label="Status" value={atom.status} />
         <InfoRow label="Image" value={imageRef(atom.image)} />
@@ -102,27 +102,27 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
         </div>
 
         {!isOff && !isRunning && (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-muted">
             <InlineCode code={atom.status} /> is a transient state — actions
             become available once it settles.
           </p>
         )}
 
         {isOff && !hasNode && (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-muted">
             Assign this atom to a zone from Mesh → the zone's Nodes list. Without
             a node it has no address on any bridge and cannot start.
           </p>
         )}
 
         {isOff && hasNode && (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-muted">
             Unassign its node in Mesh before deleting it.
           </p>
         )}
 
         {isRunning && (
-          <p className="text-xs text-gray-500">Stop it first to delete it.</p>
+          <p className="text-xs text-ink-muted">Stop it first to delete it.</p>
         )}
       </section>
 

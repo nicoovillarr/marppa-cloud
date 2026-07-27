@@ -1,5 +1,6 @@
 import { NodeResponseDto } from "src/features/mesh/api/node.api.types";
 import { WorkerFlavorResponseDto } from "./worker-flavor.api.types";
+import { ResourceStatus } from "@/core/models/resource-status.enum";
 
 export type CreateWorkerDto = {
     name: string;
@@ -12,7 +13,7 @@ export type CreateWorkerDto = {
 export type WorkerResponseDto = {
     id: string;
     name: string;
-    status: string;
+    status: ResourceStatus;
     macAddress: string;
     createdAt: Date;
     createdBy: string;

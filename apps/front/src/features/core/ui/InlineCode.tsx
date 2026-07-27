@@ -7,7 +7,7 @@ export function InlineCode({
 }) {
   return (
     <code
-      className={`bg-gray-200 text-gray-800 px-1 py-0.5 rounded font-mono text-sm ${className}`}
+      className={`bg-surface-sunken text-ink px-1 py-0.5 rounded font-mono text-sm ${className}`}
     >
       {code}
     </code>

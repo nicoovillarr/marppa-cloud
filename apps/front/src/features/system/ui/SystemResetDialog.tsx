@@ -34,7 +34,7 @@ export function SystemResetDialog({ onDone }: SystemResetDialogProps) {
         are rebuilt, not deleted.
       </p>
 
-      <label className="flex gap-3 items-start p-3 rounded border border-red-500/40 bg-red-500/10 cursor-pointer">
+      <label className="flex gap-3 items-start p-3 rounded border border-status-danger/40 bg-status-danger/10 cursor-pointer">
         <input
           type="checkbox"
           className="mt-1"
@@ -52,12 +52,12 @@ export function SystemResetDialog({ onDone }: SystemResetDialogProps) {
       </label>
 
       {hard && (
-        <p className="text-xs font-semibold text-red-500">
+        <p className="text-xs font-semibold text-status-danger">
           Everything will be destroyed. There is no backup and no way back.
         </p>
       )}
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-status-danger">{error}</p>}
 
       <div className="flex gap-2 justify-end">
         <Button

@@ -9,6 +9,7 @@ import { useWorker } from "../models/use-worker";
 import { useHiveRealtime } from "../models/use-hive-realtime";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
+import { StatusBadge } from "@/core/ui/StatusBadge";
 import { useDialog } from "@/core/ui/DialogProvider";
 import { WorkerManageDialog } from "./WorkerManageDialog";
 
@@ -30,6 +31,9 @@ const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
   status: {
     label: "Status",
     minWidth: "150px",
+    renderFn: (value: WorkerWithRelationsResponseDto) => (
+      <StatusBadge status={value.status} />
+    ),
   },
   cpuCores: {
     label: "vCPU Cores",
@@ -174,7 +178,7 @@ export function WorkersList() {
             getKey={(worker) => worker.id}
           />
           <div className="flex justify-between items-center gap-4 mt-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-ink-muted">
               Selected Workers:
               <span className="font-bold ml-1">{selectedWorkers.size}</span>
             </p>
@@ -200,7 +204,7 @@ export function WorkersList() {
           </div>
         </>
       ) : (
-        <p className="text-sm text-gray-500">No workers found.</p>
+        <p className="text-sm text-ink-muted">No workers found.</p>
       )}
     </section>
   );

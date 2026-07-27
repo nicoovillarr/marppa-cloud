@@ -6,6 +6,7 @@ import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { useEffect, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
+import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { LuClipboardCopy, LuTrash2 } from "react-icons/lu";
 import { FormSelect } from "@/core/ui/inputs/form/FormSelect";
 import { toast } from "sonner";
@@ -115,7 +116,7 @@ export function WorkerDetails({ workerId }: WorkerDetailsProps) {
     if (!workerId) return;
 
     const unsubscribe = subscribe(`hive:worker:${workerId}`, (message) => {
-      const status: string | undefined = message?.data?.status;
+      const status: ResourceStatus | undefined = message?.data?.status;
 
       if (message?.type === "UPDATED" && status) {
         setWorker((prev) => (prev ? { ...prev, status } : prev));

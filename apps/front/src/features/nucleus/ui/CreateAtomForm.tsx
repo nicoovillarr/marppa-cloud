@@ -105,7 +105,7 @@ export function CreateAtomForm() {
               <InlineCode code={newAtom.name} /> has been created and its image
               is being pulled.
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-ink-muted">
               Before it can start it needs an address: assign it to a zone from
               Mesh → the zone's Nodes list. Ports are published with fibers on
               that node, never by the container itself.
@@ -148,7 +148,7 @@ export function CreateAtomForm() {
           required
         />
 
-        <p className="text-xs text-gray-500 -mt-2">
+        <p className="text-xs text-ink-muted -mt-2">
           Only approved images are listed. Adding one is a change to the catalog
           in the repo, not something you can do from here.
         </p>
@@ -161,7 +161,7 @@ export function CreateAtomForm() {
               {envVars.map((envVar) => (
                 <li
                   key={envVar.key}
-                  className="flex items-center justify-between gap-2 text-sm border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+                  className="flex items-center justify-between gap-2 text-sm border border-border dark: rounded px-2 py-1"
                 >
                   <span className="font-mono truncate">
                     {envVar.key}={envVar.value}
@@ -181,13 +181,13 @@ export function CreateAtomForm() {
 
           <div className="flex gap-2">
             <input
-              className="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-transparent font-mono"
+              className="flex-1 text-sm border border-border dark: rounded px-2 py-1 bg-transparent font-mono"
               placeholder="POSTGRES_PASSWORD"
               value={envKey}
               onChange={(event) => setEnvKey(event.target.value)}
             />
             <input
-              className="flex-1 text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-transparent font-mono"
+              className="flex-1 text-sm border border-border dark: rounded px-2 py-1 bg-transparent font-mono"
               placeholder="value"
               value={envValue}
               onChange={(event) => setEnvValue(event.target.value)}
@@ -201,7 +201,7 @@ export function CreateAtomForm() {
             />
           </div>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-muted">
             <InlineCode code="postgresql-17" /> needs{" "}
             <InlineCode code="POSTGRES_PASSWORD" />;{" "}
             <InlineCode code="wg-easy-14" /> needs{" "}

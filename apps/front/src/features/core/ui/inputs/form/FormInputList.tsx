@@ -65,10 +65,10 @@ const InputItemSkeleton = ({ rows }: { rows: number }) => {
   return (
     <div className="flex items-center gap-2 w-full animate-pulse">
       {[...Array(rows)].map((_, index) => (
-        <div key={index} className="flex-1 h-10 rounded-md bg-gray-300"></div>
+        <div key={index} className="flex-1 h-10 rounded-md bg-surface-sunken"></div>
       ))}
 
-      <div className="shrink-0 w-10 h-10 rounded-md bg-gray-300"></div>
+      <div className="shrink-0 w-10 h-10 rounded-md bg-surface-sunken"></div>
     </div>
   );
 };

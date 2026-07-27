@@ -17,7 +17,7 @@ interface WorkerManageDialogProps {
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex justify-between gap-4 text-sm">
-    <span className="text-gray-500">{label}</span>
+    <span className="text-ink-muted">{label}</span>
     <span className="text-right break-all">{value}</span>
   </div>
 );
@@ -52,7 +52,7 @@ export function WorkerManageDialog({
 
   return (
     <div className="space-y-6">
-      <section className="space-y-1 rounded border border-gray-200 dark:border-gray-700 p-3">
+      <section className="space-y-1 rounded border border-border dark: p-3">
         <InfoRow label="Name" value={worker.name} />
         <InfoRow label="Status" value={worker.status} />
         <InfoRow label="MAC address" value={worker.macAddress} />
@@ -100,14 +100,14 @@ export function WorkerManageDialog({
         </div>
 
         {!isOff && !isRunning && (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-muted">
             <InlineCode code={worker.status} /> is a transient state — actions
             become available once it settles.
           </p>
         )}
 
         {isRunning && (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-muted">
             Stop it first to delete it.
           </p>
         )}

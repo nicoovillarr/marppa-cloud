@@ -1,15 +1,15 @@
 export function Footer() {
   return (
-    <footer className="flex items-start justify-between p-4 bg-white border-t border-gray-200">
-      <p className="text-sm text-gray-500">
-        © 2023 My App. All rights reserved.
+    <footer className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 sm:px-6 bg-surface-raised border-t border-border">
+      <p className="text-sm text-ink-faint">
+        Marppa Cloud — your infrastructure, in view.
       </p>
-      <nav className="flex items-center space-x-4">
-        <a href="/privacy" className="text-gray-700 hover:text-black">
-          Privacy Policy
+      <nav className="flex items-center gap-4">
+        <a href="/privacy" className="text-sm text-ink-muted hover:text-amber-ink">
+          Privacy
         </a>
-        <a href="/terms" className="text-gray-700 hover:text-black">
-          Terms of Service
+        <a href="/terms" className="text-sm text-ink-muted hover:text-amber-ink">
+          Terms
         </a>
       </nav>
     </footer>

@@ -10,6 +10,7 @@ import { useMeshRealtime } from "../models/use-mesh-realtime";
 import { useDialog } from "@/core/ui/DialogProvider";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { ZoneWithNodes } from "../api/zone.api.types";
+import { StatusBadge } from "@/core/ui/StatusBadge";
 
 const COLUMNS = {
   id: {
@@ -24,11 +25,7 @@ const COLUMNS = {
   status: {
     label: "Status",
     width: "150px",
-    renderFn: (value: ZoneWithNodes) => (
-      <span className={`status-${value.status.toLowerCase()}`}>
-        {value.status}
-      </span>
-    ),
+    renderFn: (value: ZoneWithNodes) => <StatusBadge status={value.status} />,
   },
   cidr: {
     label: "CIDR",
@@ -132,7 +129,7 @@ export function ZonesList() {
           />
         </>
       ) : (
-        <p className="text-sm text-gray-500">No zones found.</p>
+        <p className="text-sm text-ink-muted">No zones found.</p>
       )}
     </section>
   );

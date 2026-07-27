@@ -15,18 +15,18 @@ export function ZoneDetailsSkeleton() {
   return (
     <div className="flex flex-col w-full mx-auto">
       <article className="w-full flex flex-col gap-2 mb-2">
-        <div className="h-4 w-24 bg-gray-300 rounded-md animate-pulse"></div>
-        <div className="h-10 w-full bg-gray-300 rounded-md animate-pulse"></div>
+        <div className="h-4 w-24 bg-surface-sunken rounded-md animate-pulse"></div>
+        <div className="h-10 w-full bg-surface-sunken rounded-md animate-pulse"></div>
       </article>
 
       <article className="w-full flex flex-col gap-2 mb-4">
-        <div className="h-4 w-20 bg-gray-300 rounded-md animate-pulse"></div>
-        <div className="h-10 w-full bg-gray-300 rounded-md animate-pulse"></div>
+        <div className="h-4 w-20 bg-surface-sunken rounded-md animate-pulse"></div>
+        <div className="h-10 w-full bg-surface-sunken rounded-md animate-pulse"></div>
       </article>
 
       <article className="w-full flex justify-between items-center mb-2">
-        <div className="h-8 w-16 bg-gray-300 rounded-md animate-pulse"></div>
-        <div className="h-10 w-10 bg-gray-300 rounded-md animate-pulse"></div>
+        <div className="h-8 w-16 bg-surface-sunken rounded-md animate-pulse"></div>
+        <div className="h-10 w-10 bg-surface-sunken rounded-md animate-pulse"></div>
       </article>
 
       <TableSkeleton rows={8} />

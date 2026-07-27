@@ -16,7 +16,7 @@ export function Tooltip({ children, tooltip }: TooltipProps) {
           side="top"
           align="center"
           sideOffset={8}
-          className="z-50 p-2 bg-gray-700 text-white rounded-md text-sm max-w-xs"
+          className="z-50 p-2 bg-ink text-surface rounded-md text-sm max-w-xs"
         >
           {tooltip}
         </RadixTooltip.Content>

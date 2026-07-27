@@ -261,7 +261,7 @@ export function CreateWorkerForm() {
           className="w-full"
         />
 
-        <p className="text-xs text-gray-500 -mt-2">
+        <p className="text-xs text-ink-muted -mt-2">
           Leave it empty and a key pair is generated in your browser; you get the
           private key once, and have to fix its file permissions before using it.
           Paste your own public key instead and there is nothing to download.

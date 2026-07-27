@@ -74,21 +74,21 @@ const DialogContent = ({
     if (config.type !== "confirm") return "";
     switch (config.confirmButtonStyle) {
       case "danger":
-        return "bg-red-500 hover:bg-red-600";
+        return "bg-status-danger text-white hover:brightness-90";
       default:
-        return "bg-black hover:bg-gray-800";
+        return "bg-amber text-amber-ink hover:brightness-95";
     }
   };
 
   return (
     <div
-      className={`absolute flex flex-col bg-white p-6 rounded shadow-md transition-all w-1/2 h-screen right-0 ${className}`}
+      className={`fixed inset-0 sm:absolute sm:inset-y-0 sm:left-auto sm:right-0 flex flex-col bg-surface-raised p-6 shadow-xl transition-all w-full sm:w-full sm:max-w-lg h-full sm:h-screen rounded-none sm:rounded-l-2xl ${className}`}
     >
       <div className="w-full mb-4 flex items-center gap-x-2">
         {depth > 0 && (
           <button
             onClick={handleClose}
-            className="shrink-0 text-gray-500 cursor-pointer transition-colors hover:text-gray-800"
+            className="shrink-0 text-ink-muted cursor-pointer transition-colors hover:text-ink"
           >
             <LuArrowLeft />
           </button>
@@ -103,15 +103,15 @@ const DialogContent = ({
         {depth === 0 && (
           <button
             onClick={handleClose}
-            className="shrink-0 text-gray-500 cursor-pointer transition-colors hover:text-gray-800"
+            className="shrink-0 text-ink-muted cursor-pointer transition-colors hover:text-ink"
           >
             <LuX />
           </button>
         )}
       </div>
-      <div className="max-h-[calc(100svh-16rem)] overflow-y-auto overflow-x-hidden w-full">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full">
         {config.description && (
-          <Dialog.Description className="mb-4 text-sm text-gray-600">
+          <Dialog.Description className="mb-4 text-sm text-ink-muted">
             {config.description}
           </Dialog.Description>
         )}
@@ -125,7 +125,7 @@ const DialogContent = ({
             {config.cancelText && (
               <button
                 onClick={handleClose}
-                className="rounded px-4 py-2 text-gray-800 hover:bg-gray-100"
+                className="rounded-lg px-4 py-2 text-ink hover:bg-surface-sunken"
               >
                 {config.cancelText}
               </button>
@@ -135,7 +135,7 @@ const DialogContent = ({
                 config.onConfirm?.();
                 handleClose();
               }}
-              className={`rounded px-4 py-2 text-white ${confirmButtonStyle()}`}
+              className={`rounded-lg px-4 py-2 ${confirmButtonStyle()}`}
             >
               {config.confirmText || "Confirmar"}
             </button>
@@ -153,10 +153,10 @@ export function DialogProvider({ children }: { children: ReactNode }) {
 
   const styles = [
     "z-50 opacity-100",
-    "z-40 opacity-75 pointer-events-none right-4",
-    "z-30 opacity-50 pointer-events-none right-8",
-    "z-20 opacity-25 pointer-events-none right-12",
-    "z-10 opacity-0 pointer-events-none right-16",
+    "z-40 opacity-0 sm:opacity-75 pointer-events-none sm:right-4",
+    "z-30 opacity-0 sm:opacity-50 pointer-events-none sm:right-8",
+    "z-20 opacity-0 sm:opacity-25 pointer-events-none sm:right-12",
+    "z-10 opacity-0 pointer-events-none sm:right-16",
   ];
 
   const showDialog = (config: DialogConfig) => {

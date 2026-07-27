@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useWebSocket } from "@/core/ui/WebsocketProvider";
+import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { useUser } from "../../users/model/useUser";
 import { useAtomStore } from "./atom.store";
 import { useAtom } from "./use-atom";
@@ -23,7 +24,7 @@ export function useNucleusRealtime() {
       const type: string | undefined = message?.type;
       const payload = message?.data ?? {};
       const atomId: string | undefined = payload.atomId;
-      const status: string | undefined = payload.data?.status;
+      const status: ResourceStatus | undefined = payload.data?.status;
 
       const atoms = useAtomStore.getState().atoms;
       const knownAtom = atomId && atoms.some((a) => a.id === atomId);

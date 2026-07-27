@@ -8,6 +8,10 @@ import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
 import { useAuth } from "../models/useAuth";
 import { CaptchaWidget } from "./CaptchaWidget";
+import { Button } from "@/core/ui/Button";
+
+const inputClassName =
+  "rounded-lg border border-border bg-surface-raised p-2 text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-amber";
 
 interface FormValues {
   email: string;
@@ -27,7 +31,7 @@ export function LoginForm() {
     },
   });
 
-  const { handleSubmit } = methods;
+  const { handleSubmit, register } = methods;
 
   const onSubmit = async (data: FormValues) => {
     const { email, password } = data;
@@ -43,31 +47,34 @@ export function LoginForm() {
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+      <header className="mb-2">
+        <h1 className="font-display font-bold text-2xl">Log in</h1>
+        <p className="text-sm text-ink-muted">Enter the Marppa console.</p>
+      </header>
+
       <input
         type="email"
         placeholder="Email"
-        className="border p-2"
-        {...methods.register("email")}
+        className={inputClassName}
+        {...register("email")}
       />
 
       <input
         type="password"
         placeholder="Password"
-        className="border p-2"
-        {...methods.register("password")}
+        className={inputClassName}
+        {...register("password")}
       />
 
       <CaptchaWidget ref={captchaRef} onToken={setCaptchaToken} />
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {error && <p className="text-status-danger text-sm">{error}</p>}
 
-      <button type="submit" className="bg-blue-500 text-black p-2">
-        Login
-      </button>
+      <Button type="submit" text="Log in" className="w-full justify-center" />
 
       <Link
         href="/reset-password"
-        className="text-blue-500 text-sm text-center"
+        className="text-amber-ink text-sm text-center hover:brightness-90"
       >
         Forgot your password?
       </Link>

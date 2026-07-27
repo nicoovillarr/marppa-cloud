@@ -47,7 +47,11 @@ const ButtonContent = ({
         </span>
       )}
       {text && (
-        <label className="pointer-events-none hidden md:block">{text}</label>
+        <label
+          className={`pointer-events-none ${icon ? "hidden md:block" : "block"}`}
+        >
+          {text}
+        </label>
       )}
     </>
   );
@@ -112,11 +116,11 @@ export const Button = forwardRef<ButtonRef, ButtonProps>(
     }));
 
     const buttonStyles = {
-      primary:
-        "md:border-none md:bg-blue-600 md:text-white hover:bg-blue-700 hover:text-white",
-      secondary: "bg-gray-100 text-gray-800 hover:bg-gray-200 hover:text-black",
+      primary: "border-none bg-amber text-amber-ink hover:brightness-95",
+      secondary:
+        "border-border bg-surface-raised text-ink hover:bg-surface-sunken",
       danger:
-        "border-red-200 bg-red-50 text-red-500 hover:text-red-700 hover:bg-red-100",
+        "border-status-danger-tint bg-status-danger-tint text-status-danger hover:bg-status-danger hover:text-white",
     };
 
     const handleOnClick = async () => {
@@ -162,12 +166,12 @@ export const Button = forwardRef<ButtonRef, ButtonProps>(
 
     useEffect(() => {
       const classList = [
-        "border border-gray-200 md:border-none relative flex shrink-0 items-center justify-center gap-2 rounded-md p-3 transition-colors overflow-hidden md:px-3 md:py-2 focus:ring-2 focus:ring-blue-500",
+        "border relative flex shrink-0 items-center justify-center gap-2 rounded-lg p-3 transition-colors overflow-hidden md:px-4 md:py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
       ];
 
       if (disabled) {
         classList.push(
-          "bg-gray-600 text-gray-200 cursor-not-allowed pointer-events-none"
+          "border-border bg-surface-sunken text-ink-faint cursor-not-allowed pointer-events-none"
         );
         setButtonStyle(classList.join(" "));
         return;
@@ -178,11 +182,11 @@ export const Button = forwardRef<ButtonRef, ButtonProps>(
       }
 
       if (state === "loading") {
-        classList.push("bg-gray-400 cursor-wait");
+        classList.push("border-border bg-surface-sunken cursor-wait");
       } else if (state === "success") {
-        classList.push("bg-[#5EAC47]");
+        classList.push("border-none bg-[#1f9d5c]");
       } else if (state === "error") {
-        classList.push("bg-red-600 cursor-not-allowed");
+        classList.push("border-none bg-[#d0393f] cursor-not-allowed");
       } else {
         classList.push(`${buttonStyles[style]} cursor-pointer`);
       }
@@ -202,7 +206,7 @@ export const Button = forwardRef<ButtonRef, ButtonProps>(
             className="absolute inset-0 transition-transform duration-500 ease-in-out"
             initial={false}
             animate={{
-              backgroundColor: state === "error" ? "#B22222" : "#5EAC47",
+              backgroundColor: state === "error" ? "#d0393f" : "#1f9d5c",
               width: `${progress}%`,
               opacity: state === "error" ? 0 : `${progress / 100}`,
             }}
@@ -217,7 +221,7 @@ export const Button = forwardRef<ButtonRef, ButtonProps>(
             }}
             transition={{ duration: 0.25, ease: "easeInOut" }}
           >
-            <PulseLoader color="#f5f5f5" size={4} />
+            <PulseLoader color="var(--ink-muted)" size={4} />
           </motion.article>
 
           {/* Success icon */}

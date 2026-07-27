@@ -109,7 +109,7 @@ export function FibersDialog({
   return (
     <div className="space-y-4 min-w-96">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ink-muted">
           Port-forwards from the host to <InlineCode code={nodeIp} />. The host
           port is allocated automatically; use it to reach the VM from your LAN.
         </p>
@@ -131,9 +131,9 @@ export function FibersDialog({
       </div>
 
       {fibers === null ? (
-        <p className="text-sm text-gray-500">Loading fibers…</p>
+        <p className="text-sm text-ink-muted">Loading fibers…</p>
       ) : fibers.length === 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ink-muted">
           No fibers yet. Create one (e.g. <InlineCode code="tcp / 22" /> for SSH)
           to expose a port of this node.
         </p>
@@ -149,7 +149,7 @@ export function FibersDialog({
             return (
               <li
                 key={fiber.id}
-                className="rounded-md border border-gray-200 p-3 space-y-2"
+                className="rounded-md border border-border p-3 space-y-2"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium">
@@ -160,7 +160,7 @@ export function FibersDialog({
                     className={`text-xs rounded px-2 py-0.5 ${
                       active
                         ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-600"
+                        : "bg-surface-sunken text-ink-muted"
                     }`}
                   >
                     {fiber.status}

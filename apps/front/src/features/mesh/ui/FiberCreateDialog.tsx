@@ -44,7 +44,7 @@ export function FiberCreateDialog({
 
   return (
     <div className="space-y-4 min-w-80">
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-ink-muted">
         Expose a port of this node to the outside through the host
         (port-forward). The host port is picked automatically.
       </p>
@@ -65,7 +65,7 @@ export function FiberCreateDialog({
         placeholder="Target port (e.g. 22, 80)"
         value={targetPort}
         onChange={(e) => setTargetPort(e.target.value)}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+        className="w-full border border-border rounded-md px-3 py-2 text-sm"
       />
 
       <div className="flex justify-end">

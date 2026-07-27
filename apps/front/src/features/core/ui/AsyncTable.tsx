@@ -10,7 +10,7 @@ export type AsyncTableProps<T, K extends string> = Omit<TableProps<T, K>, "data"
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <section className="w-full space-y-2">
-      <header className="shrink-0 w-full h-12 rounded-sm bg-gray-300 animate-pulse"></header>
+      <header className="shrink-0 w-full h-12 rounded-sm bg-surface-sunken animate-pulse"></header>
       {[...Array(rows)].map((_, i) => (
         <article
           key={i}
@@ -19,12 +19,12 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
             opacity: `${100 - i * (100 / rows)}%`,
           }}
         >
-          <div className="shrink-0 w-1/12 h-8 rounded-md bg-gray-300 animate-pulse"></div>
-          <div className="shrink-0 w-2/12 h-8 rounded-md bg-gray-300 animate-pulse"></div>
-          <div className="shrink-0 flex-1 h-8 rounded-md bg-gray-300 animate-pulse"></div>
-          <div className="shrink-0 w-2/12 h-8 rounded-md bg-gray-300 animate-pulse"></div>
-          <div className="shrink-0 w-1/12 h-8 rounded-md bg-gray-300 animate-pulse"></div>
-          <div className="shrink-0 w-1/12 h-8 rounded-md bg-gray-300 animate-pulse"></div>
+          <div className="shrink-0 w-1/12 h-8 rounded-md bg-surface-sunken animate-pulse"></div>
+          <div className="shrink-0 w-2/12 h-8 rounded-md bg-surface-sunken animate-pulse"></div>
+          <div className="shrink-0 flex-1 h-8 rounded-md bg-surface-sunken animate-pulse"></div>
+          <div className="shrink-0 w-2/12 h-8 rounded-md bg-surface-sunken animate-pulse"></div>
+          <div className="shrink-0 w-1/12 h-8 rounded-md bg-surface-sunken animate-pulse"></div>
+          <div className="shrink-0 w-1/12 h-8 rounded-md bg-surface-sunken animate-pulse"></div>
         </article>
       ))}
     </section>

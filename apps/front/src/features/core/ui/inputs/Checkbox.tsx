@@ -54,16 +54,16 @@ export function Checkbox({
       onClick={(e) => handleSetChecked(e, !checkedValue)}
     >
       <aside
-        className={`inline-flex items-center justify-center w-5 h-5 rounded-full border-1 border-gray-300 bg-white`}
+        className={`inline-flex items-center justify-center w-5 h-5 rounded-full border border-border bg-surface-raised`}
       >
         {checkedValue === true ? (
-          <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+          <div className="w-3 h-3 bg-amber rounded-full"></div>
         ) : null}
       </aside>
 
       {text && (
         <label
-          className={`text-gray-700 select-none whitespace-nowrap text-ellipsis overflow-hidden ${disabled ? "cursor-not-allowed" : "cursor-pointer"
+          className={`text-ink select-none whitespace-nowrap text-ellipsis overflow-hidden ${disabled ? "cursor-not-allowed" : "cursor-pointer"
             }`}
         >
           {text}

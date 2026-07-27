@@ -6,7 +6,7 @@ const ActionButton = ({
   onClick: () => void;
 }) => (
   <button
-    className="bg-gray-600 hover:bg-gray-500 text-white text-sm px-2 py-1 rounded cursor-pointer"
+    className="bg-surface-raised/20 hover:bg-surface-raised/30 text-surface text-sm px-2 py-1 rounded cursor-pointer"
     onClick={onClick}
   >
     {text}
@@ -33,7 +33,7 @@ export function CodeBlock({
   };
 
   return (
-    <pre className="group min-h-20 relative bg-gray-700 text-white p-4 rounded-lg overflow-x-auto">
+    <pre className="group min-h-20 relative bg-ink text-surface p-4 rounded-lg overflow-x-auto font-mono text-sm">
       <aside className="group-hover:visible invisible absolute top-2 right-2 flex gap-x-2">
         {fileName && <ActionButton text="Download" onClick={handleDownload} />}
         <ActionButton

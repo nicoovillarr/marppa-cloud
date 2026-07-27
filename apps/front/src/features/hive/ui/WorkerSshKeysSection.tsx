@@ -61,24 +61,24 @@ export function WorkerSshKeysSection({ workerId, live }: WorkerSshKeysSectionPro
     <section className="space-y-3">
       <h3 className="font-semibold text-sm">Authorized SSH keys</h3>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-ink-muted">
         {live
           ? "Changes are written to the running VM through its guest agent."
           : "The VM is off, so changes are written straight to its disk."}
       </p>
 
       {keys.length === 0 ? (
-        <p className="text-xs text-gray-500">No keys registered for this worker.</p>
+        <p className="text-xs text-ink-muted">No keys registered for this worker.</p>
       ) : (
         <ul className="space-y-1">
           {keys.map((key) => (
             <li
               key={key.id}
-              className="flex items-center justify-between gap-2 text-sm border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+              className="flex items-center justify-between gap-2 text-sm border border-border dark: rounded px-2 py-1"
             >
               <span className="flex flex-col min-w-0">
                 <span className="font-medium">{key.name}</span>
-                <span className="text-xs text-gray-500 truncate">
+                <span className="text-xs text-ink-muted truncate">
                   {key.publicKey.slice(0, 42)}…
                 </span>
               </span>
@@ -95,13 +95,13 @@ export function WorkerSshKeysSection({ workerId, live }: WorkerSshKeysSectionPro
 
       <div className="space-y-2">
         <input
-          className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-transparent"
+          className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent"
           placeholder="Label (e.g. laptop)"
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
         <textarea
-          className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-transparent font-mono"
+          className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent font-mono"
           rows={3}
           placeholder="ssh-ed25519 AAAAC3... you@laptop"
           value={publicKey}

@@ -1,4 +1,5 @@
 import { NodeResponseDto, NodeWithFibers } from "./node.api.types";
+import { ResourceStatus } from "@/core/models/resource-status.enum";
 
 export type CreateZoneDto = {
     name: string;
@@ -10,7 +11,7 @@ export type ZoneResponseDto = {
     id: string;
     name: string;
     description: string;
-    status: string;
+    status: ResourceStatus;
     cidr: string;
     gateway: string;
     usedIPs: number;

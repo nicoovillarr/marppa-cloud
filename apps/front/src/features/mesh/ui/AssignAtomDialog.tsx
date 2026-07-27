@@ -65,13 +65,13 @@ export function AssignAtomDialog({
           onChangedValue={(value: any) => setSelectedAtomId(value)}
         />
       ) : (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ink-muted">
           No assignable atoms found. An atom must be stopped (INACTIVE) and not
           already assigned to a zone.
         </p>
       )}
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-ink-muted">
         This only reserves the IP — the container is attached to the zone bridge
         when the atom starts. Publish a port with a fiber on the resulting node.
       </p>

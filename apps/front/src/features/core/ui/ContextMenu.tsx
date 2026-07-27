@@ -16,7 +16,7 @@ interface ContextMenuProps {
 const Item = ({ label, color, action, disabled }: ContextMenuGroup) => {
   return (
     <RadixContextMenu.Item
-      className={`px-2 py-1 hover:bg-gray-100 cursor-pointer ${disabled ? "opacity-50 cursor-not-allowed" : ""
+      className={`px-2 py-1 hover:bg-surface-sunken cursor-pointer ${disabled ? "opacity-50 cursor-not-allowed" : ""
         }`}
       onSelect={action}
       style={{
@@ -40,7 +40,7 @@ const Group = ({
     return (
       <RadixContextMenu.Sub>
         <RadixContextMenu.SubTrigger
-          className={`px-2 py-1 hover:bg-gray-100 cursor-pointer ${disabled ? "opacity-50 cursor-not-allowed" : ""
+          className={`px-2 py-1 hover:bg-surface-sunken cursor-pointer ${disabled ? "opacity-50 cursor-not-allowed" : ""
             }`}
           disabled={disabled}
           onSelect={action}
@@ -48,7 +48,7 @@ const Group = ({
           {label}
         </RadixContextMenu.SubTrigger>
         <RadixContextMenu.Portal>
-          <RadixContextMenu.SubContent className="z-50 bg-white shadow-md rounded p-1 text-sm">
+          <RadixContextMenu.SubContent className="z-50 bg-surface-raised border border-border shadow-md rounded-lg p-1 text-sm">
             {subItems.map((item, index) => (
               <Item key={index} {...item} />
             ))}
@@ -71,7 +71,7 @@ export function ContextMenu({
     <RadixContextMenu.Root>
       <RadixContextMenu.Trigger asChild>{children}</RadixContextMenu.Trigger>
       <RadixContextMenu.Portal>
-        <RadixContextMenu.Content className="z-50 bg-white shadow-xl border border-gray-100 rounded p-1 text-sm">
+        <RadixContextMenu.Content className="z-50 bg-surface-raised shadow-xl border border-border rounded-lg p-1 text-sm">
           {groups.map((group, index) => (
             <Group key={index} {...group} />
           ))}

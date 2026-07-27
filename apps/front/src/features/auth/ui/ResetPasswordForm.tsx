@@ -8,6 +8,10 @@ import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
 import { useAuth } from "../models/useAuth";
 import { CaptchaWidget } from "./CaptchaWidget";
+import { Button } from "@/core/ui/Button";
+
+const inputClassName =
+  "rounded-lg border border-border bg-surface-raised p-2 text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-amber";
 
 interface RequestFormValues {
   email: string;
@@ -47,11 +51,12 @@ function RequestForm() {
   if (sent) {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm">
+        <h1 className="font-display font-bold text-2xl">Check your email</h1>
+        <p className="text-sm text-ink-muted">
           If an account exists for that email, we sent a link to reset your
           password.
         </p>
-        <Link href="/login" className="text-blue-500 text-sm text-center">
+        <Link href="/login" className="text-amber-ink text-sm text-center hover:brightness-90">
           Back to login
         </Link>
       </div>
@@ -60,22 +65,32 @@ function RequestForm() {
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+      <header className="mb-2">
+        <h1 className="font-display font-bold text-2xl">Reset password</h1>
+        <p className="text-sm text-ink-muted">
+          We'll email you a link to set a new one.
+        </p>
+      </header>
+
       <input
         type="email"
         placeholder="Email"
-        className="border p-2"
+        className={inputClassName}
         {...register("email")}
       />
 
       <CaptchaWidget ref={captchaRef} onToken={setCaptchaToken} />
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {error && <p className="text-status-danger text-sm">{error}</p>}
 
-      <button type="submit" disabled={isLoading} className="bg-blue-500 text-black p-2">
-        Send reset link
-      </button>
+      <Button
+        type="submit"
+        text="Send reset link"
+        disabled={isLoading}
+        className="w-full justify-center"
+      />
 
-      <Link href="/login" className="text-blue-500 text-sm text-center">
+      <Link href="/login" className="text-amber-ink text-sm text-center hover:brightness-90">
         Back to login
       </Link>
     </form>
@@ -98,8 +113,9 @@ function ConfirmForm({ token }: { token: string }) {
   if (done) {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm">Your password has been updated.</p>
-        <Link href="/login" className="text-blue-500 text-sm text-center">
+        <h1 className="font-display font-bold text-2xl">Password updated</h1>
+        <p className="text-sm text-ink-muted">Your password has been updated.</p>
+        <Link href="/login" className="text-amber-ink text-sm text-center hover:brightness-90">
           Go to login
         </Link>
       </div>
@@ -108,18 +124,25 @@ function ConfirmForm({ token }: { token: string }) {
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+      <header className="mb-2">
+        <h1 className="font-display font-bold text-2xl">Set a new password</h1>
+      </header>
+
       <input
         type="password"
         placeholder="New password"
-        className="border p-2"
+        className={inputClassName}
         {...register("newPassword", { minLength: 8 })}
       />
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {error && <p className="text-status-danger text-sm">{error}</p>}
 
-      <button type="submit" disabled={isLoading} className="bg-blue-500 text-black p-2">
-        Set new password
-      </button>
+      <Button
+        type="submit"
+        text="Set new password"
+        disabled={isLoading}
+        className="w-full justify-center"
+      />
     </form>
   );
 }

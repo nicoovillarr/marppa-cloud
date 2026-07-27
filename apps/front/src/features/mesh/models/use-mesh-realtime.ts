@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useWebSocket } from "@/core/ui/WebsocketProvider";
+import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { useUser } from "../../users/model/useUser";
 import { useZoneStore } from "./zone.store";
 import { useZone } from "./use-zone";
@@ -22,7 +23,7 @@ export function useMeshRealtime() {
     const unsubscribe = subscribe(channel, (message) => {
       const payload = message?.data ?? {};
       const zoneId: string | undefined = payload.zoneId;
-      const status: string | undefined = payload.data?.status;
+      const status: ResourceStatus | undefined = payload.data?.status;
 
       const zones = useZoneStore.getState().zones;
       const knownZone = zoneId && zones.some((z) => z.id === zoneId);

@@ -2,6 +2,7 @@
 
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { Card } from "@/core/ui/Card";
+import { Button } from "@/core/ui/Button";
 import { WorkerResponseDto } from "@/hive/api/worker.api.types";
 import { useWorker } from "@/hive/models/use-worker";
 import { AtomWithRelationsResponseDto } from "@/nucleus/api/atom.api.types";
@@ -12,16 +13,23 @@ import Link from "next/link";
 import { useEffect } from "react";
 import {
   LuActivity,
-  LuChartColumn,
-  LuContainer,
-  LuCreditCard,
   LuBox,
+  LuContainer,
   LuNetwork,
   LuServer,
 } from "react-icons/lu";
 import { ZoneWithNodes } from "src/features/mesh/api/zone.api.types";
 import { PortalWithTranspondersResponseDto } from "src/features/orbit/api/portal.api.types";
 import { useUser } from "src/features/users/model/useUser";
+
+const CardLink = ({ href, label }: { href: string; label: string }) => (
+  <Link
+    href={href}
+    className="flex text-sm items-center gap-2 mt-4 border border-border rounded-lg justify-center p-2 text-ink hover:text-amber-ink hover:bg-surface-sunken transition-colors"
+  >
+    {label}
+  </Link>
+);
 
 const Overview = ({
   workers,
@@ -34,296 +42,154 @@ const Overview = ({
   zones: ZoneWithNodes[];
   portals: PortalWithTranspondersResponseDto[];
 }) => {
-  const createdWorkersLastMonth = workers
-    ?.filter(
-      (worker) => new Date(worker.createdAt).getMonth() === new Date().getMonth() - 1
-    )
-    .reduce((acc) => acc + 1, 0);
-
-  const createdZonesLastMonth = zones
-    ?.filter(
-      (zone) => new Date(zone.createdAt).getMonth() === new Date().getMonth() - 1
-    )
-    .reduce((acc) => acc + 1, 0);
-
-  const createdPortalsLastMonth = portals
-    ?.filter(
-      (portal) =>
-        new Date(portal.createdAt).getMonth() === new Date().getMonth() - 1
-    )
-    .reduce((acc) => acc + 1, 0);
-
   const zoneNodesCount =
-    zones
-      ?.filter((zone) => zone.status === "running")
-      .flatMap((zone) => zone.nodes || []).length || 0;
+    zones?.flatMap((zone) => zone.nodes || []).length || 0;
 
   return (
     <section className="w-full">
-      <h2 className="font-semibold text-xl mb-2">Service overview</h2>
+      <h2 className="font-display font-semibold text-xl mb-4">
+        Your three pillars
+      </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <header className="flex items-center gap-2 mb-4">
             <h3 className="font-medium w-full line-clamp-1">Workers</h3>
-            <LuServer className="h-4 w-4 shrink-0" />
+            <LuServer className="h-4 w-4 shrink-0 text-amber" />
           </header>
 
-          <h4 className="font-bold text-3xl">{workers?.length || 0}</h4>
-          <p className="text-sm text-gray-500">
-            +{createdWorkersLastMonth} from last month
-          </p>
-
-          <ul className="mt-4">
-            <li className="flex items-center">
-              <span className="w-full">Running</span>{" "}
-              <span className="text-gray-600">
-                {workers?.filter((worker) => worker.status === "running").length || 0}
-              </span>
-            </li>
-            <li className="flex items-center">
-              <span className="w-full">Stopped</span>{" "}
-              <span className="text-gray-600">
-                {workers?.filter((worker) => worker.status === "stopped").length || 0}
-              </span>
-            </li>
-          </ul>
-
-          <Link
-            href="/dashboard/hive/workers"
-            className="flex text-sm items-center gap-2 mt-4 border border-gray-200 rounded justify-center p-2 text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
-          >
-            View Hive
-          </Link>
-        </Card>
-        <Card>
-          <header className="flex items-center gap-2 mb-4">
-            <h3 className="font-medium w-full line-clamp-1">Zones</h3>
-            <LuNetwork className="h-4 w-4 shrink-0" />
-          </header>
-
-          <h4 className="font-bold text-3xl">{zones?.length || 0}</h4>
-          <p className="text-sm text-gray-500">
-            +{createdZonesLastMonth} from last month
-          </p>
+          <h4 className="font-display font-bold text-3xl">
+            {workers?.length || 0}
+          </h4>
+          <p className="text-sm text-ink-muted">VMs under your control</p>
 
           <ul className="mt-4">
             <li className="flex items-center">
               <span className="w-full">Active</span>{" "}
-              <span className="text-gray-600">
-                {zones?.filter((zone) => zone.status === "running").length || 0}
+              <span className="text-ink-muted">
+                {workers?.filter((w) => w.status === ResourceStatus.ACTIVE)
+                  .length || 0}
               </span>
             </li>
             <li className="flex items-center">
-              <span className="w-full">Nodes</span>{" "}
-              <span className="text-gray-600">{zoneNodesCount}</span>
+              <span className="w-full">Inactive</span>{" "}
+              <span className="text-ink-muted">
+                {workers?.filter((w) => w.status === ResourceStatus.INACTIVE)
+                  .length || 0}
+              </span>
             </li>
           </ul>
 
-          <Link
-            href="/dashboard/mesh/zones"
-            className="flex text-sm items-center gap-2 mt-4 border border-gray-200 rounded justify-center p-2 text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
-          >
-            View Mesh
-          </Link>
+          <CardLink href="/dashboard/hive/workers" label="View Hive" />
+        </Card>
+        <Card>
+          <header className="flex items-center gap-2 mb-4">
+            <h3 className="font-medium w-full line-clamp-1">Zones</h3>
+            <LuNetwork className="h-4 w-4 shrink-0 text-amber" />
+          </header>
+
+          <h4 className="font-display font-bold text-3xl">
+            {zones?.length || 0}
+          </h4>
+          <p className="text-sm text-ink-muted">Networks you manage</p>
+
+          <ul className="mt-4">
+            <li className="flex items-center">
+              <span className="w-full">Active</span>{" "}
+              <span className="text-ink-muted">
+                {zones?.filter((z) => z.status === ResourceStatus.ACTIVE)
+                  .length || 0}
+              </span>
+            </li>
+            <li className="flex items-center">
+              <span className="w-full">Connected nodes</span>{" "}
+              <span className="text-ink-muted">{zoneNodesCount}</span>
+            </li>
+          </ul>
+
+          <CardLink href="/dashboard/mesh/zones" label="View Mesh" />
         </Card>
         <Card>
           <header className="flex items-center gap-2 mb-4">
             <h3 className="font-medium w-full line-clamp-1">Atoms</h3>
-            <LuBox className="h-4 w-4 shrink-0" />
+            <LuBox className="h-4 w-4 shrink-0 text-amber" />
           </header>
 
-          <h4 className="font-bold text-3xl">{atoms?.length || 0}</h4>
-          <p className="text-sm text-gray-500">Containers in your zones</p>
+          <h4 className="font-display font-bold text-3xl">
+            {atoms?.length || 0}
+          </h4>
+          <p className="text-sm text-ink-muted">Containers in your zones</p>
 
           <ul className="mt-4">
             <li className="flex items-center">
-              <span className="w-full">Running</span>{" "}
-              <span className="text-gray-600">
+              <span className="w-full">Active</span>{" "}
+              <span className="text-ink-muted">
                 {atoms?.filter((atom) => atom.status === ResourceStatus.ACTIVE)
                   .length || 0}
               </span>
             </li>
             <li className="flex items-center">
               <span className="w-full">Unassigned</span>{" "}
-              <span className="text-gray-600">
+              <span className="text-ink-muted">
                 {atoms?.filter((atom) => !atom.node).length || 0}
               </span>
             </li>
           </ul>
 
-          <Link
-            href="/dashboard/nucleus/atoms"
-            className="flex text-sm items-center gap-2 mt-4 border border-gray-200 rounded justify-center p-2 text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
-          >
-            View Nucleus
-          </Link>
+          <CardLink href="/dashboard/nucleus/atoms" label="View Nucleus" />
         </Card>
         <Card className="md:col-span-2 lg:col-span-1">
           <header className="flex items-center gap-2 mb-4">
             <h3 className="font-medium w-full line-clamp-1">Orbit</h3>
-            <LuContainer className="h-4 w-4 shrink-0" />
+            <LuContainer className="h-4 w-4 shrink-0 text-amber" />
           </header>
 
-          <h4 className="font-bold text-3xl">{portals?.length || 0}</h4>
-          <p className="text-sm text-gray-500">
-            +{createdPortalsLastMonth} from last month
-          </p>
+          <h4 className="font-display font-bold text-3xl">
+            {portals?.length || 0}
+          </h4>
+          <p className="text-sm text-ink-muted">Active DDNS portals</p>
 
-          <Link
-            href="/dashboard/orbit/portals"
-            className="flex text-sm items-center gap-2 mt-4 border border-gray-200 rounded justify-center p-2 text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
-          >
-            View Orbit
-          </Link>
+          <CardLink href="/dashboard/orbit/portals" label="View Orbit" />
         </Card>
       </div>
     </section>
   );
 };
 
-const Billing = () => {
-  return (
-    <section className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Card
-        icon={LuChartColumn}
-        title="Resource Usage"
-        subtitle="Current month usage across all services"
-      >
-        <ul>
-          <li className="mb-4">
-            <div className="flex items-center mb-1">
-              <span className="flex-1">CPU Hours</span>{" "}
-              <span className="text-gray-600">1,240 / 2,000</span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full">
-              <div
-                className="h-full bg-black rounded-full"
-                style={{ width: "62%" }}
-              ></div>
-            </div>
-          </li>
-
-          <li className="mb-4">
-            <div className="flex items-center mb-1">
-              <span className="flex-1">Storage (GB)</span>{" "}
-              <span className="text-gray-600">8.3 / 14</span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full">
-              <div
-                className="h-full bg-black rounded-full"
-                style={{ width: "60%" }}
-              ></div>
-            </div>
-          </li>
-
-          <li className="mb-2">
-            <div className="flex items-center mb-1">
-              <span className="flex-1">Bandwidth (GB)</span>{" "}
-              <span className="text-gray-600">120 / 200</span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full">
-              <div
-                className="h-full bg-black rounded-full"
-                style={{ width: "40%" }}
-              ></div>
-            </div>
-          </li>
-        </ul>
-      </Card>
-      <Card
-        icon={LuCreditCard}
-        title="Billing Overview"
-        subtitle="Current month charges and payment status"
-      >
-        <div className="flex flex-col mb-6">
-          <span className="text-2xl font-bold">$247.83</span>
-          <span className="text-sm text-gray-500">Due in 5 days</span>
-        </div>
-
-        <ul className="gap-y-4">
-          <li className="flex items-center mb-2">
-            <span className="flex-1">Hive</span>{" "}
-            <span className="text-gray-600">$156.20</span>
-          </li>
-
-          <li className="flex items-center mb-2">
-            <span className="flex-1">Mesh</span>{" "}
-            <span className="text-gray-600">$32.40</span>
-          </li>
-
-          <li className="flex items-center mb-2">
-            <span className="flex-1">Nibble</span>{" "}
-            <span className="text-gray-600">$59.23</span>
-          </li>
-
-          <hr className="my-4 border-gray-300" />
-
-          <li className="flex items-center text-lg font-semibold">
-            <span className="flex-1">Estimated Total</span> <span>247.83</span>
-          </li>
-        </ul>
-      </Card>
-    </section>
-  );
-};
-
-const RecentActivity = () => {
+const RecentActivity = ({ hasResources }: { hasResources: boolean }) => {
   return (
     <Card
-      title="Recent Activity"
-      subtitle="Last 30 days"
+      title="Recent activity"
+      subtitle="What happened across your infrastructure"
       icon={LuActivity}
       className="w-full"
     >
-      <ul className="space-y-4">
-        <li className="flex items-center">
-          <div>
-            <h4>VPS instance "web-server-01" started</h4>
-            <p className="text-xs text-gray-500">2 minutes ago</p>
+      {hasResources ? (
+        <p className="text-sm text-ink-muted">
+          A detailed operations log isn't available in this view yet. Check
+          each resource from its module to see its current state.
+        </p>
+      ) : (
+        <div className="flex flex-col items-center text-center py-6 gap-3">
+          <p className="text-sm text-ink-muted max-w-sm">
+            You haven't created any resources yet. Start with a network in
+            Mesh or a VM in Hive, and you'll see every step of the operation
+            here.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              text="Create Zone"
+              icon={<LuNetwork />}
+              href="/dashboard/mesh/zones/create"
+              style="secondary"
+            />
+            <Button
+              text="Create Worker"
+              icon={<LuServer />}
+              href="/dashboard/hive/workers/create"
+            />
           </div>
-
-          <span className="ml-auto text-gray-700 bg-gray-100 rounded-full px-2 py-0.5 text-sm font-semibold">
-            VPS
-          </span>
-        </li>
-        <li className="flex items-center">
-          <div>
-            <h4>Container "nginx-app" deployed</h4>
-            <p className="text-xs text-gray-500">1 hour ago</p>
-          </div>
-
-          <span className="ml-auto text-gray-700 bg-gray-100 rounded-full px-2 py-0.5 text-sm font-semibold">
-            Container
-          </span>
-        </li>
-        <li className="flex items-center">
-          <div>
-            <h4>VPC network "prod-network" created</h4>
-            <p className="text-xs text-gray-500">3 hours ago</p>
-          </div>
-
-          <span className="ml-auto text-gray-700 bg-gray-100 rounded-full px-2 py-0.5 text-sm font-semibold">
-            VPC
-          </span>
-        </li>
-        <li className="flex items-center">
-          <div>
-            <h4>VPS instance "db-server-02" stopped</h4>
-            <p className="text-xs text-gray-500">5 hours ago</p>
-          </div>
-
-          <span className="ml-auto text-gray-700 bg-gray-100 rounded-full px-2 py-0.5 text-sm font-semibold">
-            VPS
-          </span>
-        </li>
-      </ul>
-
-      <Link
-        href="/dashboard/vps"
-        className="flex text-sm items-center gap-2 mt-4 border border-gray-200 rounded justify-center p-2 text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
-      >
-        View all activity
-      </Link>
+        </div>
+      )}
     </Card>
   );
 };
@@ -331,25 +197,10 @@ const RecentActivity = () => {
 export function DashboardDetails() {
   const { user } = useUser();
 
-  const {
-    workers,
-    fetchWorkers,
-  } = useWorker();
-
-  const {
-    zones,
-    fetchZones,
-  } = useZone();
-
-  const {
-    portals,
-    fetchPortals,
-  } = usePortal();
-
-  const {
-    atoms,
-    fetchAtoms,
-  } = useAtom();
+  const { workers, fetchWorkers } = useWorker();
+  const { zones, fetchZones } = useZone();
+  const { portals, fetchPortals } = usePortal();
+  const { atoms, fetchAtoms } = useAtom();
 
   useEffect(() => {
     fetchWorkers();
@@ -358,27 +209,26 @@ export function DashboardDetails() {
     fetchAtoms();
   }, []);
 
+  const hasResources =
+    (workers?.length || 0) > 0 ||
+    (zones?.length || 0) > 0 ||
+    (atoms?.length || 0) > 0 ||
+    (portals?.length || 0) > 0;
+
   return (
     <main className="flex flex-col gap-8 w-full mx-auto">
       <header className="w-full flex flex-col">
-        <h1 className="font-bold text-2xl">
-          Welcome back, {user?.name || "User"}
+        <h1 className="font-display font-bold text-2xl sm:text-3xl">
+          Welcome back{user?.name ? `, ${user.name}` : ""}
         </h1>
-        <p className="text-sm text-gray-500">
-          Here's what's happening with your cloud infrastructure today.
+        <p className="text-sm text-ink-muted">
+          Here's what's happening with your infrastructure today.
         </p>
       </header>
 
-      <Overview
-        workers={workers}
-        atoms={atoms}
-        zones={zones}
-        portals={portals}
-      />
+      <Overview workers={workers} atoms={atoms} zones={zones} portals={portals} />
 
-      <Billing />
-
-      <RecentActivity />
+      <RecentActivity hasResources={hasResources} />
     </main>
   );
 }

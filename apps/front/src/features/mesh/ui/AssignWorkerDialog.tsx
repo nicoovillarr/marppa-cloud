@@ -67,7 +67,7 @@ export function AssignWorkerDialog({
           onChangedValue={(value: any) => setSelectedWorkerId(value)}
         />
       ) : (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ink-muted">
           No assignable workers found. A worker must be stopped (INACTIVE) and
           not already assigned to a zone.
         </p>

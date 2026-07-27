@@ -72,26 +72,26 @@ export function AtomEnvVarsSection({ atomId, editable }: AtomEnvVarsSectionProps
     <section className="space-y-3">
       <h3 className="font-semibold text-sm">Environment variables</h3>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-ink-muted">
         {editable
           ? "The container is rebuilt from these on every start."
           : "Stop the atom to edit them — the running container was built from the values it had at start."}
       </p>
 
       {envVars.length === 0 ? (
-        <p className="text-xs text-gray-500">No variables set for this atom.</p>
+        <p className="text-xs text-ink-muted">No variables set for this atom.</p>
       ) : (
         <ul className="space-y-1">
           {envVars.map((envVar) => (
             <li
               key={envVar.id}
-              className="flex items-center justify-between gap-2 text-sm border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+              className="flex items-center justify-between gap-2 text-sm border border-border dark: rounded px-2 py-1"
             >
               <span className="flex flex-col min-w-0">
                 <span className="font-medium font-mono">{envVar.key}</span>
                 <button
                   type="button"
-                  className="text-xs text-gray-500 truncate text-left font-mono hover:text-black"
+                  className="text-xs text-ink-muted truncate text-left font-mono hover:text-amber-ink"
                   onClick={() => toggleReveal(envVar.id)}
                 >
                   {revealed.has(envVar.id) ? envVar.value : "•••••••• (click to reveal)"}
@@ -113,13 +113,13 @@ export function AtomEnvVarsSection({ atomId, editable }: AtomEnvVarsSectionProps
       {editable && (
         <div className="space-y-2">
           <input
-            className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-transparent font-mono"
+            className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent font-mono"
             placeholder="POSTGRES_PASSWORD"
             value={key}
             onChange={(event) => setKey(event.target.value)}
           />
           <input
-            className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-transparent font-mono"
+            className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent font-mono"
             placeholder="value"
             value={value}
             onChange={(event) => setValue(event.target.value)}

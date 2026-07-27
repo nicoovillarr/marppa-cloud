@@ -11,6 +11,7 @@ import { useAtom } from "../models/use-atom";
 import { useNucleusRealtime } from "../models/use-nucleus-realtime";
 import { AtomWithRelationsResponseDto } from "../api/atom.api.types";
 import { AtomManageDialog, imageRef } from "./AtomManageDialog";
+import { StatusBadge } from "@/core/ui/StatusBadge";
 
 const COLUMNS: ColumnMapping<AtomWithRelationsResponseDto> = {
   id: {
@@ -36,6 +37,9 @@ const COLUMNS: ColumnMapping<AtomWithRelationsResponseDto> = {
   status: {
     label: "Status",
     minWidth: "150px",
+    renderFn: (atom: AtomWithRelationsResponseDto) => (
+      <StatusBadge status={atom.status} />
+    ),
   },
 };
 
@@ -173,7 +177,7 @@ export function AtomsList() {
             getKey={(atom) => atom.id}
           />
           <div className="flex justify-between items-center gap-4 mt-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-ink-muted">
               Selected Atoms:
               <span className="font-bold ml-1">{selectedAtoms.size}</span>
             </p>
@@ -199,7 +203,7 @@ export function AtomsList() {
           </div>
         </>
       ) : (
-        <p className="text-sm text-gray-500">No atoms found.</p>
+        <p className="text-sm text-ink-muted">No atoms found.</p>
       )}
     </section>
   );

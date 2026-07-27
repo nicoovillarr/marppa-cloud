@@ -109,24 +109,24 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <div
-        className={`relative flex w-full items-center justify-center gap-x-2 overflow-hidden rounded border border-gray-300 bg-white p-2 pl-3 focus-within:outline-none focus-within:ring-2 ${className}`}
+        className={`relative flex w-full items-center justify-center gap-x-2 overflow-hidden rounded-lg border border-border bg-surface-raised p-2 pl-3 focus-within:outline-none focus-within:ring-2 focus-within:ring-amber ${className}`}
       >
         {disabled && (
-          <div className="absolute left-0 top-0 h-full w-full cursor-not-allowed bg-gray-200 opacity-50">
+          <div className="absolute left-0 top-0 h-full w-full cursor-not-allowed bg-surface-sunken opacity-50">
             {disabledText && (
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-800 select-none italic">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted select-none italic">
                 {disabledText}
               </span>
             )}
           </div>
         )}
 
-        {leading && <span className="shrink-0 text-gray-500">{leading}</span>}
+        {leading && <span className="shrink-0 text-ink-muted">{leading}</span>}
 
         <input
           ref={ref}
           type={type}
-          className="w-full border-none outline-none placeholder:text-gray-400 focus:outline-none"
+          className="w-full border-none outline-none bg-transparent text-ink placeholder:text-ink-faint focus:outline-none"
           value={internalValue}
           onChange={handleChange}
           onBlur={handleBlur}
@@ -136,7 +136,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           inputMode={type === "number" ? "numeric" : undefined}
         />
 
-        {trailing && <span className="shrink-0 text-gray-500">{trailing}</span>}
+        {trailing && <span className="shrink-0 text-ink-muted">{trailing}</span>}
       </div>
     );
   }

@@ -168,7 +168,7 @@ export function Select({
   return (
     <div className={`flex items-center gap-2 min-w-8 min-h-4 ${className} relative`}>
       {disabled && (
-        <div className="absolute inset-0 cursor-not-allowed rounded-md bg-gray-200 opacity-50"></div>
+        <div className="absolute inset-0 cursor-not-allowed rounded-md bg-surface-sunken opacity-50"></div>
       )}
 
       <RadixSelect.Root
@@ -181,7 +181,7 @@ export function Select({
         disabled={isLoading}
       >
         <RadixSelect.Trigger
-          className={`inline-flex ${width} h-[42px] items-center gap-x-2 rounded border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50 focus:border-blue-500 focus:outline-none focus:ring-2 disabled:cursor-not-allowed`}
+          className={`inline-flex ${width} h-[42px] items-center gap-x-2 rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm text-ink shadow-sm hover:bg-surface-sunken focus:border-amber focus:outline-none focus:ring-2 focus:ring-amber disabled:cursor-not-allowed`}
           disabled={isLoading || disabled}
         >
           {isLoading ? (
@@ -208,7 +208,7 @@ export function Select({
 
         <RadixSelect.Portal>
           <RadixSelect.Content
-            className={`z-50 ${width} mt-1 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none`}
+            className={`z-50 ${width} mt-1 rounded-lg bg-surface-raised shadow-lg ring-1 ring-border focus:outline-none`}
             position="popper"
           >
             <RadixSelect.Viewport className="p-1">
@@ -216,7 +216,7 @@ export function Select({
                 <div className="p-2">
                   <input
                     type="text"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-amber focus:outline-none focus:ring-1 focus:ring-amber"
                     placeholder="Buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -232,8 +232,8 @@ export function Select({
                       <RadixSelect.Item
                         key={item.value ?? item.displayText ?? "item"}
                         value={String(item.value)}
-                        className={`cursor-pointer select-none rounded-md px-4 py-2 text-sm text-gray-700 overflow-hidden hover:bg-gray-100 focus:bg-gray-100 focus:outline-none relative ${isSelected
-                          ? "before:content-[''] before:absolute before:w-8 before:h-8 before:rounded-full before:-left-6 before:top-1/2 before:-translate-y-1/2 before:mt-[1px] before:bg-blue-500"
+                        className={`cursor-pointer select-none rounded-md px-4 py-2 text-sm text-ink overflow-hidden hover:bg-surface-sunken focus:bg-surface-sunken focus:outline-none relative ${isSelected
+                          ? "before:content-[''] before:absolute before:w-8 before:h-8 before:rounded-full before:-left-6 before:top-1/2 before:-translate-y-1/2 before:mt-[1px] before:bg-amber"
                           : ""
                           }`}
                       >

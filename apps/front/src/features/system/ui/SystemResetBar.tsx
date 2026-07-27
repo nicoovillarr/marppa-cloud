@@ -36,7 +36,7 @@ export function SystemResetBar() {
     });
 
   return (
-    <section className="w-full flex items-center justify-end gap-4 flex-wrap rounded border border-red-500 bg-red-500/10 p-4">
+    <section className="w-full flex items-center justify-end gap-4 flex-wrap rounded border border-status-danger bg-status-danger/10 p-4">
       <p className="text-sm text-right">
         <span className="font-semibold">Danger zone.</span> Reconciles this host
         against the database, deleting host resources the database does not know

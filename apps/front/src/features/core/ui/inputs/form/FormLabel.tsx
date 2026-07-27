@@ -13,12 +13,12 @@ export function FormLabel({
   tooltip?: string;
 }) {
   return (
-    <label className={`mb-1 text-sm font-medium ${className}`}>
+    <label className={`mb-1 text-sm font-medium text-ink ${className}`}>
       {text}
-      {required && <span className="text-red-500">*</span>}
+      {required && <span className="text-status-danger">*</span>}
       {tooltip && (
         <Tooltip tooltip={tooltip}>
-          <LuInfo className="inline ml-1 text-gray-400 hover:text-gray-600" />
+          <LuInfo className="inline ml-1 text-ink-faint hover:text-ink-muted" />
         </Tooltip>
       )}
     </label>

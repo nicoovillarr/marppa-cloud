@@ -23,8 +23,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {(title || subtitle) && (
         <header className="w-full flex flex-col">
-          {title && <h1 className="font-bold text-2xl">{title}</h1>}
-          {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+          {title && (
+            <h1 className="font-display font-bold text-2xl sm:text-3xl">
+              {title}
+            </h1>
+          )}
+          {subtitle && <p className="text-sm text-ink-muted">{subtitle}</p>}
         </header>
       )}
 

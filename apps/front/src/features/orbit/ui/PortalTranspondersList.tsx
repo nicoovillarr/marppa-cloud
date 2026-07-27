@@ -9,6 +9,7 @@ import { TransponderForm } from "./TransponderForm";
 import { useDialog } from "@/core/ui/DialogProvider";
 import { TransponderWithNodeResponseModel } from "../api/transponder.api.type";
 import { usePortal } from "../models/use-portal";
+import { StatusBadge } from "@/core/ui/StatusBadge";
 
 export function PortalTranspondersList({
   portalId,
@@ -62,6 +63,9 @@ export function PortalTranspondersList({
     status: {
       label: "Status",
       minWidth: "150px",
+      renderFn: (value: TransponderWithNodeResponseModel) => (
+        <StatusBadge status={value.status} />
+      ),
     },
     priority: {
       label: "Priority",
@@ -84,7 +88,7 @@ export function PortalTranspondersList({
       <header className="flex justify-between items-center gap-x-4">
         <FormLabel text="Transponders" />
         <button
-          className="text-gray-600 hover:text-black cursor-pointer transition-colors"
+          className="text-ink-muted hover:text-amber-ink cursor-pointer transition-colors"
           onClick={onAddTransponder}
           type="button"
         >

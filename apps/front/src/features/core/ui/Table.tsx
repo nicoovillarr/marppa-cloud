@@ -73,8 +73,8 @@ const RowInner = <T, K>(
 
   return (
     <tr
-      className={`cursor-pointer ${rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"
-        } hover:bg-gray-100`}
+      className={`cursor-pointer ${rowIndex % 2 === 0 ? "bg-surface-raised" : "bg-surface"
+        } hover:bg-amber-tint/60`}
     >
       {Object.keys(columnMapping).map((key) => {
         const col = columnMapping[key];
@@ -83,7 +83,7 @@ const RowInner = <T, K>(
         return (
           <td
             key={key}
-            className="border border-gray-300 px-4 py-2"
+            className="border border-border px-4 py-2"
             onClick={(e) => {
               if (!rowHref) handleClick(e, key, rowData);
             }}
@@ -105,7 +105,7 @@ const RowInner = <T, K>(
               {canCopy && (
                 <Tooltip tooltip="Copy to clipboard">
                   <button
-                    className="opacity-0 group-hover:opacity-100 absolute right-0 top-1/2 -translate-y-1/2 rounded-full cursor-pointer transition-all hover:bg-gray-200 p-2"
+                    className="opacity-0 group-hover:opacity-100 absolute right-0 top-1/2 -translate-y-1/2 rounded-full cursor-pointer transition-all hover:bg-surface-sunken p-2"
                     onClick={(e) => copy(e, rowData[key])}
                   >
                     <LuClipboard />
@@ -479,11 +479,11 @@ function TableInner<T, K>(
 
         {showHeader && (
           <thead>
-            <tr className="bg-blue-100">
+            <tr className="bg-surface-sunken">
               {Object.entries(actualColumns).map(([key, col]) => (
                 <th
                   key={key}
-                  className="border border-gray-300 px-4 py-2 text-left"
+                  className="border border-border px-4 py-2 text-left font-mono text-xs uppercase tracking-wide text-ink-muted"
                 >
                   {col.label ?? key}
                 </th>

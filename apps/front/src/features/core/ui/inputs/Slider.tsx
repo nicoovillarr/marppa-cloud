@@ -59,14 +59,14 @@ export function Slider({
         onTouchEnd={handleMouseUp}
         disabled={disabled}
       >
-        <RadixSlider.Track className="bg-gray-300 relative grow rounded-full h-1">
+        <RadixSlider.Track className="bg-surface-sunken relative grow rounded-full h-1">
           <RadixSlider.Range
-            className={`absolute rounded-full h-full ${disabled ? "bg-blue-300" : "bg-blue-500"
+            className={`absolute rounded-full h-full ${disabled ? "bg-amber/40" : "bg-amber"
               }`}
           />
         </RadixSlider.Track>
         <RadixSlider.Thumb
-          className={`block w-5 h-5 bg-white border-2 rounded-full shadow outline-none ${disabled ? "border-blue-300" : "border-blue-500"
+          className={`block w-5 h-5 bg-surface-raised border-2 rounded-full shadow outline-none ${disabled ? "border-amber/40" : "border-amber"
             }`}
           style={{
             cursor: disabled ? "not-allowed" : cursor,
@@ -74,7 +74,7 @@ export function Slider({
         />
       </RadixSlider.Root>
 
-      <span className="w-16 text-end text-sm text-gray-700 whitespace-nowrap shrink-0">
+      <span className="w-16 text-end text-sm text-ink-muted whitespace-nowrap shrink-0">
         {valueText ? valueText(internalValue) : internalValue[0]}
       </span>
     </div>
