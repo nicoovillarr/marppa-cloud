@@ -47,6 +47,11 @@ export class StubNucleusService extends NucleusService {
     return this.running.has(id);
   }
 
+  public async getRunningAtoms(): Promise<string[]> {
+    console.log('[STUB] getRunningAtoms');
+    return [...this.running];
+  }
+
   public async reconcileAtoms(expectedIds: string[]): Promise<string[]> {
     const orphans = [...this.running].filter((id) => !expectedIds.includes(id));
     orphans.forEach((id) => this.running.delete(id));

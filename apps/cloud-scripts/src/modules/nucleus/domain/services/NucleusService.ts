@@ -41,6 +41,8 @@ export abstract class NucleusService {
 
   abstract isAtomRunning(id: string): Promise<boolean>;
 
+  abstract getRunningAtoms(): Promise<string[]>;
+
   abstract reconcileAtoms(expectedIds: string[]): Promise<string[]>;
 
   /**

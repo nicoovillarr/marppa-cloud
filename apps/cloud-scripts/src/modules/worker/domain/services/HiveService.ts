@@ -55,7 +55,9 @@ export abstract class HiveService {
   abstract getWorkerVnet(vmName: string, bridgeName?: string | null): Promise<string | null>;
   
   abstract getDefinedWorkers(): Promise<string[]>;
-  
+
+  abstract getRunningWorkers(): Promise<string[]>;
+
 
   abstract isGuestAgentReachable(vmName: string): Promise<boolean>;
 

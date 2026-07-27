@@ -155,6 +155,14 @@ export class DockerNucleusService extends NucleusService {
     return output.trim().length > 0;
   }
 
+  public async getRunningAtoms(): Promise<string[]> {
+    const output = await this.docker([
+      'ps', '--filter', `label=${ATOM_LABEL}`, '--format', '{{.Names}}',
+    ]);
+
+    return output.split('\n').map((line) => line.trim()).filter(Boolean);
+  }
+
   public async reconcileAtoms(expectedIds: string[]): Promise<string[]> {
     const output = await this.docker([
       'ps', '--all', '--filter', `label=${ATOM_LABEL}`, '--format', '{{.Names}}',

@@ -924,6 +924,16 @@ local-hostname: ${name}
     return vmNames;
   }
 
+  public async getRunningWorkers(): Promise<string[]> {
+    const response = await Command.runCommand('sudo', [
+      'virsh',
+      'list',
+      '--name',
+    ]);
+
+    return response.split('\n').map((line) => line.trim()).filter(Boolean);
+  }
+
   public async reconcileWorkers(expectedVmNames: string[]): Promise<string[]> {
     const expected = new Set(expectedVmNames);
     const workers = await this.getDefinedWorkers();

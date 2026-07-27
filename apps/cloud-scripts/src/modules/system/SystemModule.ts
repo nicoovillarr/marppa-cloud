@@ -10,6 +10,7 @@ import { SystemResetHardProcessor } from './application/SystemResetHardProcessor
 import { DeleteProcessor } from '@/system/application/DeleteProcessor';
 import { HostPreflightService } from './infrastructure/services/HostPreflightService';
 import { IPChecker } from './application/IPChecker';
+import { DriftReconciler } from './application/DriftReconciler';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { IPChecker } from './application/IPChecker';
     NucleusModule,
     OrbitModule,
   ],
-  providers: [DeleteProcessor, HostPreflightService, IPChecker],
+  providers: [DeleteProcessor, HostPreflightService, IPChecker, DriftReconciler],
   processors: [SystemResetProcessor, SystemResetHardProcessor],
   exports: [HostPreflightService],
 })
