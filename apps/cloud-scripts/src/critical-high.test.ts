@@ -7,6 +7,8 @@ import { LinuxOrbitService } from '@/orbit/infrastructure/services/LinuxOrbitSer
 import { LinuxHiveService } from '@/worker/infrastructure/LinuxHiveService';
 import { WorkerStartProcessor } from '@/worker/application/WorkerStartProcessor';
 import { Command } from '@/libs/Command';
+import { AppContainer } from '@/libs/Container';
+import { IPChecker } from '@/system/application/IPChecker';
 
 test('EventWorker marks aborted events as failed', async () => {
   let markFailedCalls = 0;
@@ -316,4 +318,20 @@ test('Command timeout does not fire for a command that finishes in time', async 
   );
 
   assert.equal(output, 'fast');
+});
+
+
+test('IPChecker constructor params all resolve to injectable tokens', () => {
+  const tokens: unknown[] = (AppContainer as any)._resolveParamTokens(IPChecker);
+
+  assert.ok(tokens.length > 0, 'IPChecker must declare its dependencies');
+
+  // A primitive here means the container would look for a provider registered
+  // under `Number`/`String` and blow up while building the graph.
+  for (const token of tokens) {
+    assert.ok(
+      token !== Number && token !== String && token !== Boolean,
+      `IPChecker has a primitive constructor param (${String(token)}); it cannot be injected`,
+    );
+  }
 });

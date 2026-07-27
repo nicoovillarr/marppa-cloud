@@ -252,10 +252,17 @@ cache file, so one portal's credentials or failures cannot affect another's:
   value it pushed. This is what makes repeated syncs cheap: with an unchanged IP
   ddclient skips the provider call entirely.
 
-The app runs `sudo ddclient -file <conf>`; the config carries `daemon=0`, so it updates
-once and exits. A `PORTAL_UPDATE` event carrying the property `FORCE_SYNC=true` adds
-`-force`, which bypasses the cache and pushes the record even when nothing changed —
-use it to repair a record edited out-of-band at the provider.
+The app runs `sudo ddclient -file <conf>`, which updates once and exits. A
+`PORTAL_UPDATE` event carrying the property `FORCE_SYNC=true` adds `-force`, which
+bypasses the cache and pushes the record even when nothing changed — use it to repair a
+record edited out-of-band at the provider.
+
+Two things trigger a sync: the `PORTAL_CREATE`/`PORTAL_UPDATE` processors, and
+`IPChecker`, which polls the host's public IP every `IP_CHECK_INTERVAL_MS` and re-syncs
+every ACTIVE portal whose stored `lastPublicIP` no longer matches. Without that poller a
+portal's record only ever moves when someone edits the portal, so it is what makes the
+DNS actually dynamic. The `lastPublicIP` filter is also what keeps the poll cheap: one
+IP lookup per cycle instead of one ddclient run per portal.
 
 **Only Cloudflare is supported.** `PortalType` still carries a `DYNU` value in the
 database enum, but `SUPPORTED_PORTAL_TYPES` (in `@marppa-cloud/api-types`) is the app's
@@ -348,6 +355,7 @@ process refuses to boot with a list of what is wrong.
 | `NFTABLES_RESET_SOURCE` | yes | Path to the pristine base ruleset (`/etc/nftables.base.conf` above). Restored by `SYSTEM_RESET`. |
 | `ALLOWED_IMAGE_DOMAINS` | yes | Comma-separated allowlist of hosts images may be downloaded from, e.g. `cloud-images.ubuntu.com`. |
 | `WORKER_BOOT_TIMEOUT_MS` | no | How long to wait for a VM's first boot before declaring it unreachable. Default `180000`. |
+| `IP_CHECK_INTERVAL_MS` | no | How often to re-check the host's public IP and re-sync portal DNS. Default `600000`. |
 | `LOG_DIR` | no | Log directory. Omit to log only to stdout. |
 | `MAX_LOG_SIZE`, `LOG_BACKUP_COUNT` | no | Log rotation. Defaults: 10 MB, 5 files. |
 | `USE_STUBS` | no | `true` replaces every host service with a no-op stub **and skips the preflight**. Development only — never set it on the host. |
