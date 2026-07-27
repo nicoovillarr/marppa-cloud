@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useNodeStore } from "./node.store";
 import { nodeApi } from "../api/node.api";
 import { zoneApi } from "../api/zone.api";
-import { NodeWithFibers } from "../api/node.api.types";
+import { CreateNodeDto, NodeWithFibers } from "../api/node.api.types";
 
 export const useNode = () => {
     const {
@@ -59,12 +59,12 @@ export const useNode = () => {
         }
     }, [setIsLoading, setError, addNode]);
 
-    const createNode = useCallback(async (zoneId: string, workerId: string) => {
+    const createNode = useCallback(async (zoneId: string, target: CreateNodeDto) => {
         setIsLoading(true);
         setError(null);
 
         try {
-            return await nodeApi.create(zoneId, { workerId });
+            return await nodeApi.create(zoneId, target);
         } catch (error) {
             setError(error);
             return null;

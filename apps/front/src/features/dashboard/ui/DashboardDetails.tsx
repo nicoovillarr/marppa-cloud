@@ -1,8 +1,11 @@
 "use client";
 
+import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { Card } from "@/core/ui/Card";
 import { WorkerResponseDto } from "@/hive/api/worker.api.types";
 import { useWorker } from "@/hive/models/use-worker";
+import { AtomWithRelationsResponseDto } from "@/nucleus/api/atom.api.types";
+import { useAtom } from "@/nucleus/models/use-atom";
 import { useZone } from "@/mesh/models/use-zone";
 import { usePortal } from "@/orbit/models/use-portal";
 import Link from "next/link";
@@ -12,6 +15,7 @@ import {
   LuChartColumn,
   LuContainer,
   LuCreditCard,
+  LuBox,
   LuNetwork,
   LuServer,
 } from "react-icons/lu";
@@ -21,10 +25,12 @@ import { useUser } from "src/features/users/model/useUser";
 
 const Overview = ({
   workers,
+  atoms,
   zones,
   portals,
 }: {
   workers: WorkerResponseDto[];
+  atoms: AtomWithRelationsResponseDto[];
   zones: ZoneWithNodes[];
   portals: PortalWithTranspondersResponseDto[];
 }) => {
@@ -118,6 +124,38 @@ const Overview = ({
             className="flex text-sm items-center gap-2 mt-4 border border-gray-200 rounded justify-center p-2 text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
           >
             View Mesh
+          </Link>
+        </Card>
+        <Card>
+          <header className="flex items-center gap-2 mb-4">
+            <h3 className="font-medium w-full line-clamp-1">Atoms</h3>
+            <LuBox className="h-4 w-4 shrink-0" />
+          </header>
+
+          <h4 className="font-bold text-3xl">{atoms?.length || 0}</h4>
+          <p className="text-sm text-gray-500">Containers in your zones</p>
+
+          <ul className="mt-4">
+            <li className="flex items-center">
+              <span className="w-full">Running</span>{" "}
+              <span className="text-gray-600">
+                {atoms?.filter((atom) => atom.status === ResourceStatus.ACTIVE)
+                  .length || 0}
+              </span>
+            </li>
+            <li className="flex items-center">
+              <span className="w-full">Unassigned</span>{" "}
+              <span className="text-gray-600">
+                {atoms?.filter((atom) => !atom.node).length || 0}
+              </span>
+            </li>
+          </ul>
+
+          <Link
+            href="/dashboard/nucleus/atoms"
+            className="flex text-sm items-center gap-2 mt-4 border border-gray-200 rounded justify-center p-2 text-gray-700 hover:text-black hover:bg-gray-100 transition-colors"
+          >
+            View Nucleus
           </Link>
         </Card>
         <Card className="md:col-span-2 lg:col-span-1">
@@ -308,10 +346,16 @@ export function DashboardDetails() {
     fetchPortals,
   } = usePortal();
 
+  const {
+    atoms,
+    fetchAtoms,
+  } = useAtom();
+
   useEffect(() => {
     fetchWorkers();
     fetchZones();
     fetchPortals();
+    fetchAtoms();
   }, []);
 
   return (
@@ -327,6 +371,7 @@ export function DashboardDetails() {
 
       <Overview
         workers={workers}
+        atoms={atoms}
         zones={zones}
         portals={portals}
       />
