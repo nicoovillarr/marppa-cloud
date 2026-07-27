@@ -40,7 +40,7 @@ export class ZoneApiService {
     const list = await this.zoneService.findByOwnerId(ownerId);
     return list.map(data => {
       const zone = plainToInstance(ZoneResponseModel, data.zone, { excludeExtraneousValues: true });
-      const nodes = data.nodes.map(node => plainToInstance(NodeResponseModel, node, { excludeExtraneousValues: true }));
+      const nodes = data.nodes.map(data => plainToInstance(NodeResponseModel, data.node, { excludeExtraneousValues: true }));
 
       return mergeDto(ZoneWithNodesResponseModel, zone, { nodes })
     });
