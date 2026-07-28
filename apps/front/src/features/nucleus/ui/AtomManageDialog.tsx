@@ -1,20 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { Button } from "@/core/ui/Button";
 import { InlineCode } from "@/core/ui/InlineCode";
-import { closeCurrentDialog, useDialog } from "@/core/ui/DialogProvider";
+import { closeCurrentDialog } from "@/core/ui/DialogProvider";
 import { AtomWithRelationsResponseDto } from "../api/atom.api.types";
 import { useAtom } from "../models/use-atom";
 import { AtomEnvVarsSection } from "./AtomEnvVarsSection";
-
-const AtomConsole = dynamic(
-  () => import("./AtomConsole").then((mod) => mod.AtomConsole),
-  { ssr: false },
-);
 
 interface AtomManageDialogProps {
   atom: AtomWithRelationsResponseDto;
@@ -35,7 +30,7 @@ export const imageRef = (image: AtomWithRelationsResponseDto["image"]) =>
 
 export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
   const { startAtom, terminateAtom, deleteAtom } = useAtom();
-  const { showDialog } = useDialog();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   const isOff = atom.status === ResourceStatus.INACTIVE;
@@ -110,12 +105,10 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
             text="Console"
             style="secondary"
             disabled={!isRunning}
-            onClick={() =>
-              showDialog({
-                title: `Console — ${atom.name}`,
-                content: <AtomConsole atomId={atom.id} />,
-              })
-            }
+            onClick={() => {
+              closeCurrentDialog();
+              router.push(`/dashboard/nucleus/atoms/${atom.id}/console`);
+            }}
           />
         </div>
 
