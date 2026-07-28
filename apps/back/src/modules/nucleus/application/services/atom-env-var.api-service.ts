@@ -8,6 +8,7 @@ import {
 import { AtomEnvVarModel } from '@/nucleus/domain/models/atom-env-var.model';
 import { AtomEntity } from '@/nucleus/domain/entities/atom.entity';
 import { CreateAtomEnvVarDto } from '@/nucleus/presentation/dtos/create-atom-env-var.dto';
+import { MAX_ATOM_ENV_VARS } from '@/nucleus/presentation/dtos/create-atom.dto';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import { BadRequestError } from '@/shared/domain/errors/bad-request.error';
@@ -41,6 +42,14 @@ export class AtomEnvVarApiService {
 
     if (!data.value.trim()) {
       await this.assertNotRequired(atom, data.key);
+    }
+
+    const existing = await this.repository.findByAtomId(atomId);
+    const isNewKey = !existing.some((envVar) => envVar.key === data.key);
+    if (isNewKey && existing.length >= MAX_ATOM_ENV_VARS) {
+      throw new BadRequestError(
+        `An atom cannot have more than ${MAX_ATOM_ENV_VARS} env vars.`,
+      );
     }
 
     return this.repository.upsert(atomId, data.key, data.value, user!.userId);

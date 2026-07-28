@@ -11,6 +11,8 @@ import {
 } from 'class-validator';
 import { CreateAtomEnvVarDto } from './create-atom-env-var.dto';
 
+export const MAX_ATOM_ENV_VARS = 10;
+
 export class CreateAtomDto {
   // The name becomes the container's network alias, which Docker's embedded DNS
   // resolves for the other atoms in the zone; it has to be a valid DNS label.
@@ -31,7 +33,7 @@ export class CreateAtomDto {
 
   @IsArray()
   @IsOptional()
-  @ArrayMaxSize(50)
+  @ArrayMaxSize(MAX_ATOM_ENV_VARS)
   @ValidateNested({ each: true })
   @Type(() => CreateAtomEnvVarDto)
   envVars?: CreateAtomEnvVarDto[];
