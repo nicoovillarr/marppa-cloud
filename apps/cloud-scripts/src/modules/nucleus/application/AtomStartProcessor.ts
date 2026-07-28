@@ -92,6 +92,18 @@ export class AtomStartProcessor implements IEventProcessor {
         );
       }
 
+      const missingEnvVars = atom.image.requiredEnvVars.filter(
+        (key) => !atom!.envVars.find((envVar) => envVar.key === key)?.value.trim(),
+      );
+
+      if (missingEnvVars.length) {
+        throw new AbortError(
+          `Atom ${atom.id} is missing required env vars for image "${atom.image.name}": ` +
+          `${missingEnvVars.join(', ')}`,
+          EventType.ATOM_START_FAILED,
+        );
+      }
+
       await updateAtomStatus(STATES.work);
 
       await this.nucleusService.startAtom(

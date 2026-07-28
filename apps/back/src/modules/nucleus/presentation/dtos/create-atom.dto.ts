@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsNumber,
   IsOptional,
@@ -30,6 +31,7 @@ export class CreateAtomDto {
 
   @IsArray()
   @IsOptional()
+  @ArrayMaxSize(50)
   @ValidateNested({ each: true })
   @Type(() => CreateAtomEnvVarDto)
   envVars?: CreateAtomEnvVarDto[];

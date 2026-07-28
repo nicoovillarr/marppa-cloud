@@ -69,7 +69,7 @@ export class AtomApiService {
    * The node travels as PARENT so a still-provisioning one defers the job.
    */
   public async start(id: string): Promise<void> {
-    const { node } = await this.service.findByIdWithRelations(id);
+    const { node, image } = await this.service.findByIdWithRelations(id);
 
     if (node == null) {
       throw new Error(
@@ -80,6 +80,17 @@ export class AtomApiService {
     if (node.status !== ResourceStatus.ACTIVE) {
       throw new Error(
         `Atom node must be ACTIVE to start the atom (is ${node.status})`,
+      );
+    }
+
+    const envVars = await this.envVarService.findByAtomId(id);
+    const missing = image.requiredEnvVars.filter(
+      (key) => !envVars.find((envVar) => envVar.key === key)?.value.trim(),
+    );
+
+    if (missing.length) {
+      throw new Error(
+        `Atom is missing required env vars for image "${image.name}": ${missing.join(', ')}`,
       );
     }
 

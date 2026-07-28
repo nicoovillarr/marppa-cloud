@@ -21,6 +21,7 @@ export function CreateAtomForm() {
   const [envVars, setEnvVars] = useState<CreateAtomEnvVarDto[]>([]);
   const [envKey, setEnvKey] = useState("");
   const [envValue, setEnvValue] = useState("");
+  const [requiredValues, setRequiredValues] = useState<Record<string, string>>({});
 
   const { showDialog } = useDialog();
 
@@ -36,13 +37,28 @@ export function CreateAtomForm() {
     },
   });
 
-  const { handleSubmit, setError, control } = methods;
+  const { handleSubmit, setError, control, watch } = methods;
+
+  const atomImageId = watch("atomImageId");
+  const selectedImage = images.find((img) => String(img.id) === String(atomImageId));
+  const requiredKeys = selectedImage?.requiredEnvVars ?? [];
+
+  useEffect(() => {
+    setRequiredValues((prev) =>
+      Object.fromEntries(requiredKeys.map((key) => [key, prev[key] ?? ""])),
+    );
+  }, [selectedImage?.id]);
 
   const addEnvVar = () => {
     const key = envKey.trim();
 
     if (!ENV_KEY.test(key)) {
       toast.error("The name must look like POSTGRES_PASSWORD");
+      return;
+    }
+
+    if (requiredKeys.includes(key)) {
+      toast.error(`${key} is required by this image — set it above`);
       return;
     }
 
@@ -88,7 +104,19 @@ export function CreateAtomForm() {
       return;
     }
 
-    const newAtom = await createAtom(atomName, Number(atomImageId), envVars);
+    const missingRequired = requiredKeys.filter((key) => !requiredValues[key]?.trim());
+    if (missingRequired.length > 0) {
+      toast.error(`Set a value for: ${missingRequired.join(", ")}`);
+      await buttonRef.current?.setIsLoading(false);
+      return;
+    }
+
+    const allEnvVars = [
+      ...requiredKeys.map((key) => ({ key, value: requiredValues[key] })),
+      ...envVars,
+    ];
+
+    const newAtom = await createAtom(atomName, Number(atomImageId), allEnvVars);
 
     await buttonRef.current?.setIsLoading(false);
 
@@ -153,6 +181,28 @@ export function CreateAtomForm() {
           in the repo, not something you can do from here.
         </p>
 
+        {requiredKeys.length > 0 && (
+          <section className="space-y-2">
+            <h3 className="font-semibold text-sm">
+              Required by <InlineCode code={selectedImage!.name} />
+            </h3>
+
+            {requiredKeys.map((key) => (
+              <div key={key} className="flex gap-2 items-center">
+                <span className="flex-1 text-sm font-mono truncate">{key}</span>
+                <input
+                  className="flex-1 text-sm border border-border dark: rounded px-2 py-1 bg-transparent font-mono"
+                  placeholder="value"
+                  value={requiredValues[key] ?? ""}
+                  onChange={(event) =>
+                    setRequiredValues({ ...requiredValues, [key]: event.target.value })
+                  }
+                />
+              </div>
+            ))}
+          </section>
+        )}
+
         <section className="space-y-2">
           <h3 className="font-semibold text-sm">Environment variables</h3>
 
@@ -202,12 +252,7 @@ export function CreateAtomForm() {
           </div>
 
           <p className="text-xs text-ink-muted">
-            <InlineCode code="postgresql-17" /> needs{" "}
-            <InlineCode code="POSTGRES_PASSWORD" />;{" "}
-            <InlineCode code="wg-easy-14" /> needs{" "}
-            <InlineCode code="WG_HOST" /> and{" "}
-            <InlineCode code="PASSWORD_HASH" />. You can also add them later,
-            while the atom is stopped.
+            You can also add or change these later, while the atom is stopped.
           </p>
         </section>
 

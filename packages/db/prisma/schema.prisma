@@ -319,9 +319,10 @@ model AtomImage {
   digest       String?
   architecture String  @default("amd64")
 
-  capabilities String[] @default([])
-  sysctls      Json?
-  command      String[] @default([])
+  capabilities    String[] @default([])
+  sysctls         Json?
+  command         String[] @default([])
+  requiredEnvVars String[] @default([])
 
   atoms Atom[]
 }

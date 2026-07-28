@@ -6,6 +6,7 @@ interface AtomImageOptionalProps {
   description?: string;
   digest?: string;
   capabilities?: string[];
+  requiredEnvVars?: string[];
 }
 
 export class AtomImageEntity extends PatchableEntity {
@@ -15,6 +16,7 @@ export class AtomImageEntity extends PatchableEntity {
   public readonly description?: string;
   public readonly digest?: string;
   public readonly capabilities: string[];
+  public readonly requiredEnvVars: string[];
 
   constructor(
     public readonly name: string,
@@ -30,6 +32,7 @@ export class AtomImageEntity extends PatchableEntity {
     this.description = optionals.description ?? undefined;
     this.digest = optionals.digest ?? undefined;
     this.capabilities = optionals.capabilities ?? [];
+    this.requiredEnvVars = optionals.requiredEnvVars ?? [];
   }
 
   toObject(): Record<string, any> {
@@ -43,6 +46,7 @@ export class AtomImageEntity extends PatchableEntity {
       digest: this.digest,
       architecture: this.architecture,
       capabilities: this.capabilities,
+      requiredEnvVars: this.requiredEnvVars,
     };
   }
 
@@ -58,6 +62,7 @@ export class AtomImageEntity extends PatchableEntity {
         description: data.description,
         digest: data.digest,
         capabilities: data.capabilities,
+        requiredEnvVars: data.requiredEnvVars,
       },
     );
   }

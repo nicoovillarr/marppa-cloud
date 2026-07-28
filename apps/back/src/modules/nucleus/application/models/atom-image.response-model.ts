@@ -10,4 +10,5 @@ export class AtomImageResponseModel {
   @Expose() digest: string | null;
   @Expose() architecture: string;
   @Expose() capabilities: string[];
+  @Expose() requiredEnvVars: string[];
 }

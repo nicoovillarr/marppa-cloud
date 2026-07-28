@@ -12,6 +12,7 @@ import { UpdateAtomDto } from '@/nucleus/presentation/dtos/update-atom.dto';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
+import { BadRequestError } from '@/shared/domain/errors/bad-request.error';
 import { CompanyService } from '@/company/domain/services/company.service';
 import { AtomImageEntity } from '../entities/atom-image.entity';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
@@ -79,6 +80,7 @@ export class AtomService {
 
     const image = await this.atomImageService.findById(data.imageId);
     await this.assertImageAllowed(image);
+    this.assertRequiredEnvVars(image, data.envVars);
 
     const entity = new AtomEntity(
       data.name,
@@ -185,6 +187,23 @@ export class AtomService {
       throw new ForbiddenError(
         `Image "${image.name}" requests host capabilities (${rootOnly.join(', ')}) ` +
         'and can only be used by the root company.',
+      );
+    }
+  }
+
+  private assertRequiredEnvVars(
+    image: AtomImageEntity,
+    envVars?: { key: string; value: string }[],
+  ): void {
+    const provided = new Map((envVars ?? []).map((envVar) => [envVar.key, envVar.value]));
+
+    const missing = image.requiredEnvVars.filter(
+      (key) => !provided.get(key)?.trim(),
+    );
+
+    if (missing.length) {
+      throw new BadRequestError(
+        `Image "${image.name}" requires ${missing.join(', ')} to be set.`,
       );
     }
   }

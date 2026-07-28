@@ -8,4 +8,5 @@ export type AtomImageResponseDto = {
     digest: string | null;
     architecture: string;
     capabilities: string[];
+    requiredEnvVars: string[];
 }

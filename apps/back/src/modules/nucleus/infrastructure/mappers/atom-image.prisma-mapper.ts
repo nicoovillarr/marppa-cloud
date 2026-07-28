@@ -14,6 +14,7 @@ export class AtomImagePrismaMapper {
         description: raw.description ?? undefined,
         digest: raw.digest ?? undefined,
         capabilities: raw.capabilities,
+        requiredEnvVars: raw.requiredEnvVars,
       },
     );
   }
