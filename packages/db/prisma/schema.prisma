@@ -321,6 +321,7 @@ model AtomImage {
 
   capabilities String[] @default([])
   sysctls      Json?
+  command      String[] @default([])
 
   atoms Atom[]
 }

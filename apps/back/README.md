@@ -128,6 +128,13 @@ Three consequences shape the module:
   ruleset). `-p` / `--publish` must never appear in a `docker run`. See
   `apps/cloud-scripts/deploy/README.md` for the daemon config and the checks that
   enforce it.
+- **`AtomImage.command` overrides the image's default CMD.** Left empty for
+  images whose own entrypoint is already a long-running daemon (postgres,
+  redis, wg-easy). Base OS images like `ubuntu` default to a bare shell that
+  exits the instant it hits EOF on an unattached stdin — `--restart
+  unless-stopped` then just respawns it forever, and there is never a running
+  container for `docker exec` to reach. The seeded `ubuntu-24.04` row sets
+  `command: ['sleep', 'infinity']` for exactly this reason.
 - **The container is rebuilt from the row on every `ATOM_START`.** That is why
   there is no `ATOM_UPDATE`: a rename or an env change is a plain DB write that
   applies on the next start, and both are refused while the atom is not

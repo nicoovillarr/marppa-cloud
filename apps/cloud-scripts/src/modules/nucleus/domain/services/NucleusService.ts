@@ -4,7 +4,14 @@ export const NUCLEUS_SERVICE_TOKEN = Symbol('NUCLEUS_SERVICE');
 
 export type AtomImageSource = Pick<
   AtomImage,
-  'registry' | 'repository' | 'tag' | 'digest' | 'architecture' | 'capabilities' | 'sysctls'
+  | 'registry'
+  | 'repository'
+  | 'tag'
+  | 'digest'
+  | 'architecture'
+  | 'capabilities'
+  | 'sysctls'
+  | 'command'
 >;
 
 /**

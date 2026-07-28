@@ -187,6 +187,13 @@ Both `HostPreflightService` (at startup and before every reset) and
 shows up in the live ruleset, so a daemon that silently regains its firewall
 management is caught before it can clobber anything.
 
+`AtomImage.command`, when set, is appended as trailing positional args after
+the image ref in `startAtom` — see `apps/back/README.md`'s Nucleus section for
+why (base OS images with no long-running foreground process need it, service
+images like postgres/redis/wg-easy leave it empty). Each token goes through
+`SAFE_COMMAND_TOKEN` before reaching `docker run`, same as every other
+interpolated value in this file.
+
 `cloud-script` reaches Docker through `sudo docker` (see the sudoers grant), not
 through membership of the `docker` group, so every call stays inside the same
 auditable allowlist as `virsh` and `nft`.

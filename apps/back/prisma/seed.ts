@@ -251,6 +251,18 @@ const createAtomImages = async () => {
     },
 
     {
+      name: 'ubuntu-24.04',
+      description: 'Ubuntu 24.04 LTS (docker image)',
+      registry: 'docker.io',
+      repository: 'ubuntu',
+      tag: '24.04',
+      architecture: 'amd64',
+      capabilities: [],
+      sysctls: undefined,
+      command: ['sleep', 'infinity'],
+    },
+
+    {
       // NET_ADMIN is tenant-safe: it only reconfigures the container's own
       // network namespace, and without NET_RAW (dropped by the runtime baseline)
       // it cannot capture packets or forge ARP on the zone bridge. The image also

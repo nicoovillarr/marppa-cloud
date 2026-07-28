@@ -24,6 +24,7 @@ const SAFE_CAPABILITY = /^[A-Z_]+$/;
 const SAFE_SYSCTL_KEY = /^[a-z0-9._]+$/;
 const SAFE_SYSCTL_VALUE = /^[A-Za-z0-9._\-]+$/;
 const SAFE_LIMIT = /^[0-9]+(\.[0-9]+)?[a-z]?$/;
+const SAFE_COMMAND_TOKEN = /^[^\r\n\0]+$/;
 
 /**
  * What is added back after dropping everything: the set an image needs to run
@@ -120,6 +121,7 @@ export class DockerNucleusService extends NucleusService {
       ...this.capabilityArgs(image),
       ...this.sysctlArgs(image),
       this.imageRef(image),
+      ...this.commandArgs(image),
     ];
 
     console.log(`Starting atom ${atomId} on ${zoneId} at ${net.ipAddress}`);
@@ -326,6 +328,12 @@ export class DockerNucleusService extends NucleusService {
         String(value), SAFE_SYSCTL_VALUE, 'sysctl value',
       )}`,
     ]);
+  }
+
+  private commandArgs(image: AtomImageSource): string[] {
+    return (image.command ?? []).map((token) =>
+      this.assertMatches(token, SAFE_COMMAND_TOKEN, 'command token'),
+    );
   }
 
   private assertAtomId(id: string): string {
