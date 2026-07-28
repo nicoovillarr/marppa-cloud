@@ -12,6 +12,9 @@ import React, {
 } from "react";
 import { toast } from "sonner";
 
+const RECONNECT_BASE_DELAY_MS = 1000;
+const RECONNECT_MAX_DELAY_MS = 30000;
+
 interface IBroadcastResponse {
   type: string;
   channel?: string;
@@ -114,17 +117,19 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const scheduleReconnect = useCallback(() => {
     if (reconnectRef.current || socketRef.current) return;
 
-    if (reconnectAttemptsRef.current >= 2) {
-      console.error("[WebSocket]: Max reconnect attempts reached. Giving up.");
-      return;
-    }
+    const delay = Math.min(
+      RECONNECT_BASE_DELAY_MS * 2 ** reconnectAttemptsRef.current,
+      RECONNECT_MAX_DELAY_MS,
+    );
 
-    console.log(`[WebSocket]: Reconnecting in 5s...`);
+    console.log(
+      `[WebSocket]: Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1})...`,
+    );
     reconnectRef.current = setTimeout(() => {
       reconnectRef.current = null;
       reconnectAttemptsRef.current++;
       connect();
-    }, 5000);
+    }, delay);
   }, [connect]);
 
   const abortReconnect = useCallback(() => {
