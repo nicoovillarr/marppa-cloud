@@ -5,6 +5,7 @@ import { RedisService } from './infrastructure/services/RedisService';
 import { WebSocketServer } from './infrastructure/http/WebSocketServer';
 import { ResourceQueueService } from './infrastructure/services/ResourceQueueService';
 import { ParentStateService } from './infrastructure/services/ParentStateService';
+import { DockerExecService } from './infrastructure/services/DockerExecService';
 
 @Module({
   providers: [
@@ -14,6 +15,7 @@ import { ParentStateService } from './infrastructure/services/ParentStateService
     WebSocketServer,
     ResourceQueueService,
     ParentStateService,
+    DockerExecService,
   ],
   exports: [
     PrismaService,
@@ -22,6 +24,7 @@ import { ParentStateService } from './infrastructure/services/ParentStateService
     WebSocketServer,
     ResourceQueueService,
     ParentStateService,
+    DockerExecService,
   ],
 })
 export class SharedModule {}

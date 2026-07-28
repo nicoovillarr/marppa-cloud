@@ -24,6 +24,7 @@ interface IWebSocketContext {
   sendMessage: (type: string, data?: any) => void;
   subscribe: (channel: string, callback: MessageHandler) => () => void;
   unsubscribe: (channel: string) => void;
+  subscribeExec: (sessionId: string, callback: MessageHandler) => () => void;
   connected: boolean;
 }
 
@@ -36,6 +37,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const [connected, setConnected] = useState(false);
   const queueRef = useRef<{ type: string; data?: any }[]>([]);
   const subsRef = useRef<Record<string, Set<MessageHandler>>>({});
+  const execSubsRef = useRef<Record<string, MessageHandler>>({});
   const reconnectAttemptsRef = useRef(0);
   const pingRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectRef = useRef<NodeJS.Timeout | null>(null);
@@ -222,6 +224,14 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     sendMessage("UNSUBSCRIBE_CHANNEL", { channel });
   }, []);
 
+  const subscribeExec = useCallback((sessionId: string, cb: MessageHandler) => {
+    execSubsRef.current[sessionId] = cb;
+
+    return () => {
+      delete execSubsRef.current[sessionId];
+    };
+  }, []);
+
   const handleMessage = (message: IBroadcastResponse) => {
     console.log(`[WebSocket]: Received WS message: ${JSON.stringify(message)}`);
 
@@ -237,6 +247,13 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         console.debug("[WebSocket]: PONG received");
         return;
       default:
+        if (message.type.startsWith("EXEC_")) {
+          const sessionId = message.data?.sessionId as string | undefined;
+          const handler = sessionId ? execSubsRef.current[sessionId] : undefined;
+          handler?.(message);
+          return;
+        }
+
         const handlers = message.channel
           ? subsRef.current[message.channel]
           : undefined;
@@ -277,7 +294,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     authenticate();
   }, [isLoading, accessToken, connected, authenticate]);
 
-  const value = { sendMessage, subscribe, unsubscribe, connected };
+  const value = { sendMessage, subscribe, unsubscribe, subscribeExec, connected };
 
   return (
     <WebSocketContext.Provider value={value}>

@@ -5,10 +5,11 @@ import { toast } from "sonner";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { Button } from "@/core/ui/Button";
 import { InlineCode } from "@/core/ui/InlineCode";
-import { closeCurrentDialog } from "@/core/ui/DialogProvider";
+import { closeCurrentDialog, useDialog } from "@/core/ui/DialogProvider";
 import { AtomWithRelationsResponseDto } from "../api/atom.api.types";
 import { useAtom } from "../models/use-atom";
 import { AtomEnvVarsSection } from "./AtomEnvVarsSection";
+import { AtomConsole } from "./AtomConsole";
 
 interface AtomManageDialogProps {
   atom: AtomWithRelationsResponseDto;
@@ -29,6 +30,7 @@ export const imageRef = (image: AtomWithRelationsResponseDto["image"]) =>
 
 export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
   const { startAtom, terminateAtom, deleteAtom } = useAtom();
+  const { showDialog } = useDialog();
   const [busy, setBusy] = useState(false);
 
   const isOff = atom.status === ResourceStatus.INACTIVE;
@@ -97,6 +99,17 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
                 `Deletion of ${atom.name} queued`,
                 `Failed to delete ${atom.name}`,
               )
+            }
+          />
+          <Button
+            text="Console"
+            style="secondary"
+            disabled={!isRunning}
+            onClick={() =>
+              showDialog({
+                title: `Console — ${atom.name}`,
+                content: <AtomConsole atomId={atom.id} />,
+              })
             }
           />
         </div>

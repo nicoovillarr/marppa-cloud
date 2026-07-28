@@ -191,6 +191,21 @@ management is caught before it can clobber anything.
 through membership of the `docker` group, so every call stays inside the same
 auditable allowlist as `virsh` and `nft`.
 
+### Atom console
+
+The exec-into-atom feature (`DockerExecService`) shells out to the same
+`sudo docker exec -it` from the allowlist above — it deliberately does **not**
+talk to `/var/run/docker.sock` directly, which would need `cloud-script` in the
+`docker` group and step outside the auditable-allowlist model this doc just
+described. The real-terminal behaviour (resize, colors, job control) instead
+comes from wrapping that command in a locally-allocated pseudo-tty via
+`node-pty`, so Docker's own `-t` isatty check passes without a client terminal.
+
+`node-pty` has a native addon and needs a C++ build toolchain
+(`build-essential`, `python3`) on whatever host runs `npm ci` for
+`cloud-scripts` — the self-hosted CI runner in this pipeline, since it's the
+one executing `npm ci`.
+
 ## Secrets / `.env`
 
 Nothing goes into GitHub secrets. The host keeps its own

@@ -4,6 +4,7 @@ import { jwtVerify } from 'jose';
 import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '../services/LoggerService';
 import { PrismaService } from '../services/PrismaService';
+import { DockerExecService, type ExecSession } from '../services/DockerExecService';
 import { OnModuleDestroy, OnModuleInit } from '@/libs/Container';
 
 type ChannelMap = Record<string, Set<string>>;
@@ -15,17 +16,37 @@ type AuthedSocket = WebSocket & {
   authTimer?: NodeJS.Timeout;
 };
 
+type ExecSessionEntry = {
+  socket: AuthedSocket;
+  session: ExecSession;
+  atomId: string;
+  paused: boolean;
+  lastActivity: number;
+};
+
 const AUTH_GRACE_MS = 10_000;
+const SAFE_EXEC_SESSION_ID = /^[0-9a-f-]{36}$/i;
+const MAX_EXEC_SESSIONS_PER_SOCKET = 4;
+const MAX_EXEC_SESSIONS_PER_COMPANY = 12;
+const MAX_WS_PAYLOAD_BYTES = 64 * 1024;
+const EXEC_BACKPRESSURE_HIGH_WATERMARK = 1024 * 1024;
+const EXEC_BACKPRESSURE_LOW_WATERMARK = 256 * 1024;
+const EXEC_BACKPRESSURE_CHECK_MS = 100;
+const EXEC_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const EXEC_SWEEP_INTERVAL_MS = 30 * 1000;
 
 @Injectable()
 export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
   private readonly channels: ChannelMap = {};
   private readonly clients: ClientMap = {};
+  private readonly execSessions: Map<string, ExecSessionEntry> = new Map();
   private wss: WsServer | null = null;
+  private execSweepTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly logger: LoggerService,
     private readonly prisma: PrismaService,
+    private readonly execService: DockerExecService,
   ) {}
 
   public onModuleInit(): void {
@@ -35,6 +56,7 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       port: Number(WS_PORT),
       host: WS_HOST || '127.0.0.1',
       verifyClient: (info) => this.isOriginAllowed(info.origin),
+      maxPayload: MAX_WS_PAYLOAD_BYTES,
     });
 
     this.wss.on('connection', (socket: AuthedSocket) => {
@@ -49,6 +71,11 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log('[WebSocketServer] Client connected');
     });
+
+    this.execSweepTimer = setInterval(
+      () => void this.sweepExecSessions(),
+      EXEC_SWEEP_INTERVAL_MS,
+    );
 
     this.logger.info(`[WebSocketServer] Listening on port ${WS_PORT}`);
   }
@@ -75,6 +102,26 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       }
 
       if (!socket.userId) return;
+
+      if (type === 'EXEC_OPEN') {
+        await this.handleExecOpen(socket, data);
+        return;
+      }
+
+      if (type === 'EXEC_INPUT') {
+        this.handleExecInput(socket, data);
+        return;
+      }
+
+      if (type === 'EXEC_RESIZE') {
+        this.handleExecResize(socket, data);
+        return;
+      }
+
+      if (type === 'EXEC_CLOSE') {
+        this.handleExecClose(socket, data);
+        return;
+      }
 
       const channel = data?.channel as string | undefined;
       if (!channel) return;
@@ -177,8 +224,196 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  private async handleExecOpen(
+    socket: AuthedSocket,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
+    const sessionId = data?.sessionId as string | undefined;
+    const atomId = data?.atomId as string | undefined;
+    const cols = Number(data?.cols);
+    const rows = Number(data?.rows);
+
+    if (!sessionId || !atomId || !SAFE_EXEC_SESSION_ID.test(sessionId)) return;
+    if (this.execSessions.has(sessionId)) return;
+
+    const sessionsForSocket = [...this.execSessions.values()].filter(
+      (entry) => entry.socket === socket,
+    ).length;
+    const sessionsForCompany = [...this.execSessions.values()].filter(
+      (entry) => entry.socket.companyId === socket.companyId,
+    ).length;
+
+    if (
+      sessionsForSocket >= MAX_EXEC_SESSIONS_PER_SOCKET ||
+      sessionsForCompany >= MAX_EXEC_SESSIONS_PER_COMPANY
+    ) {
+      socket.send(
+        JSON.stringify({
+          type: 'EXEC_ERROR',
+          data: { sessionId, message: 'Too many open console sessions' },
+        }),
+      );
+      return;
+    }
+
+    const authorized = await this.isChannelAuthorized(
+      socket,
+      `nucleus:atom:${atomId}`,
+    );
+    if (!authorized) {
+      socket.send(
+        JSON.stringify({
+          type: 'EXEC_ERROR',
+          data: { sessionId, message: 'Not authorized' },
+        }),
+      );
+      this.logger.warn(
+        `[WebSocketServer] ${socket.userId} denied exec on atom ${atomId}`,
+      );
+      return;
+    }
+
+    try {
+      const session = this.execService.open(
+        atomId,
+        cols,
+        rows,
+        (chunk) => this.handleExecOutput(sessionId, chunk),
+        (exitResult) =>
+          this.closeExecSession(sessionId, exitResult.exitCode === 0 ? 'exited' : 'error'),
+      );
+
+      this.execSessions.set(sessionId, {
+        socket,
+        session,
+        atomId,
+        paused: false,
+        lastActivity: Date.now(),
+      });
+      socket.send(JSON.stringify({ type: 'EXEC_OPENED', data: { sessionId } }));
+      this.logger.log(
+        `[WebSocketServer] ${socket.userId} opened exec session ${sessionId} on atom ${atomId}`,
+      );
+    } catch (err) {
+      socket.send(
+        JSON.stringify({
+          type: 'EXEC_ERROR',
+          data: { sessionId, message: 'Failed to start console session' },
+        }),
+      );
+      this.logger.error(
+        `[WebSocketServer] Exec open failed for atom ${atomId}: ${String(err)}`,
+      );
+    }
+  }
+
+  private handleExecOutput(sessionId: string, chunk: string): void {
+    const entry = this.execSessions.get(sessionId);
+    if (!entry || entry.socket.readyState !== WebSocket.OPEN) return;
+
+    entry.lastActivity = Date.now();
+    entry.socket.send(
+      JSON.stringify({ type: 'EXEC_OUTPUT', data: { sessionId, chunk } }),
+    );
+
+    if (!entry.paused && entry.socket.bufferedAmount > EXEC_BACKPRESSURE_HIGH_WATERMARK) {
+      entry.paused = true;
+      entry.session.pause();
+      this.relieveExecBackpressure(sessionId);
+    }
+  }
+
+  private relieveExecBackpressure(sessionId: string): void {
+    const interval = setInterval(() => {
+      const entry = this.execSessions.get(sessionId);
+      if (!entry || entry.socket.readyState !== WebSocket.OPEN) {
+        clearInterval(interval);
+        return;
+      }
+
+      if (entry.socket.bufferedAmount <= EXEC_BACKPRESSURE_LOW_WATERMARK) {
+        entry.paused = false;
+        entry.session.resume();
+        clearInterval(interval);
+      }
+    }, EXEC_BACKPRESSURE_CHECK_MS);
+  }
+
+  private handleExecInput(socket: AuthedSocket, data?: Record<string, unknown>): void {
+    const sessionId = data?.sessionId as string | undefined;
+    const input = data?.input as string | undefined;
+    if (!sessionId || input == null) return;
+
+    const entry = this.execSessions.get(sessionId);
+    if (!entry || entry.socket !== socket) return;
+
+    entry.lastActivity = Date.now();
+    entry.session.write(input);
+  }
+
+  private handleExecResize(socket: AuthedSocket, data?: Record<string, unknown>): void {
+    const sessionId = data?.sessionId as string | undefined;
+    if (!sessionId) return;
+
+    const entry = this.execSessions.get(sessionId);
+    if (!entry || entry.socket !== socket) return;
+
+    entry.lastActivity = Date.now();
+    try {
+      entry.session.resize(Number(data?.cols), Number(data?.rows));
+    } catch {}
+  }
+
+  private handleExecClose(socket: AuthedSocket, data?: Record<string, unknown>): void {
+    const sessionId = data?.sessionId as string | undefined;
+    if (!sessionId) return;
+
+    const entry = this.execSessions.get(sessionId);
+    if (!entry || entry.socket !== socket) return;
+
+    this.closeExecSession(sessionId, 'closed');
+  }
+
+  private closeExecSession(sessionId: string, reason: string): void {
+    const entry = this.execSessions.get(sessionId);
+    if (!entry) return;
+
+    this.execSessions.delete(sessionId);
+    entry.session.close();
+
+    if (entry.socket.readyState === WebSocket.OPEN) {
+      entry.socket.send(
+        JSON.stringify({ type: 'EXEC_CLOSED', data: { sessionId, reason } }),
+      );
+    }
+  }
+
+  private async sweepExecSessions(): Promise<void> {
+    for (const [sessionId, entry] of [...this.execSessions]) {
+      if (Date.now() - entry.lastActivity > EXEC_IDLE_TIMEOUT_MS) {
+        this.closeExecSession(sessionId, 'idle-timeout');
+        continue;
+      }
+
+      const authorized = await this.isChannelAuthorized(
+        entry.socket,
+        `nucleus:atom:${entry.atomId}`,
+      );
+      if (!authorized) {
+        this.logger.warn(
+          `[WebSocketServer] Revoking exec session ${sessionId}: no longer authorized`,
+        );
+        this.closeExecSession(sessionId, 'unauthorized');
+      }
+    }
+  }
+
   private onClose(socket: AuthedSocket): void {
     if (socket.authTimer) clearTimeout(socket.authTimer);
+
+    for (const [sessionId, entry] of this.execSessions) {
+      if (entry.socket === socket) this.closeExecSession(sessionId, 'socket-closed');
+    }
 
     const { userId } = socket;
     if (userId) {
@@ -258,6 +493,11 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
   }
 
   public async onModuleDestroy(): Promise<void> {
+    if (this.execSweepTimer) {
+      clearInterval(this.execSweepTimer);
+      this.execSweepTimer = null;
+    }
+
     if (!this.wss) {
       return;
     }
