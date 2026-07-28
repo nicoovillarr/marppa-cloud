@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { Button } from "@/core/ui/Button";
@@ -9,7 +10,11 @@ import { closeCurrentDialog, useDialog } from "@/core/ui/DialogProvider";
 import { AtomWithRelationsResponseDto } from "../api/atom.api.types";
 import { useAtom } from "../models/use-atom";
 import { AtomEnvVarsSection } from "./AtomEnvVarsSection";
-import { AtomConsole } from "./AtomConsole";
+
+const AtomConsole = dynamic(
+  () => import("./AtomConsole").then((mod) => mod.AtomConsole),
+  { ssr: false },
+);
 
 interface AtomManageDialogProps {
   atom: AtomWithRelationsResponseDto;
