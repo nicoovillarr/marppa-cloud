@@ -37,6 +37,7 @@ const SHUTDOWN_POLL_MS = 2_000;
 const SAFE_VM_NAME = /^[a-zA-Z0-9_-]+$/;
 const ALLOWED_IMAGE_URL = /^https?:\/\/[a-zA-Z0-9.\-]+(:\d+)?\//;
 const SAFE_USERNAME = /^[a-z_][a-z0-9_-]{0,31}$/;
+const SAFE_WORKER_ID = /^[a-zA-Z0-9_-]+$/;
 
 @Injectable()
 export class LinuxHiveService extends HiveService {
@@ -128,6 +129,10 @@ export class LinuxHiveService extends HiveService {
       throw new TypeError(
         'name, mac, workerImage and workerInstance are required',
       );
+
+    if (!SAFE_WORKER_ID.test(id)) {
+      throw new TypeError(`Invalid worker id: ${id}`);
+    }
 
     if (!Array.isArray(publicSshKeys) || publicSshKeys.length === 0) {
       throw new TypeError('At least one public SSH key is required');

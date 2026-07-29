@@ -10,6 +10,10 @@ import { AbortError } from '@/event/domain/errors/AbortError';
 import { Inject } from '@/decorators/Inject';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 
+const ALLOWED_PROTOCOLS = new Set(['tcp', 'udp']);
+const MIN_PORT = 1;
+const MAX_PORT = 65535;
+
 @EventProcessor(EventType.NODE_UPDATE_FIBER)
 export class NodeUpdateFiberProcessor implements IEventProcessor {
 
@@ -64,7 +68,21 @@ export class NodeUpdateFiberProcessor implements IEventProcessor {
       }
 
       const actualPort = parseInt(newTargetPort.value, 10);
-      const actualProtocol = newProtocol.value;
+      const actualProtocol = newProtocol.value.trim().toLowerCase();
+
+      if (!Number.isInteger(actualPort) || actualPort < MIN_PORT || actualPort > MAX_PORT) {
+        throw new AbortError(
+          `Invalid NEW_TARGET_PORT "${newTargetPort.value}" for event ID: ${event.id}`,
+          EventType.NODE_UPDATE_FIBER_FAILED,
+        );
+      }
+
+      if (!ALLOWED_PROTOCOLS.has(actualProtocol)) {
+        throw new AbortError(
+          `Invalid NEW_PROTOCOL "${newProtocol.value}" for event ID: ${event.id}`,
+          EventType.NODE_UPDATE_FIBER_FAILED,
+        );
+      }
 
       const portIsAvailable = await this.meshService.isPortAvailable(fiber.node.ipAddress, actualPort, actualProtocol);
       if (!portIsAvailable) {

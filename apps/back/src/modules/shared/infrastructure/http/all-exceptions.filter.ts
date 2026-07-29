@@ -4,6 +4,7 @@ import {
   Catch,
   ArgumentsHost,
   HttpStatus,
+  HttpException,
 } from '@nestjs/common';
 import { Response } from 'express';
 
@@ -25,6 +26,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
         code: 'ALREADY_TAKEN',
         message: conflict,
       });
+    }
+
+    // Guards, ValidationPipe and the throttler already craft a safe status +
+    // message (no stack traces, no internals) — pass those through as-is
+    // instead of collapsing them into a generic 500.
+    if (exception instanceof HttpException) {
+      return res.status(exception.getStatus()).json(exception.getResponse());
     }
 
     console.error('Unexpected error:', exception);

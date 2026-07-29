@@ -17,10 +17,10 @@ Derived from the exhaustive audit on 2026-07-28. `[○]` pending, `[✓]` done.
 - [✓] Full security headers on the frontend (CSP, HSTS, X-Frame-Options, Permissions-Policy)
 - [✓] `helmet()` in NestJS
 - [✓] Next.js middleware with a real session-cookie check
-- [○] `SAFE_WORKER_ID` regex in `LinuxHiveService.createWorker`
-- [○] Explicit Argon2 parameters (`argon2id`, memoryCost, timeCost, parallelism)
-- [○] Bound-check port/protocol in `NodeUpdateFiberProcessor`
-- [○] Review `AllExceptionsFilter` to avoid leaking internal error messages
+- [✓] `SAFE_WORKER_ID` regex in `LinuxHiveService.createWorker`
+- [✓] Explicit Argon2 parameters (`argon2id`, memoryCost, timeCost, parallelism)
+- [✓] Bound-check port/protocol in `NodeUpdateFiberProcessor`
+- [✓] Review `AllExceptionsFilter` to avoid leaking internal error messages
 
 ## Medium term (1-2 months)
 
