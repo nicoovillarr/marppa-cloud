@@ -148,6 +148,8 @@ The `host.cloud.marppa.com` record must be **DNS-only (grey)** so it resolves to
 - Keep the host patched; monitor auth logs and set alerts on repeated failures.
 - If you would rather not expose raw ports from a home network at all, consider a VPN/bastion in front of the fibers, or Cloudflare Spectrum (paid) to proxy arbitrary TCP through Cloudflare instead of the grey record.
 
+**Network segmentation (VLAN/DMZ)** — a full security audit (2026-07-28) covered application-level hardening (IDOR/ownership guards, RBAC, CSRF, rate limiting, JWT/queue signing, audit trail, a centralized CASL authorization layer, etc.), all resolved. The one item deliberately left open is putting the Cloud Scripts host behind a segmented VLAN/DMZ: that needs a router/switch capable of VLAN tagging and isolated zones, which a typical consumer ISP router doesn't support. It's infrastructure, not code, so it's tracked here instead of a checklist in the repo — revisit once the host moves to hardware/hosting that supports it.
+
 ## Hive
 
 The Hive is a core module of the MCS that provides virtualization for running applications. It is designed to be lightweight and efficient, allowing for quick deployment and management of VMs. Within the Hive, users can create, manage, and scale Workers (VMs) as needed, providing a flexible environment for application development and deployment.
