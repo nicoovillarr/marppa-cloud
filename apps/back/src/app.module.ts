@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 
 import { AuthMiddleware } from '@/auth/presentation/middlewares/auth.middleware';
+import { CsrfOriginMiddleware } from '@/shared/infrastructure/http/csrf-origin.middleware';
 
 import { SharedModule } from '@/shared/shared.module';
 import { AuthModule } from '@/auth/auth.module';
@@ -46,7 +47,7 @@ const env = process.env.NODE_ENV ?? 'development';
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(AuthMiddleware)
+      .apply(CsrfOriginMiddleware, AuthMiddleware)
       .forRoutes('*');
   }
 }
