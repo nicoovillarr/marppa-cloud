@@ -18,6 +18,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from '@/auth/presentation/guards/roles.guard';
+import { CompanyRateLimitGuard } from '@/shared/infrastructure/http/company-rate-limit.guard';
 
 const env = process.env.NODE_ENV ?? 'development';
 
@@ -61,6 +62,10 @@ const env = process.env.NODE_ENV ?? 'development';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CompanyRateLimitGuard,
     },
   ],
 })
