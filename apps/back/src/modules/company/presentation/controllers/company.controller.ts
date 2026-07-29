@@ -43,9 +43,4 @@ export class CompanyController {
   ): Promise<CompanyEntity | null> {
     return this.companyApiService.findById(id);
   }
-
-  @Get()
-  public async findAll(): Promise<CompanyEntity[]> {
-    return this.companyApiService.findAll();
-  }
 }

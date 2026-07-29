@@ -70,7 +70,17 @@ export class UserService {
   }
 
   async findUserById(userId: string): Promise<UserEntity | null> {
-    return await this.userRepository.findUserById(userId);
+    const requester = getCurrentUser();
+    if (!requester) {
+      throw new UnauthorizedError();
+    }
+
+    const user = await this.userRepository.findUserById(userId);
+    if (!user || user.companyId !== requester.companyId) {
+      return null;
+    }
+
+    return user;
   }
 
   async findUserByEmail(email: string): Promise<UserEntity> {

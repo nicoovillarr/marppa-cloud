@@ -212,7 +212,15 @@ describe('UserService', () => {
   });
 
   describe('findUserById', () => {
-    it('should return a user by id', async () => {
+    beforeEach(() => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000002',
+        companyId: 'c-000001',
+        email: 'requester@example.com',
+      } as any);
+    });
+
+    it('should return a user by id when same company', async () => {
       mockUserRepository.findUserById.mockResolvedValue(mockUser);
 
       const result = await service.findUserById('u-000001');
@@ -228,6 +236,27 @@ describe('UserService', () => {
 
       expect(repository.findUserById).toHaveBeenCalledWith('u-999999');
       expect(result).toBeNull();
+    });
+
+    it('should return null if user belongs to another company', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000002',
+        companyId: 'c-other',
+        email: 'requester@example.com',
+      } as any);
+      mockUserRepository.findUserById.mockResolvedValue(mockUser);
+
+      const result = await service.findUserById('u-000001');
+
+      expect(result).toBeNull();
+    });
+
+    it('should throw UnauthorizedError if no user in context', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue(null);
+
+      await expect(service.findUserById('u-000001')).rejects.toThrow(
+        UnauthorizedError,
+      );
     });
   });
 

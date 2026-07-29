@@ -6,6 +6,8 @@ import {
 import { CompanyEntity } from '../entities/company.entity';
 import { CreateCompanyDto } from '../../presentation/dtos/create-company.dto';
 import { UpdateCompanyDto } from '../../presentation/dtos/update-company.dto';
+import { assertCompanyOwnership } from '@/shared/domain/services/ownership.service';
+import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 
 @Injectable()
 export class CompanyService {
@@ -29,6 +31,8 @@ export class CompanyService {
     id: string,
     data: UpdateCompanyDto,
   ): Promise<CompanyEntity> {
+    assertCompanyOwnership(id);
+
     const { name, alias, description, parentCompanyId } = data;
     const company = new CompanyEntity(name, {
       id,
@@ -41,21 +45,20 @@ export class CompanyService {
   }
 
   public async delete(id: string): Promise<void> {
+    assertCompanyOwnership(id);
     return this.companyRepository.delete(id);
   }
 
   public async findById(id: string): Promise<CompanyEntity | null> {
+    assertCompanyOwnership(id);
+
     const company = await this.companyRepository.findById(id);
 
     if (company == null) {
-      return null;
+      throw new NotFoundError();
     }
 
     return company;
-  }
-
-  public async findAll(): Promise<CompanyEntity[]> {
-    return this.companyRepository.findAll();
   }
 
   private async save(company: CompanyEntity): Promise<CompanyEntity> {
