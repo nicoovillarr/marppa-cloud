@@ -74,6 +74,7 @@ describe('AuthService', () => {
   const mockTokenStorageService = {
     setAccessToken: jest.fn(),
     setRefreshToken: jest.fn(),
+    setCsrfToken: jest.fn(),
     clear: jest.fn(),
   };
 
@@ -132,6 +133,9 @@ describe('AuthService', () => {
       );
       expect(tokenStorageService.setRefreshToken).toHaveBeenCalledWith(
         refreshToken,
+      );
+      expect(tokenStorageService.setCsrfToken).toHaveBeenCalledWith(
+        expect.any(String),
       );
       expect(result).toEqual({ accessToken, refreshToken });
     });

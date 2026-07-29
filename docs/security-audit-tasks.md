@@ -25,7 +25,7 @@ Derived from the exhaustive audit on 2026-07-28. `[○]` pending, `[✓]` done.
 ## Medium term (1-2 months)
 
 - [○] Real RBAC (owner/member roles per Company)
-- [○] Full CSRF token (double-submit) replacing the Origin mitigation
+- [✓] Full CSRF token (double-submit) replacing the Origin mitigation
 - [✓] Second confirmation barrier for `SYSTEM_RESET_HARD`
 - [✓] Align the major version of `jose` between back and cloud-scripts
 - [✓] Add `aud`/`iss` claims to JWTs and verify them at every consumer

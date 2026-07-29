@@ -26,11 +26,23 @@ const refreshAttrs = {
   path: REFRESH_PATH,
 } as const;
 
+// Readable by JS on purpose: the double-submit CSRF check compares this
+// cookie against an X-CSRF-Token header the frontend sets from document.cookie.
+const csrfAttrs = {
+  httpOnly: false,
+  secure,
+  sameSite,
+  domain,
+  path: '/',
+} as const;
+
 export const AuthCookiePolicy = {
   access: { ...accessAttrs, maxAge: 15 * 60 * 1000 },
   refresh: { ...refreshAttrs, maxAge: 7 * 24 * 60 * 60 * 1000 },
+  csrf: { ...csrfAttrs, maxAge: 15 * 60 * 1000 },
   clear: {
     access: accessAttrs,
     refresh: refreshAttrs,
+    csrf: csrfAttrs,
   },
 } as const;

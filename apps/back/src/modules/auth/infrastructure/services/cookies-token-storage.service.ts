@@ -20,8 +20,13 @@ export class CookiesTokenStorageService implements TokenStorageService {
     this.res.cookie('refresh_token', token, AuthCookiePolicy.refresh);
   }
 
+  setCsrfToken(token: string): void {
+    this.res.cookie('csrf_token', token, AuthCookiePolicy.csrf);
+  }
+
   clear(): void {
     this.res.clearCookie('access_token', AuthCookiePolicy.clear.access);
     this.res.clearCookie('refresh_token', AuthCookiePolicy.clear.refresh);
+    this.res.clearCookie('csrf_token', AuthCookiePolicy.clear.csrf);
   }
 }

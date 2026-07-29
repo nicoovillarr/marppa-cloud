@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 
 import { SessionEntity } from '@/auth/domain/entities/session.entity';
 import { type TokenGenerator } from '@/auth/domain/services/token-generator.service';
@@ -31,9 +32,11 @@ export class AuthService {
   }> {
     const accessToken = await this.tokenGenerator.generateJwt(user, 'access');
     const refreshToken = await this.tokenGenerator.generateJwt(user, 'refresh');
+    const csrfToken = randomBytes(32).toString('base64url');
 
     this.tokenStorageService.setAccessToken(accessToken);
     this.tokenStorageService.setRefreshToken(refreshToken);
+    this.tokenStorageService.setCsrfToken(csrfToken);
 
     return {
       accessToken,
