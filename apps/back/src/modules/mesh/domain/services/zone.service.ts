@@ -13,6 +13,7 @@ import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { ZoneWithNodesModel } from '../models/zone-with-nodes.model';
 import { ZoneWithNodesAndFibersModel } from '../models/zone-with-nodes-and-fibers.model';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { assertCompanyOwnership } from '@/shared/domain/services/ownership.service';
 
 @Injectable()
 export class ZoneService {
@@ -27,7 +28,7 @@ export class ZoneService {
       throw new NotFoundError();
     }
 
-    this.assertOwnership(entity.ownerId);
+    assertCompanyOwnership(entity.ownerId);
     return entity;
   }
 
@@ -37,7 +38,7 @@ export class ZoneService {
       throw new NotFoundError();
     }
 
-    this.assertOwnership(entity.zone.ownerId);
+    assertCompanyOwnership(entity.zone.ownerId);
     return entity;
   }
 
@@ -47,7 +48,7 @@ export class ZoneService {
       throw new NotFoundError();
     }
 
-    this.assertOwnership(entity.zone.ownerId);
+    assertCompanyOwnership(entity.zone.ownerId);
     return entity;
   }
 
@@ -220,17 +221,5 @@ export class ZoneService {
     }
 
     return this.repository.update(entity);
-  }
-
-  private assertOwnership(ownerId: string): void {
-    const user = getCurrentUser();
-    if (!user) {
-      throw new UnauthorizedError();
-    }
-
-    // Hide other companies' resources entirely rather than revealing they exist.
-    if (ownerId !== user.companyId) {
-      throw new NotFoundError();
-    }
   }
 }

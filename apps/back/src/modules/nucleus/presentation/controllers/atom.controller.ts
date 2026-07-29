@@ -10,6 +10,7 @@ import {
   Put,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { AtomApiService } from '@/nucleus/application/services/atom.api-service';
@@ -20,8 +21,10 @@ import { AtomEnvVarModel } from '@/nucleus/domain/models/atom-env-var.model';
 import { CreateAtomDto } from '../dtos/create-atom.dto';
 import { UpdateAtomDto } from '../dtos/update-atom.dto';
 import { CreateAtomEnvVarDto } from '../dtos/create-atom-env-var.dto';
+import { LoggedInGuard } from '@/auth/presentation/guards/logged-in.guard';
 
 @Controller('nucleus/atoms')
+@UseGuards(LoggedInGuard)
 export class AtomController {
   constructor(
     private readonly service: AtomApiService,

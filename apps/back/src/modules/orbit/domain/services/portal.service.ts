@@ -18,6 +18,7 @@ import {
 import { PortalWithTranspondersWithNodeModel } from '../models/portal-with-transponders-with-node.model';
 import { ZoneService } from '@/mesh/domain/services/zone.service';
 import { DNS_PROVIDER, DnsProvider } from './dns-provider.service';
+import { assertCompanyOwnership } from '@/shared/domain/services/ownership.service';
 
 @Injectable()
 export class PortalService {
@@ -40,7 +41,7 @@ export class PortalService {
       throw new NotFoundError();
     }
 
-    this.assertOwnership(portal.ownerId);
+    assertCompanyOwnership(portal.ownerId);
     return portal;
   }
 
@@ -53,7 +54,7 @@ export class PortalService {
       throw new NotFoundError();
     }
 
-    this.assertOwnership(model.portal.ownerId);
+    assertCompanyOwnership(model.portal.ownerId);
     return model;
   }
 
@@ -164,16 +165,5 @@ export class PortalService {
     }
 
     await this.zoneService.findById(zoneId);
-  }
-
-  private assertOwnership(ownerId: string): void {
-    const user = getCurrentUser();
-    if (user == null) {
-      throw new UnauthorizedError();
-    }
-
-    if (ownerId !== user.companyId) {
-      throw new NotFoundError();
-    }
   }
 }

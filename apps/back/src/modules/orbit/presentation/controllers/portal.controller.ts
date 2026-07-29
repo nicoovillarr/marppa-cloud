@@ -7,12 +7,15 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { PortalApiService } from '../../application/services/portal.api-service';
 import { CreatePortalDto } from '../dtos/create-portal.dto';
 import { UpdatePortalDto } from '../dtos/update-portal.dto';
+import { LoggedInGuard } from '@/auth/presentation/guards/logged-in.guard';
 
 @Controller('orbit/portals')
+@UseGuards(LoggedInGuard)
 export class PortalController {
   constructor(private readonly apiService: PortalApiService) { }
 

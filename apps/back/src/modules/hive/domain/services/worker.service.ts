@@ -14,6 +14,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { MacAddressService } from './mac-address.service';
 import { WorkerInvalidStatusError } from '../errors/worker-invalid-status.error';
+import { assertCompanyOwnership } from '@/shared/domain/services/ownership.service';
 
 @Injectable()
 export class WorkerService {
@@ -30,7 +31,7 @@ export class WorkerService {
       throw new NotFoundError();
     }
 
-    this.assertOwnership(worker.ownerId);
+    assertCompanyOwnership(worker.ownerId);
     return worker;
   }
 
@@ -40,7 +41,7 @@ export class WorkerService {
       throw new NotFoundError();
     }
 
-    this.assertOwnership(worker.worker.ownerId);
+    assertCompanyOwnership(worker.worker.ownerId);
     return worker;
   }
 
@@ -165,18 +166,6 @@ export class WorkerService {
     });
 
     await this.save(updated);
-  }
-
-  private assertOwnership(ownerId: string): void {
-    const user = getCurrentUser();
-    if (!user) {
-      throw new UnauthorizedError();
-    }
-
-    // Hide other companies' resources entirely rather than revealing they exist.
-    if (ownerId !== user.companyId) {
-      throw new NotFoundError();
-    }
   }
 
   private save(data: WorkerEntity): Promise<WorkerEntity> {

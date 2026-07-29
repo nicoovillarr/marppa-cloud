@@ -17,6 +17,9 @@ export class CaptchaService {
   public static async verify(request: Request): Promise<void> {
     const secret = process.env.TURNSTILE_SECRET;
     if (!secret) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new ServiceUnavailableError();
+      }
       return;
     }
 
