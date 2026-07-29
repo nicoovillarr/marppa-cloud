@@ -124,11 +124,6 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      if (type === 'PING') {
-        socket.send(JSON.stringify({ type: 'PONG' }));
-        return;
-      }
-
       if (!socket.userId) return;
 
       if (type === 'EXEC_OPEN') {

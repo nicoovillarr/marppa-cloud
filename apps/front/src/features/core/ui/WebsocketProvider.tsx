@@ -42,7 +42,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const subsRef = useRef<Record<string, Set<MessageHandler>>>({});
   const execSubsRef = useRef<Record<string, MessageHandler>>({});
   const reconnectAttemptsRef = useRef(0);
-  const pingRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectRef = useRef<NodeJS.Timeout | null>(null);
   const isAuthenticatedRef = useRef(false);
   const error = useRef<boolean>(false);
@@ -65,7 +64,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       }
       reconnectAttemptsRef.current = 0;
       setConnected(true);
-      startPing();
     };
 
     socket.onclose = () => {
@@ -75,7 +73,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       socketRef.current = null;
       isAuthenticatedRef.current = false;
       setConnected(false);
-      stopPing();
       abortReconnect();
       scheduleReconnect();
     };
@@ -83,7 +80,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     socket.onerror = (err) => {
       console.error("[WebSocket]: WebSocket error", err);
       socket.close();
-      stopPing();
       abortReconnect();
     };
 
@@ -98,7 +94,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   }, [url]);
 
   const disconnect = useCallback(() => {
-    stopPing();
     reconnectRef.current && clearTimeout(reconnectRef.current);
     isAuthenticatedRef.current = false;
     queueRef.current = [];
@@ -152,18 +147,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
     return () => clearTimeout(timeout);
   }, [accessToken]);
-
-  const startPing = () => {
-    if (pingRef.current) return;
-    pingRef.current = setInterval(() => sendMessage("PING"), 30000);
-  };
-
-  const stopPing = () => {
-    if (pingRef.current) {
-      clearInterval(pingRef.current);
-      pingRef.current = null;
-    }
-  };
 
   const flushQueue = () => {
     const socket = socketRef.current;
@@ -247,9 +230,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
           sendMessage("SUBSCRIBE_CHANNEL", { channel });
         });
         flushQueue();
-        return;
-      case "PONG":
-        console.debug("[WebSocket]: PONG received");
         return;
       default:
         if (message.type.startsWith("EXEC_")) {
