@@ -150,6 +150,17 @@ The `host.cloud.marppa.com` record must be **DNS-only (grey)** so it resolves to
 
 **Network segmentation (VLAN/DMZ)** — a full security audit (2026-07-28) covered application-level hardening (IDOR/ownership guards, RBAC, CSRF, rate limiting, JWT/queue signing, audit trail, a centralized CASL authorization layer, etc.), all resolved. The one item deliberately left open is putting the Cloud Scripts host behind a segmented VLAN/DMZ: that needs a router/switch capable of VLAN tagging and isolated zones, which a typical consumer ISP router doesn't support. It's infrastructure, not code, so it's tracked here instead of a checklist in the repo — revisit once the host moves to hardware/hosting that supports it.
 
+Broad strokes for when that hardware is in place:
+
+1. **Hardware.** Replace the ISP router with something that does 802.1Q VLAN tagging and inter-VLAN firewall rules — a pfSense/OPNsense box, or a prosumer router (e.g. UniFi/MikroTik) paired with a managed switch. The ISP router still terminates the WAN, but hands routing/firewalling to this device (bridge mode).
+2. **Carve out the zones.** At minimum three VLANs: a **DMZ** for the Cloud Scripts host (the only thing exposed to the internet), a **management** VLAN for admin access (SSH/UniFi controller/etc., never internet-facing), and the regular **trusted LAN** for everyday devices. Each is its own subnet/broadcast domain.
+3. **Firewall rules between zones, default-deny.** DMZ → LAN: blocked entirely — a compromised Cloud Scripts host must not be able to pivot to the rest of the home network. LAN → DMZ: blocked except what's explicitly needed (e.g. admin SSH from the management VLAN only). Internet → DMZ: only `443/tcp` (Caddy/WS) and the `MIN_PORT`–`MAX_PORT` fiber range, exactly as today's host firewall already restricts, just enforced one layer earlier at the router.
+4. **Physical/logical placement.** Either a dedicated switch port trunked with the DMZ VLAN tag for the host's NIC, or (simpler, same effect) a separate physical switch for the DMZ segment if the hardware doesn't support tagging cleanly.
+5. **Re-verify egress, not just ingress.** The DMZ should also restrict outbound traffic from the host to what it actually needs (DNS, NTP, the Postgres/Redis instances if they move elsewhere, package repos) — a segmentation project that only blocks inbound but leaves egress wide open still lets a compromised host phone home or scan the LAN.
+6. **Test the isolation before trusting it**: from a device on the trusted LAN, confirm the DMZ host is unreachable on any port other than the ones explicitly allowed; from the DMZ host, confirm it cannot reach LAN devices at all.
+
+None of this touches application code — it's purely router/switch configuration once the hardware supports it.
+
 ## Hive
 
 The Hive is a core module of the MCS that provides virtualization for running applications. It is designed to be lightweight and efficient, allowing for quick deployment and management of VMs. Within the Hive, users can create, manage, and scale Workers (VMs) as needed, providing a flexible environment for application development and deployment.
