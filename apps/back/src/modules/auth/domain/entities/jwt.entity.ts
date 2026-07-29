@@ -1,3 +1,4 @@
+import { UserRole } from '@marppa-cloud/db';
 import { BaseEntity } from '@/shared/domain/entities/base.entity';
 
 export class JwtEntity extends BaseEntity {
@@ -6,6 +7,7 @@ export class JwtEntity extends BaseEntity {
     public readonly email: string,
     public readonly companyId: string,
     public readonly type: 'access' | 'refresh',
+    public readonly role: UserRole,
   ) {
     super();
   }
@@ -16,6 +18,7 @@ export class JwtEntity extends BaseEntity {
       email: this.email,
       companyId: this.companyId,
       type: this.type,
+      role: this.role,
     };
   }
 }

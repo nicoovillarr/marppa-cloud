@@ -1,6 +1,7 @@
 export * from './enums';
 export * from './event-state-machine';
 export * from './auth';
+export * from './jwt';
 export * from './company';
 export * from './event';
 export * from './hive';

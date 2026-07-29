@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/core/ui/Button";
+import { Input } from "@/core/ui/inputs/Input";
 import { closeCurrentDialog } from "@/core/ui/DialogProvider";
 import { systemApi } from "../api/system.api";
 
@@ -11,13 +12,14 @@ interface SystemResetDialogProps {
 
 export function SystemResetDialog({ onDone }: SystemResetDialogProps) {
   const [hard, setHard] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const confirm = async () => {
     setError(null);
 
     try {
-      await systemApi.reset(hard);
+      await systemApi.reset(hard, hard ? confirmPassword : undefined);
       closeCurrentDialog();
       onDone?.();
     } catch (err) {
@@ -52,9 +54,18 @@ export function SystemResetDialog({ onDone }: SystemResetDialogProps) {
       </label>
 
       {hard && (
-        <p className="text-xs font-semibold text-status-danger">
-          Everything will be destroyed. There is no backup and no way back.
-        </p>
+        <>
+          <p className="text-xs font-semibold text-status-danger">
+            Everything will be destroyed. There is no backup and no way back.
+          </p>
+
+          <Input
+            type="password"
+            placeholder="Confirm your password"
+            value={confirmPassword}
+            onChangedValue={setConfirmPassword}
+          />
+        </>
       )}
 
       {error && <p className="text-xs text-status-danger">{error}</p>}
@@ -68,6 +79,7 @@ export function SystemResetDialog({ onDone }: SystemResetDialogProps) {
         <Button
           text={hard ? "Hard reset" : "Reset"}
           style="danger"
+          disabled={hard && confirmPassword.length === 0}
           onClick={confirm}
         />
       </div>

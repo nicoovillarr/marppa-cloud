@@ -3,6 +3,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { type CacheStorage } from '@/shared/domain/services/cache.service';
 import { CACHE_STORAGE_SYMBOL } from '@/shared/domain/services/cache.service';
 
+const LOGIN_LOCKOUT_THRESHOLD = 5;
+const LOGIN_LOCKOUT_WINDOW_SECONDS = 15 * 60;
+
 @Injectable()
 export class AuthCache {
   private readonly prefix: string = 'auth';
@@ -12,18 +15,24 @@ export class AuthCache {
     private readonly cache: CacheStorage,
   ) { }
 
-  setIsUserAdmin(userId: number, isAdmin: boolean): void {
-    this.cache.set(
-      `${this.prefix}:user:${userId}:admin`,
-      isAdmin ? 'true' : 'false',
-      60 * 5,
-    );
+  private failedLoginKey(email: string): string {
+    return `${this.prefix}:login-attempts:${email.toLowerCase()}`;
   }
 
-  async isUserAdmin(userId: number): Promise<boolean | undefined> {
-    const data = await this.cache.get(`${this.prefix}:user:${userId}:admin`);
-    if (data === 'true') return true;
-    if (data === 'false') return false;
-    return undefined;
+  async recordFailedLogin(email: string): Promise<void> {
+    const key = this.failedLoginKey(email);
+    const attempts = (await this.cache.get<number>(key)) ?? 0;
+
+    await this.cache.set(key, attempts + 1, LOGIN_LOCKOUT_WINDOW_SECONDS);
+  }
+
+  async isLoginLockedOut(email: string): Promise<boolean> {
+    const attempts = (await this.cache.get<number>(this.failedLoginKey(email))) ?? 0;
+
+    return attempts >= LOGIN_LOCKOUT_THRESHOLD;
+  }
+
+  async clearFailedLogins(email: string): Promise<void> {
+    await this.cache.delete(this.failedLoginKey(email));
   }
 }

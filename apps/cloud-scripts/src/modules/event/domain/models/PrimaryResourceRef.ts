@@ -6,4 +6,5 @@ export interface PrimaryResourceRef {
 export interface EventJobData {
   eventId: number;
   primary?: PrimaryResourceRef;
+  signature: string;
 }

@@ -16,6 +16,7 @@ import { SessionEntity } from '../entities/session.entity';
 import { UserEntity } from '@/user/domain/entities/user.entity';
 import { JwtEntity } from '../entities/jwt.entity';
 import { RequestData } from '../../../../libs/utils';
+import { UserRole } from '@marppa-cloud/db';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -58,6 +59,7 @@ describe('AuthService', () => {
     'test@example.com',
     'c-000001',
     'refresh',
+    UserRole.OWNER,
   );
 
   const mockAuthRepository = {
@@ -74,6 +76,7 @@ describe('AuthService', () => {
   const mockTokenStorageService = {
     setAccessToken: jest.fn(),
     setRefreshToken: jest.fn(),
+    setCsrfToken: jest.fn(),
     clear: jest.fn(),
   };
 
@@ -133,6 +136,9 @@ describe('AuthService', () => {
       expect(tokenStorageService.setRefreshToken).toHaveBeenCalledWith(
         refreshToken,
       );
+      expect(tokenStorageService.setCsrfToken).toHaveBeenCalledWith(
+        expect.any(String),
+      );
       expect(result).toEqual({ accessToken, refreshToken });
     });
   });
@@ -176,6 +182,21 @@ describe('AuthService', () => {
         'refresh-token-123',
       );
       expect(tokenStorageService.clear).toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteSession', () => {
+    it('should delete a session by refresh token without touching cookies', async () => {
+      mockAuthRepository.deleteSessionByRefreshToken.mockResolvedValue(
+        undefined,
+      );
+
+      await service.deleteSession('refresh-token-123');
+
+      expect(repository.deleteSessionByRefreshToken).toHaveBeenCalledWith(
+        'refresh-token-123',
+      );
+      expect(tokenStorageService.clear).not.toHaveBeenCalled();
     });
   });
 

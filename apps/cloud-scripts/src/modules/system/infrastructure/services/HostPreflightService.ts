@@ -17,7 +17,7 @@ const REQUIRED_ENV_VARS = [
   'BRIDGE_NAME', 'USERNAME', 'MIN_PORT', 'MAX_PORT',
   'NFTABLES_RESET_SOURCE', 'ALLOWED_IMAGE_DOMAINS',
   // Services this app cannot run without
-  'DATABASE_URL', 'REDIS_URL', 'WS_PORT', 'JWT_SECRET',
+  'DATABASE_URL', 'REDIS_URL', 'WS_PORT', 'JWT_SECRET', 'EVENT_QUEUE_HMAC_SECRET',
 ];
 
 /** Env vars that must parse as a positive integer. */
@@ -72,6 +72,7 @@ export class HostPreflightService {
     this.checkPaths(problems);
     await this.checkNftables(problems);
     await this.checkNftablesResetSource(problems);
+    await this.checkEgressHardening(problems);
     await this.checkUplink(problems);
     await this.checkVirtualization(problems);
     await this.checkDnsmasqConfDir(problems);
@@ -276,6 +277,35 @@ export class HostPreflightService {
       problems.push(
         `NFTABLES_RESET_SOURCE (${resetSource}) is missing required tables: ` +
           `${missing.join(', ')}. A system reset would leave the host without them.`,
+      );
+    }
+  }
+
+  private async checkEgressHardening(problems: string[]): Promise<void> {
+    if (process.env.REQUIRE_EGRESS_HARDENING !== 'true') {
+      return;
+    }
+
+    const resetSource = process.env.NFTABLES_RESET_SOURCE?.trim();
+    if (!resetSource || !fs.existsSync(resetSource)) {
+      return;
+    }
+
+    let contents: string;
+    try {
+      contents = await Command.runCommand('sudo', ['cat', resetSource]);
+    } catch (err) {
+      problems.push(
+        `Could not read NFTABLES_RESET_SOURCE (${resetSource}) to verify egress hardening: ${this.message(err)}`,
+      );
+      return;
+    }
+
+    if (!NftablesRuleset.hasDefaultDenyOutputPolicy(contents)) {
+      problems.push(
+        `REQUIRE_EGRESS_HARDENING=true but ${resetSource} has no default-drop 'output' ` +
+          'chain in inet filter. Add one with an explicit allowlist (DNS, NTP, the DB/Redis ' +
+          'hosts, package repos, ALLOWED_IMAGE_DOMAINS) — see docs/host-network-hardening.md.',
       );
     }
   }

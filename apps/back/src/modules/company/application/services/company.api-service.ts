@@ -26,8 +26,4 @@ export class CompanyApiService {
   public async findById(id: string): Promise<CompanyEntity | null> {
     return this.companyService.findById(id);
   }
-
-  public async findAll(): Promise<CompanyEntity[]> {
-    return this.companyService.findAll();
-  }
 }

@@ -1,4 +1,5 @@
 import type { EventPayload } from '../domain/models/EventPayload';
+import { verifyEventJobSignature } from '@marppa-cloud/shared';
 import { DelayedError, Worker, type Job } from 'bullmq';
 import { Injectable } from '@/decorators/Injectable';
 import { ProcessorRegistry } from './ProcessorRegistry';
@@ -84,6 +85,13 @@ export class EventWorker implements OnModuleInit, OnModuleDestroy {
   private async process(job: Job): Promise<void> {
     const data = (job.data ?? {}) as EventJobData;
     const { eventId } = data;
+
+    if (!this.hasValidSignature(data)) {
+      this.logger.error(
+        `[EventWorker] Job ${job.id ?? 'unknown'} for event ${eventId} has an invalid or missing signature. Dropping.`,
+      );
+      return;
+    }
 
     const event = await this.repository.findById(eventId);
     if (!event) {
@@ -207,5 +215,16 @@ export class EventWorker implements OnModuleInit, OnModuleDestroy {
       await this.repository.incrementRetry(eventId);
       throw err;
     }
+  }
+
+  private hasValidSignature(data: EventJobData): boolean {
+    const secret = process.env.EVENT_QUEUE_HMAC_SECRET;
+    if (!secret) {
+      throw new Error(
+        'EVENT_QUEUE_HMAC_SECRET is required to verify jobs enqueued by the backend.',
+      );
+    }
+
+    return verifyEventJobSignature(data.eventId, data.signature, secret);
   }
 }

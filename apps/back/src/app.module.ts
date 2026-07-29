@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 
 import { AuthMiddleware } from '@/auth/presentation/middlewares/auth.middleware';
+import { CsrfTokenMiddleware } from '@/shared/infrastructure/http/csrf-token.middleware';
 
 import { SharedModule } from '@/shared/shared.module';
 import { AuthModule } from '@/auth/auth.module';
@@ -14,6 +15,9 @@ import { OrbitModule } from '@/orbit/orbit.module';
 import { SystemModule } from '@/system/system.module';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { CompanyRateLimitGuard } from '@/shared/infrastructure/http/company-rate-limit.guard';
 
 const env = process.env.NODE_ENV ?? 'development';
 
@@ -31,6 +35,13 @@ const env = process.env.NODE_ENV ?? 'development';
 
     ScheduleModule.forRoot(),
 
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000,
+        limit: 120,
+      },
+    ]),
+
     SharedModule,
     AuthModule,
     UserModule,
@@ -42,11 +53,21 @@ const env = process.env.NODE_ENV ?? 'development';
     OrbitModule,
     SystemModule,
   ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CompanyRateLimitGuard,
+    },
+  ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(AuthMiddleware)
+      .apply(CsrfTokenMiddleware, AuthMiddleware)
       .forRoutes('*');
   }
 }

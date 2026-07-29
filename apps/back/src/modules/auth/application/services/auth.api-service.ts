@@ -18,6 +18,9 @@ import { TokenType } from '@/tokens/domain/enums/token-types.enum';
 import { getFrontendUrl } from '@/auth/domain/config/frontend-url';
 import { isRegistrationEnabled } from '@/auth/domain/config/registration';
 import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
+import { TooManyRequestsError } from '@/shared/domain/errors/too-many-requests.error';
+import { InvalidCredentialsError } from '@/user/domain/errors/invalid-credentials.error';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 
 @Injectable()
 export class AuthApiService {
@@ -62,20 +65,24 @@ export class AuthApiService {
     await CaptchaService.verify(req);
 
     const { email, password } = data;
-    const user = await this.userService.findUserByEmail(email);
 
-    if (!user) {
-      throw new Error('Invalid credentials');
+    if (await this.cache.isLoginLockedOut(email)) {
+      throw new TooManyRequestsError(
+        'Demasiados intentos fallidos. Probá de nuevo más tarde.',
+      );
     }
 
-    const isPasswordValid = await this.userService.comparePassword(
-      password,
-      user.password,
-    );
+    const user = await this.userService.findUserByEmailOrNull(email);
+    const isPasswordValid =
+      user != null &&
+      (await this.userService.comparePassword(password, user.password));
 
-    if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
+    if (!user || !isPasswordValid) {
+      await this.cache.recordFailedLogin(email);
+      throw new InvalidCredentialsError();
     }
+
+    await this.cache.clearFailedLogins(email);
 
     const { refreshToken } =
       await this.authService.generateAndSaveUserTokens(user);
@@ -92,7 +99,7 @@ export class AuthApiService {
   async logout(req: Request) {
     const refreshToken = req.cookies.refresh_token;
     if (!refreshToken) {
-      throw new Error('No refresh token found');
+      throw new UnauthorizedError();
     }
 
     await this.authService.invalidateSession(refreshToken);
@@ -124,6 +131,8 @@ export class AuthApiService {
       newRefreshToken,
       requestData,
     );
+
+    await this.authService.deleteSession(oldRefreshToken);
 
     return true;
   }

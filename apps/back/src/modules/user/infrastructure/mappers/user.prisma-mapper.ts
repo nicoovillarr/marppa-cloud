@@ -11,6 +11,7 @@ export class UserPrismaMapper {
       user.companyId,
       {
         id: user.id,
+        role: user.role,
         createdAt: user.createdAt ?? undefined,
         updatedAt: user.updatedAt ?? undefined,
       },

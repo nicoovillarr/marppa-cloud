@@ -3,7 +3,7 @@ import { RedisService } from './RedisService';
 import { Queue } from 'bullmq';
 import { LoggerService } from './LoggerService';
 import { OnModuleInit, OnModuleDestroy } from '@/libs/Container';
-import { eventJobId } from '@marppa-cloud/shared';
+import { eventJobId, signEventJob } from '@marppa-cloud/shared';
 import type {
   EventJobData,
   PrimaryResourceRef,
@@ -69,7 +69,11 @@ export class ResourceQueueService implements OnModuleInit, OnModuleDestroy {
     if (!nextRaw) return;
 
     const nextEventId = Number(nextRaw);
-    const jobData: EventJobData = { eventId: nextEventId, primary };
+    const jobData: EventJobData = {
+      eventId: nextEventId,
+      primary,
+      signature: this.signEventJob(nextEventId),
+    };
 
     await this.queue.add('process-event', jobData, {
       jobId: eventJobId(nextEventId),
@@ -83,10 +87,25 @@ export class ResourceQueueService implements OnModuleInit, OnModuleDestroy {
   public async enqueue(primary: PrimaryResourceRef, eventId: number): Promise<void> {
     if (!this.queue) return;
 
-    const jobData: EventJobData = { eventId, primary };
+    const jobData: EventJobData = {
+      eventId,
+      primary,
+      signature: this.signEventJob(eventId),
+    };
     await this.queue.add('process-event', jobData, {
       jobId: eventJobId(eventId),
     });
+  }
+
+  private signEventJob(eventId: number): string {
+    const secret = process.env.EVENT_QUEUE_HMAC_SECRET;
+    if (!secret) {
+      throw new Error(
+        'EVENT_QUEUE_HMAC_SECRET is required to sign jobs enqueued on the resource FIFO.',
+      );
+    }
+
+    return signEventJob(eventId, secret);
   }
 
   public async cancel(

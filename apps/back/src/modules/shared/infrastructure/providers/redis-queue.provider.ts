@@ -17,6 +17,20 @@ export const RedisQueueProvider: Provider = {
       );
     }
 
+    if (process.env.NODE_ENV === 'production') {
+      const parsed = new URL(REDIS_URL);
+
+      if (parsed.protocol !== 'rediss:') {
+        throw new Error(
+          'REDIS_URL must use TLS (rediss://) in production.',
+        );
+      }
+
+      if (!parsed.password) {
+        throw new Error('REDIS_URL must include a password in production.');
+      }
+    }
+
     return new Redis(REDIS_URL, { maxRetriesPerRequest: null });
   },
 };

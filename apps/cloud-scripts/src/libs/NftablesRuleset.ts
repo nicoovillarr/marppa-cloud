@@ -33,4 +33,8 @@ export class NftablesRuleset {
   public static stripFlushRuleset(rulesetText: string): string {
     return rulesetText.replace(/^[ \t]*flush[ \t]+ruleset[ \t]*$/gm, '');
   }
+
+  public static hasDefaultDenyOutputPolicy(rulesetText: string): boolean {
+    return /chain\s+output\s*\{[\s\S]*?policy\s+drop\s*;/.test(rulesetText);
+  }
 }

@@ -10,6 +10,8 @@ import { EventPropertyEntity } from '../entities/event-property.entity';
 import { EventWithRelationsModel } from '../models/event-with-relations.model';
 import { EventTypeKey } from '../enums/event-type-key.enum';
 import { CreateEventDto } from '@/event/presentation/dtos/create-event.dto';
+import * as sessionContext from '@/auth/infrastructure/als/session.context';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 
 describe('EventService', () => {
   let service: EventService;
@@ -68,6 +70,13 @@ describe('EventService', () => {
 
     service = module.get<EventService>(EventService);
     repository = module.get<EventRepository>(EVENT_REPOSITORY_SYMBOL);
+
+    jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+      userId: 'u-000001',
+      companyId: 'c-000001',
+      email: 'test@test.com',
+      type: 'access',
+    } as any);
   });
 
   afterEach(() => {
@@ -80,8 +89,6 @@ describe('EventService', () => {
 
       const dto: CreateEventDto = {
         type: EventTypeKey.SYSTEM_TEST_EVENT,
-        createdBy: 'u-000001',
-        companyId: 'c-000001',
         notes: 'Test event',
         data: { key: 'value' },
       };
@@ -90,6 +97,26 @@ describe('EventService', () => {
 
       expect(repository.create).toHaveBeenCalledWith(expect.any(EventEntity));
       expect(result).toEqual(mockEvent);
+    });
+
+    it('should derive createdBy/companyId from the session, ignoring any client-supplied values', async () => {
+      mockEventRepository.create.mockResolvedValue(mockEvent);
+
+      await service.create({
+        type: EventTypeKey.SYSTEM_TEST_EVENT,
+      } as CreateEventDto);
+
+      const eventArg = (repository.create as jest.Mock).mock.calls[0][0];
+      expect(eventArg.createdBy).toBe('u-000001');
+      expect(eventArg.companyId).toBe('c-000001');
+    });
+
+    it('should throw UnauthorizedError if there is no session', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue(null);
+
+      await expect(
+        service.create({ type: EventTypeKey.SYSTEM_TEST_EVENT }),
+      ).rejects.toThrow(UnauthorizedError);
     });
   });
 
@@ -139,16 +166,34 @@ describe('EventService', () => {
       expect(repository.findById).toHaveBeenCalledWith(999);
       expect(result).toBeNull();
     });
+
+    it('should throw when the event belongs to another company', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000002',
+        companyId: 'c-other',
+        email: 'test@test.com',
+        type: 'access',
+      } as any);
+      mockEventRepository.findById.mockResolvedValue(mockEventWithRelations);
+
+      await expect(service.findById(1)).rejects.toThrow();
+    });
   });
 
   describe('findMany', () => {
-    it('should return all events', async () => {
+    it('should scope the query to the caller company', async () => {
       mockEventRepository.findMany.mockResolvedValue([mockEvent]);
 
       const result = await service.findMany();
 
-      expect(repository.findMany).toHaveBeenCalled();
+      expect(repository.findMany).toHaveBeenCalledWith('c-000001');
       expect(result).toEqual([mockEvent]);
+    });
+
+    it('should throw UnauthorizedError if there is no session', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue(null);
+
+      await expect(service.findMany()).rejects.toThrow(UnauthorizedError);
     });
   });
 });

@@ -39,8 +39,10 @@ export class EventPrismaRepository implements EventRepository {
     });
   }
 
-  async findMany(): Promise<EventEntity[]> {
-    const results = await this.prisma.event.findMany();
+  async findMany(companyId: string): Promise<EventEntity[]> {
+    const results = await this.prisma.event.findMany({
+      where: { companyId },
+    });
     return results.map((r) => EventPrismaMapper.toEntity(r));
   }
 

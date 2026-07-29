@@ -1,5 +1,14 @@
 const isProduction = process.env.NODE_ENV === "production";
 
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${name}=([^;]*)`)
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export const fetcher = async <T>(
   action: string,
   method: "POST" | "GET" | "PUT" | "DELETE" = "GET",
@@ -9,6 +18,13 @@ export const fetcher = async <T>(
 
   if (!(body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
+  }
+
+  if (method !== "GET") {
+    const csrfToken = readCookie("csrf_token");
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
   }
 
   let url = `/api${action}`;

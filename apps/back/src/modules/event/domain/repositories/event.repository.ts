@@ -16,5 +16,5 @@ export abstract class EventRepository {
     eventProperty: EventPropertyEntity,
   ): Promise<EventPropertyEntity>;
   abstract findById(id: number): Promise<EventWithRelationsModel | null>;
-  abstract findMany(): Promise<EventEntity[]>;
+  abstract findMany(companyId: string): Promise<EventEntity[]>;
 }

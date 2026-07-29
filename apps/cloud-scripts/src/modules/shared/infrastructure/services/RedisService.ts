@@ -11,6 +11,19 @@ export class RedisService
   private static requireRedisUrl(): string {
     const url = process.env.REDIS_URL;
     if (!url) throw new Error('REDIS_URL environment variable is required');
+
+    if (process.env.NODE_ENV === 'production') {
+      const parsed = new URL(url);
+
+      if (parsed.protocol !== 'rediss:') {
+        throw new Error('REDIS_URL must use TLS (rediss://) in production.');
+      }
+
+      if (!parsed.password) {
+        throw new Error('REDIS_URL must include a password in production.');
+      }
+    }
+
     return url;
   }
 

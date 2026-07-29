@@ -8,8 +8,12 @@ import { EventResourceEntity } from '../entities/event-resource.entity';
 import { EventEntity } from '../entities/event.entity';
 import { EventWithRelationsModel } from '../models/event-with-relations.model';
 import { CreateEventDto } from '@/event/presentation/dtos/create-event.dto';
-import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import {
+  getCurrentIpAddress,
+  getCurrentUser,
+} from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { authorize } from '@/shared/domain/policy/authorize';
 import { EventResourceRole } from '@marppa-cloud/db';
 
 @Injectable()
@@ -20,21 +24,15 @@ export class EventService {
   ) {}
 
   async create(data: CreateEventDto): Promise<EventEntity> {
-    let { createdBy, companyId } = data;
-
-    if (createdBy == null || companyId == null) {
-      const user = getCurrentUser();
-      if (user == null) {
-        throw new UnauthorizedError();
-      }
-
-      createdBy ??= user.userId;
-      companyId ??= user.companyId;
+    const user = getCurrentUser();
+    if (user == null) {
+      throw new UnauthorizedError();
     }
 
-    const event = new EventEntity(data.type, createdBy, companyId, {
+    const event = new EventEntity(data.type, user.userId, user.companyId, {
       notes: data.notes,
       data: data.data,
+      createdByIp: getCurrentIpAddress(),
     });
 
     return this.eventRepository.create(event);
@@ -65,10 +63,21 @@ export class EventService {
   }
 
   async findById(id: number): Promise<EventWithRelationsModel | null> {
-    return this.eventRepository.findById(id);
+    const event = await this.eventRepository.findById(id);
+    if (!event) {
+      return null;
+    }
+
+    authorize('read', 'Event', event.event.companyId);
+    return event;
   }
 
   async findMany(): Promise<EventEntity[]> {
-    return this.eventRepository.findMany();
+    const user = getCurrentUser();
+    if (user == null) {
+      throw new UnauthorizedError();
+    }
+
+    return this.eventRepository.findMany(user.companyId);
   }
 }

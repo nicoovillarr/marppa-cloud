@@ -11,7 +11,10 @@ export const systemApi = {
     return fetcher<SystemResetAvailabilityDto>(`${baseUrl}/reset/availability`);
   },
 
-  reset(hard: boolean): Promise<SystemResetResponseDto> {
-    return fetcher<SystemResetResponseDto>(`${baseUrl}/reset`, "POST", { hard });
+  reset(hard: boolean, confirmPassword?: string): Promise<SystemResetResponseDto> {
+    return fetcher<SystemResetResponseDto>(`${baseUrl}/reset`, "POST", {
+      hard,
+      confirmPassword,
+    });
   },
 };

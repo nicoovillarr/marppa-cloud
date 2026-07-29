@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ZoneApiService } from '../../application/services/zone.api-service';
 import { ZoneResponseModel } from '../../application/models/zone.response-model';
@@ -14,8 +15,10 @@ import { CreateZoneDto } from '../dtos/create-zone.dto';
 import { UpdateZoneDto } from '../dtos/update-zone.dto';
 import { ZoneWithNodesAndFibersResponseModel } from '@/mesh/application/models/zone-with-nodes-and-fibers.response-model';
 import { ZoneWithNodesResponseModel } from '@/mesh/application/models/zone-with-nodes.response.model';
+import { LoggedInGuard } from '@/auth/presentation/guards/logged-in.guard';
 
 @Controller('mesh/zones')
+@UseGuards(LoggedInGuard)
 export class ZoneController {
   constructor(private readonly apiService: ZoneApiService) { }
 

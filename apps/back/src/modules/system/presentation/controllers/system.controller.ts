@@ -20,6 +20,6 @@ export class SystemController {
   public async reset(
     @Body() data: SystemResetDto,
   ): Promise<{ eventId: number }> {
-    return this.apiService.reset(data.hard === true);
+    return this.apiService.reset(data.hard === true, data.confirmPassword);
   }
 }

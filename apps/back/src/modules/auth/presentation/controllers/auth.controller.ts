@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 
 import { AuthApiService } from '@/auth/application/services/auth.api-service';
@@ -15,12 +16,14 @@ export class AuthController {
   constructor(private readonly authApiService: AuthApiService) { }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('register')
   async register(@Body() data: CreateUserDto, @Req() req: Request) {
     return await this.authApiService.register(data, req);
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('login')
   async login(@Body() data: LoginUserDto, @Req() req: Request) {
     return await this.authApiService.login(data, req);
@@ -41,6 +44,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('reset-password')
   async requestPasswordReset(
     @Body() data: ResetPasswordDto,

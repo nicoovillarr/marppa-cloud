@@ -11,6 +11,7 @@ import {
   Put,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateWorkerDto } from '../dtos/create-worker.dto';
 import { UpdateWorkerDto } from '../dtos/update-worker.dto';
@@ -20,8 +21,10 @@ import type { Response } from 'express';
 import { WorkerSshKeyApiService } from '@/hive/application/services/worker-ssh-key.api-service';
 import { WorkerSshKeyModel } from '@/hive/domain/models/worker-ssh-key.model';
 import { CreateWorkerSshKeyDto } from '../dtos/create-worker-ssh-key.dto';
+import { LoggedInGuard } from '@/auth/presentation/guards/logged-in.guard';
 
 @Controller('hive/workers')
+@UseGuards(LoggedInGuard)
 export class WorkerController {
   constructor(
     private readonly service: WorkerApiService,

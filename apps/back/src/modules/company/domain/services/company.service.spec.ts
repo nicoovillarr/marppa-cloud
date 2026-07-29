@@ -7,6 +7,9 @@ import {
 import { CompanyEntity } from '../entities/company.entity';
 import { CreateCompanyDto } from '../../presentation/dtos/create-company.dto';
 import { UpdateCompanyDto } from '../../presentation/dtos/update-company.dto';
+import * as sessionContext from '@/auth/infrastructure/als/session.context';
+import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { UserRole } from '@marppa-cloud/db';
 
 describe('CompanyService', () => {
   let service: CompanyService;
@@ -23,7 +26,6 @@ describe('CompanyService', () => {
     update: jest.fn(),
     delete: jest.fn(),
     findById: jest.fn(),
-    findAll: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -39,6 +41,14 @@ describe('CompanyService', () => {
 
     service = module.get<CompanyService>(CompanyService);
     repository = module.get<CompanyRepository>(COMPANY_REPOSITORY_SYMBOL);
+
+    jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+      userId: 'u-000001',
+      companyId: '1',
+      email: 'test@test.com',
+      type: 'access',
+      role: UserRole.OWNER,
+    } as any);
   });
 
   afterEach(() => {
@@ -84,6 +94,22 @@ describe('CompanyService', () => {
       );
       expect(result).toEqual(updatedCompany);
     });
+
+    it('should reject a MEMBER trying to update their own company', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000002',
+        companyId: '1',
+        email: 'member@test.com',
+        type: 'access',
+        role: UserRole.MEMBER,
+      } as any);
+
+      await expect(
+        service.update('1', {
+          name: 'Updated Company',
+        } as UpdateCompanyDto),
+      ).rejects.toThrow(NotFoundError);
+    });
   });
 
   describe('delete', () => {
@@ -93,6 +119,18 @@ describe('CompanyService', () => {
       await service.delete('1');
 
       expect(repository.delete).toHaveBeenCalledWith('1');
+    });
+
+    it('should reject a MEMBER trying to delete their own company', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000002',
+        companyId: '1',
+        email: 'member@test.com',
+        type: 'access',
+        role: UserRole.MEMBER,
+      } as any);
+
+      await expect(service.delete('1')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -106,24 +144,40 @@ describe('CompanyService', () => {
       expect(result).toEqual(mockCompany);
     });
 
-    it('should return null if company not found', async () => {
+    it('should throw NotFoundError if company not found', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000001',
+        companyId: '999',
+        email: 'test@test.com',
+        type: 'access',
+      } as any);
       mockCompanyRepository.findById.mockResolvedValue(null);
 
-      const result = await service.findById('999');
-
+      await expect(service.findById('999')).rejects.toThrow(NotFoundError);
       expect(repository.findById).toHaveBeenCalledWith('999');
-      expect(result).toBeNull();
     });
-  });
 
-  describe('findAll', () => {
-    it('should return all companies', async () => {
-      mockCompanyRepository.findAll.mockResolvedValue([mockCompany]);
+    it('should throw NotFoundError when the company belongs to another owner', async () => {
+      mockCompanyRepository.findById.mockResolvedValue(mockCompany);
 
-      const result = await service.findAll();
+      await expect(service.findById('other-company')).rejects.toThrow(
+        NotFoundError,
+      );
+    });
 
-      expect(repository.findAll).toHaveBeenCalled();
-      expect(result).toEqual([mockCompany]);
+    it('should let a MEMBER read their own company', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000002',
+        companyId: '1',
+        email: 'member@test.com',
+        type: 'access',
+        role: UserRole.MEMBER,
+      } as any);
+      mockCompanyRepository.findById.mockResolvedValue(mockCompany);
+
+      const result = await service.findById('1');
+
+      expect(result).toEqual(mockCompany);
     });
   });
 });

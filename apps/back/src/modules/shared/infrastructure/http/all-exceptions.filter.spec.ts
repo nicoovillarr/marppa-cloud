@@ -1,4 +1,4 @@
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus, UnauthorizedException } from '@nestjs/common';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 
@@ -62,5 +62,14 @@ describe('AllExceptionsFilter', () => {
 
     expect(sent.status).toBe(HttpStatus.NOT_FOUND);
     expect(sent.body.message).toBe('nope');
+  });
+
+  it('should pass through a NestJS HttpException with its real status instead of a 500', () => {
+    const { sent, host } = capture();
+
+    filter.catch(new UnauthorizedException('Usuario no autenticado'), host);
+
+    expect(sent.status).toBe(HttpStatus.UNAUTHORIZED);
+    expect(sent.body.message).toBe('Usuario no autenticado');
   });
 });

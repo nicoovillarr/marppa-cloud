@@ -7,9 +7,15 @@ import { LinuxOrbitService } from '@/orbit/infrastructure/services/LinuxOrbitSer
 import { LinuxHiveService } from '@/worker/infrastructure/LinuxHiveService';
 import { WorkerStartProcessor } from '@/worker/application/WorkerStartProcessor';
 import { Command } from '@/libs/Command';
-import { isValidSshPublicKey, eventJobId } from '@marppa-cloud/shared';
+import { isValidSshPublicKey, eventJobId, signEventJob } from '@marppa-cloud/shared';
 import { AppContainer } from '@/libs/Container';
 import { IPChecker } from '@/system/application/IPChecker';
+import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
+import { NftablesRuleset } from '@/libs/NftablesRuleset';
+
+process.env.EVENT_QUEUE_HMAC_SECRET ??= 'test-event-queue-hmac-secret';
+const testEventSignature = (eventId: number) =>
+  signEventJob(eventId, process.env.EVENT_QUEUE_HMAC_SECRET!);
 
 test('EventWorker marks aborted events as failed', async () => {
   let markFailedCalls = 0;
@@ -71,10 +77,50 @@ test('EventWorker marks aborted events as failed', async () => {
     repository as any,
   );
 
-  await (worker as any).process({ data: { eventId: 42 } });
+  await (worker as any).process({
+    data: { eventId: 42, signature: testEventSignature(42) },
+  });
 
   assert.equal(markFailedCalls, 1);
   assert.equal(incrementRetryCalls, 0);
+});
+
+test('EventWorker drops a job with a missing or forged signature', async () => {
+  let findByIdCalls = 0;
+
+  const repository = {
+    findById: async () => {
+      findByIdCalls += 1;
+      return {} as any;
+    },
+    markProcessed: async () => undefined,
+    markFailed: async () => undefined,
+    incrementRetry: async () => undefined,
+    createEvent: async () => 1,
+    addEventResource: async () => undefined,
+  };
+
+  const logger = {
+    info: () => undefined,
+    log: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  };
+
+  const worker = new EventWorker(
+    {} as any,
+    {} as any,
+    logger as any,
+    {} as any,
+    repository as any,
+  );
+
+  await (worker as any).process({ data: { eventId: 42 } });
+  await (worker as any).process({
+    data: { eventId: 42, signature: 'not-the-real-signature' },
+  });
+
+  assert.equal(findByIdCalls, 0);
 });
 
 test('LinuxHiveService rejects invalid VM names before invoking virsh', async () => {
@@ -143,10 +189,80 @@ test('EventWorker accepts system events with no primary resource', async () => {
     repository as any,
   );
 
-  await (worker as any).process({ data: { eventId: 48 } });
+  await (worker as any).process({
+    data: { eventId: 48, signature: testEventSignature(48) },
+  });
 
   assert.equal(handled, 1);
   assert.equal(markFailedCalls, 0);
+});
+
+test('WebSocketServer throttles a socket that floods EXEC_OPEN', async () => {
+  const logger = {
+    info: () => undefined,
+    log: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  };
+
+  const server = new WebSocketServer(
+    logger as any,
+    {} as any,
+    { open: async () => { throw new Error('should not reach exec service'); } } as any,
+    { open: async () => { throw new Error('should not reach console service'); } } as any,
+  );
+
+  const sent: any[] = [];
+  const socket = {
+    userId: 'u-1',
+    companyId: 'c-1',
+    readyState: 1,
+    send: (raw: string) => sent.push(JSON.parse(raw)),
+    execOpenRate: { count: Number.MAX_SAFE_INTEGER, windowStart: Date.now() },
+  };
+
+  await (server as any).handleExecOpen(socket, {
+    sessionId: '11111111-1111-1111-1111-111111111111',
+    resourceType: 'worker',
+    resourceId: 'w-1',
+    cols: 80,
+    rows: 24,
+  });
+
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].type, 'EXEC_ERROR');
+  assert.match(sent[0].data.message, /Too many console sessions/);
+});
+
+test('WebSocketServer drops messages once a socket exceeds the generic flood limit', async () => {
+  const logger = {
+    info: () => undefined,
+    log: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  };
+
+  const server = new WebSocketServer(logger as any, {} as any, {} as any, {} as any);
+
+  let unsubscribeCalls = 0;
+  (server as any).handleUnsubscribe = () => {
+    unsubscribeCalls += 1;
+  };
+
+  const socket = {
+    userId: 'u-1',
+    companyId: 'c-1',
+    messageRate: { count: Number.MAX_SAFE_INTEGER, windowStart: Date.now() },
+  };
+
+  await (server as any).onMessage(
+    socket,
+    Buffer.from(
+      JSON.stringify({ type: 'UNSUBSCRIBE_CHANNEL', data: { channel: 'hive:worker:w-1' } }),
+    ),
+  );
+
+  assert.equal(unsubscribeCalls, 0);
 });
 
 test('LinuxOrbitService rejects injected proxy config values', () => {
@@ -356,6 +472,33 @@ ssh-rsa ${body}`), 'embedded newline');
 test('event job ids are never bare integers', () => {
   assert.equal(eventJobId(91), 'event-91');
   assert.ok(!/^\d+$/.test(eventJobId(91)), 'BullMQ rejects a fully numeric custom id');
+});
+
+test('NftablesRuleset detects a default-deny output policy', () => {
+  const hardened = `
+table inet filter {
+  chain input {
+    type filter hook input priority 0; policy drop;
+  }
+  chain output {
+    type filter hook output priority 0; policy drop;
+    udp dport 53 accept
+  }
+}
+`;
+
+  const openEgress = `
+table inet filter {
+  chain output {
+    type filter hook output priority 0;
+    udp dport 53 accept
+  }
+}
+`;
+
+  assert.equal(NftablesRuleset.hasDefaultDenyOutputPolicy(hardened), true);
+  assert.equal(NftablesRuleset.hasDefaultDenyOutputPolicy(openEgress), false);
+  assert.equal(NftablesRuleset.hasDefaultDenyOutputPolicy(''), false);
 });
 
 

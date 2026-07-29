@@ -26,11 +26,21 @@ const refreshAttrs = {
   path: REFRESH_PATH,
 } as const;
 
+const jsReadableCsrfAttrs = {
+  httpOnly: false,
+  secure,
+  sameSite,
+  domain,
+  path: '/',
+} as const;
+
 export const AuthCookiePolicy = {
   access: { ...accessAttrs, maxAge: 15 * 60 * 1000 },
   refresh: { ...refreshAttrs, maxAge: 7 * 24 * 60 * 60 * 1000 },
+  csrf: { ...jsReadableCsrfAttrs, maxAge: 15 * 60 * 1000 },
   clear: {
     access: accessAttrs,
     refresh: refreshAttrs,
+    csrf: jsReadableCsrfAttrs,
   },
 } as const;

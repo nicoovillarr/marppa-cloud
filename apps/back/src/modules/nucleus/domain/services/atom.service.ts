@@ -19,6 +19,7 @@ import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import { EventTypeKey, getEventStateTransition } from '@marppa-cloud/api-types';
 import { forbiddenCapabilities, rootOnlyCapabilities } from '@marppa-cloud/shared';
+import { authorize } from '@/shared/domain/policy/authorize';
 
 @Injectable()
 export class AtomService {
@@ -37,7 +38,7 @@ export class AtomService {
       throw new NotFoundError();
     }
 
-    this.assertOwnership(atom.ownerId);
+    authorize('manage', 'Atom', atom.ownerId);
     return atom;
   }
 
@@ -47,7 +48,7 @@ export class AtomService {
       throw new NotFoundError();
     }
 
-    this.assertOwnership(atom.atom.ownerId);
+    authorize('manage', 'Atom', atom.atom.ownerId);
     return atom;
   }
 
@@ -220,17 +221,6 @@ export class AtomService {
   assertStatus(atom: AtomEntity, expected: ResourceStatus): void {
     if (atom.status !== expected) {
       throw new AtomInvalidStatusError(expected, atom.status);
-    }
-  }
-
-  private assertOwnership(ownerId: string): void {
-    const user = getCurrentUser();
-    if (!user) {
-      throw new UnauthorizedError();
-    }
-
-    if (ownerId !== user.companyId) {
-      throw new NotFoundError();
     }
   }
 

@@ -8,6 +8,7 @@ interface EventOptionalProps {
   data?: Record<string, unknown> | unknown[];
   createdAt?: Date;
   createdBy?: string;
+  createdByIp?: string;
   retries?: number;
   processedAt?: Date;
   failedAt?: Date;
@@ -20,6 +21,7 @@ export class EventEntity extends BaseEntity {
 
   public readonly notes?: string;
   public readonly data?: Record<string, unknown> | unknown[];
+  public readonly createdByIp?: string;
   public readonly retries?: number;
   public readonly processedAt?: Date;
   public readonly failedAt?: Date;
@@ -36,6 +38,7 @@ export class EventEntity extends BaseEntity {
     this.id = optionals.id ?? undefined;
     this.notes = optionals.notes ?? undefined;
     this.data = optionals.data ?? undefined;
+    this.createdByIp = optionals.createdByIp ?? undefined;
     this.retries = optionals.retries ?? 0;
     this.processedAt = optionals.processedAt ?? undefined;
     this.failedAt = optionals.failedAt ?? undefined;
@@ -53,6 +56,7 @@ export class EventEntity extends BaseEntity {
       failedAt: this.failedAt,
       companyId: this.companyId,
       createdBy: this.createdBy,
+      createdByIp: this.createdByIp,
     };
   }
 }

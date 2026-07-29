@@ -7,6 +7,7 @@ import {
 import { AuthService } from '@/auth/domain/services/auth.service';
 import { sessionStorage } from '@/auth/infrastructure/als/session.context';
 import { Request } from 'express';
+import { Utils } from '../../../../libs/utils';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
@@ -30,7 +31,9 @@ export class AuthMiddleware implements NestMiddleware {
         throw new UnauthorizedException('El token es inválido');
       }
 
-      return sessionStorage.run({ user: payload }, () => {
+      const { ipAddress } = Utils.parseRequestData(req);
+
+      return sessionStorage.run({ user: payload, ipAddress }, () => {
         next();
       });
     } catch {

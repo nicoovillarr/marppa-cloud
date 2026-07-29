@@ -1,6 +1,7 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
+import { signEventJob as signEventJobWithSecret } from '@marppa-cloud/shared';
 import { REDIS_QUEUE_CLIENT_SYMBOL } from '../providers/redis-queue.provider';
 
 const QUEUE_NAME = 'infrastructure-events';
@@ -14,6 +15,18 @@ export interface PrimaryResourceRef {
 export interface EventJobData {
   eventId: number;
   primary?: PrimaryResourceRef;
+  signature: string;
+}
+
+export function signEventJob(eventId: number): string {
+  const secret = process.env.EVENT_QUEUE_HMAC_SECRET;
+  if (!secret) {
+    throw new Error(
+      'EVENT_QUEUE_HMAC_SECRET is required to sign jobs enqueued for cloud-scripts.',
+    );
+  }
+
+  return signEventJobWithSecret(eventId, secret);
 }
 
 const ENQUEUE_LUA = `
@@ -56,7 +69,11 @@ export class EventQueueService implements OnModuleDestroy {
   async enqueue(eventId: number, primary?: PrimaryResourceRef): Promise<void> {
     if (!this.queue) return;
 
-    const data: EventJobData = { eventId, primary };
+    const data: EventJobData = {
+      eventId,
+      primary,
+      signature: signEventJob(eventId),
+    };
     const jobId = `event-${eventId}`;
 
     if (!primary || !this.redis) {

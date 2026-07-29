@@ -7,14 +7,6 @@ export class CreateEventDto {
 
   @IsString()
   @IsOptional()
-  createdBy?: string;
-
-  @IsString()
-  @IsOptional()
-  companyId?: string;
-
-  @IsString()
-  @IsOptional()
   notes?: string;
 
   @IsObject()
