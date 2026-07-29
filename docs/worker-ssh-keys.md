@@ -73,8 +73,16 @@ lo que se haga desde adentro puede impedirlo.
 
 ### 3. Consola serie
 
-`virsh console` existe, pero las imágenes cloud no traen contraseña, así que no hay con
-qué autenticarse salvo que se haya configurado antes. En la práctica no es una vía.
+**Implementado el 2026-07-29** (ver `docs/worker-console.md`). Cada worker nuevo recibe
+una password random al crearse, guardada cifrada (`Worker.consolePassword`,
+`SecretCipher`), horneada en el `chpasswd` del cloud-init — login solo local, `ssh_pwauth`
+sigue en `false`. Al abrir la consola desde la UI, `cloud-scripts` la descifra y hace el
+login por vos; nadie ve la password en texto plano. Sigue siendo la única vía que no
+depende de nada de lo que el usuario pueda romper desde adentro (guest agent parado,
+`authorized_keys` borrado, firewall del guest cerrado) — es el último recurso real.
+
+Limitación: solo los workers creados después de este cambio tienen `consolePassword`. Los
+anteriores quedan sin consola hasta que se recreen.
 
 ## Límite que no se puede cerrar
 

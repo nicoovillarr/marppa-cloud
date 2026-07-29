@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { Button } from "@/core/ui/Button";
@@ -27,6 +28,7 @@ export function WorkerManageDialog({
   onChanged,
 }: WorkerManageDialogProps) {
   const { startWorker, terminateWorker, deleteWorker } = useWorker();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   const isOff = worker.status === ResourceStatus.INACTIVE;
@@ -96,6 +98,15 @@ export function WorkerManageDialog({
                 `Failed to delete ${worker.name}`,
               )
             }
+          />
+          <Button
+            text="Console"
+            style="secondary"
+            disabled={!isRunning}
+            onClick={() => {
+              closeCurrentDialog();
+              router.push(`/dashboard/hive/workers/${worker.id}/console`);
+            }}
           />
         </div>
 

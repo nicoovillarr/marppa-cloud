@@ -5,10 +5,12 @@ import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '../services/LoggerService';
 import { PrismaService } from '../services/PrismaService';
 import { DockerExecService, type ExecSession } from '../services/DockerExecService';
+import { WorkerConsoleService } from '../services/WorkerConsoleService';
 import { OnModuleDestroy, OnModuleInit } from '@/libs/Container';
 
 type ChannelMap = Record<string, Set<string>>;
 type ClientMap = Record<string, Map<string, WebSocket>>;
+type ExecResourceType = 'atom' | 'worker';
 
 type AuthedSocket = WebSocket & {
   userId?: string;
@@ -20,7 +22,8 @@ type AuthedSocket = WebSocket & {
 type ExecSessionEntry = {
   socket: AuthedSocket;
   session: ExecSession;
-  atomId: string;
+  resourceType: ExecResourceType;
+  resourceId: string;
   paused: boolean;
   lastActivity: number;
 };
@@ -51,6 +54,7 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     private readonly logger: LoggerService,
     private readonly prisma: PrismaService,
     private readonly execService: DockerExecService,
+    private readonly workerConsoleService: WorkerConsoleService,
   ) {}
 
   public onModuleInit(): void {
@@ -260,11 +264,19 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     data?: Record<string, unknown>,
   ): Promise<void> {
     const sessionId = data?.sessionId as string | undefined;
-    const atomId = data?.atomId as string | undefined;
+    const resourceType = data?.resourceType as string | undefined;
+    const resourceId = data?.resourceId as string | undefined;
     const cols = Number(data?.cols);
     const rows = Number(data?.rows);
 
-    if (!sessionId || !atomId || !SAFE_EXEC_SESSION_ID.test(sessionId)) return;
+    if (
+      !sessionId ||
+      !resourceId ||
+      !SAFE_EXEC_SESSION_ID.test(sessionId) ||
+      (resourceType !== 'atom' && resourceType !== 'worker')
+    ) {
+      return;
+    }
     if (this.execSessions.has(sessionId) || this.pendingExecOpens.has(sessionId)) return;
 
     const sessionsForSocket =
@@ -295,10 +307,12 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     this.pendingExecOpens.set(sessionId, socket);
 
     try {
-      const authorized = await this.isChannelAuthorized(
-        socket,
-        `nucleus:atom:${atomId}`,
-      );
+      const channel =
+        resourceType === 'worker'
+          ? `hive:worker:${resourceId}`
+          : `nucleus:atom:${resourceId}`;
+
+      const authorized = await this.isChannelAuthorized(socket, channel);
       if (!authorized) {
         socket.send(
           JSON.stringify({
@@ -307,30 +321,30 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
           }),
         );
         this.logger.warn(
-          `[WebSocketServer] ${socket.userId} denied exec on atom ${atomId}`,
+          `[WebSocketServer] ${socket.userId} denied exec on ${resourceType} ${resourceId}`,
         );
         return;
       }
 
-      const session = this.execService.open(
-        atomId,
-        cols,
-        rows,
-        (chunk) => this.handleExecOutput(sessionId, chunk),
-        (exitResult) =>
-          this.closeExecSession(sessionId, exitResult.exitCode === 0 ? 'exited' : 'error'),
-      );
+      const onData = (chunk: string) => this.handleExecOutput(sessionId, chunk);
+      const onExit = (exitResult: { exitCode: number; signal?: number }) =>
+        this.closeExecSession(sessionId, exitResult.exitCode === 0 ? 'exited' : 'error');
+
+      const session = await (resourceType === 'worker'
+        ? this.workerConsoleService.open(resourceId, cols, rows, onData, onExit)
+        : this.execService.open(resourceId, cols, rows, onData, onExit));
 
       this.execSessions.set(sessionId, {
         socket,
         session,
-        atomId,
+        resourceType,
+        resourceId,
         paused: false,
         lastActivity: Date.now(),
       });
       socket.send(JSON.stringify({ type: 'EXEC_OPENED', data: { sessionId } }));
       this.logger.log(
-        `[WebSocketServer] ${socket.userId} opened exec session ${sessionId} on atom ${atomId}`,
+        `[WebSocketServer] ${socket.userId} opened exec session ${sessionId} on ${resourceType} ${resourceId}`,
       );
     } catch (err) {
       socket.send(
@@ -340,7 +354,7 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
         }),
       );
       this.logger.error(
-        `[WebSocketServer] Exec open failed for atom ${atomId}: ${String(err)}`,
+        `[WebSocketServer] Exec open failed for ${resourceType} ${resourceId}: ${String(err)}`,
       );
     } finally {
       this.pendingExecOpens.delete(sessionId);
@@ -435,10 +449,12 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
         continue;
       }
 
-      const authorized = await this.isChannelAuthorized(
-        entry.socket,
-        `nucleus:atom:${entry.atomId}`,
-      );
+      const channel =
+        entry.resourceType === 'worker'
+          ? `hive:worker:${entry.resourceId}`
+          : `nucleus:atom:${entry.resourceId}`;
+
+      const authorized = await this.isChannelAuthorized(entry.socket, channel);
       if (!authorized) {
         this.logger.warn(
           `[WebSocketServer] Revoking exec session ${sessionId}: no longer authorized`,

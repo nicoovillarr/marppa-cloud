@@ -8,7 +8,7 @@ export class StubHiveService extends HiveService {
     return true;
   }
 
-  public async createWorker(id: string, name: string, mac: string, _workerImage: WorkerImageSource, _workerInstance: WorkerInstanceSource, _publicSshKeys: string[]): Promise<void> {
+  public async createWorker(id: string, name: string, mac: string, _workerImage: WorkerImageSource, _workerInstance: WorkerInstanceSource, _publicSshKeys: string[], _consolePassword: string): Promise<void> {
     console.log(`[STUB] createWorker: id=${id} name=${name} mac=${mac}`);
   }
 
@@ -20,7 +20,7 @@ export class StubHiveService extends HiveService {
     console.log(`[STUB] addSerialTTYToSecuretty: ${imgPath}`);
   }
 
-  public async createCloudInitISO(id: string, name: string, _mac: string, destDir: string, _sshPublicKeys: string[], net?: WorkerNetworkConfig): Promise<string> {
+  public async createCloudInitISO(id: string, name: string, _mac: string, destDir: string, _sshPublicKeys: string[], _consolePassword: string, net?: WorkerNetworkConfig): Promise<string> {
     const isoPath = `/stub/cloud-init/${destDir}/seed-${id}.iso`;
     console.log(`[STUB] createCloudInitISO: vm=${name} path=${isoPath} net=${net ? `${net.ipAddress}/${net.prefix}` : 'dhcp'}`);
     return isoPath;

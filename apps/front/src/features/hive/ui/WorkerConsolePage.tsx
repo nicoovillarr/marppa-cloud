@@ -10,34 +10,33 @@ import { StatusBadge } from "@/core/ui/StatusBadge";
 import { InlineCode } from "@/core/ui/InlineCode";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { useDashboardLayout } from "@/dashboard/models/use-dashboard-layout";
-import { useAtom } from "../models/use-atom";
-import { imageRef } from "./AtomManageDialog";
+import { useWorker } from "../models/use-worker";
 
 const ResourceConsole = dynamic(
   () => import("@/core/ui/ResourceConsole").then((mod) => mod.ResourceConsole),
   { ssr: false },
 );
 
-export function AtomConsolePage() {
-  const { atomId } = useParams<{ atomId: string }>();
+export function WorkerConsolePage() {
+  const { workerId } = useParams<{ workerId: string }>();
   const router = useRouter();
-  const { atoms, fetchAtom } = useAtom();
+  const { workers, fetchWorker } = useWorker();
   const { setFillHeight } = useDashboardLayout();
   const [loaded, setLoaded] = useState(false);
 
-  const atom = atoms.find((a) => a.id === atomId);
-  const isRunning = atom?.status === ResourceStatus.ACTIVE;
+  const worker = workers.find((w) => w.id === workerId);
+  const isRunning = worker?.status === ResourceStatus.ACTIVE;
 
   useEffect(() => {
-    fetchAtom(atomId).finally(() => setLoaded(true));
-  }, [atomId]);
+    fetchWorker(workerId).finally(() => setLoaded(true));
+  }, [workerId]);
 
   useEffect(() => {
     setFillHeight(true);
     return () => setFillHeight(false);
   }, []);
 
-  const goBack = () => router.push("/dashboard/nucleus/atoms");
+  const goBack = () => router.push("/dashboard/hive/workers");
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-3">
@@ -45,29 +44,29 @@ export function AtomConsolePage() {
         <div className="flex items-center gap-3 min-w-0">
           <Button icon={<LuArrowLeft />} style="secondary" onClick={goBack} />
           <div className="min-w-0">
-            <p className="font-semibold truncate">{atom?.name ?? "Console"}</p>
-            {atom && (
+            <p className="font-semibold truncate">{worker?.name ?? "Console"}</p>
+            {worker && (
               <p className="text-xs text-ink-muted font-mono truncate">
-                {imageRef(atom.image)}
+                {worker.flavor?.name ?? "—"}
               </p>
             )}
           </div>
         </div>
 
-        {atom && (
+        {worker && (
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-ink-muted">Status</span>
-              <StatusBadge status={atom.status} />
+              <StatusBadge status={worker.status} />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-ink-muted">IP</span>
-              <InlineCode code={atom.node?.ipAddress ?? "not assigned"} />
+              <InlineCode code={worker.node?.ipAddress ?? "not assigned"} />
             </div>
-            {atom.updatedAt && (
+            {worker.updatedAt && (
               <div className="flex items-center gap-2">
                 <span className="text-ink-muted">Since</span>
-                <ReactTimeAgo date={atom.updatedAt} />
+                <ReactTimeAgo date={worker.updatedAt} />
               </div>
             )}
           </div>
@@ -77,13 +76,13 @@ export function AtomConsolePage() {
       <div className="flex-1 min-h-0 min-w-0">
         {!loaded ? (
           <p className="text-sm text-ink-muted">Loading…</p>
-        ) : !atom ? (
-          <p className="text-sm text-ink-muted">Atom not found.</p>
+        ) : !worker ? (
+          <p className="text-sm text-ink-muted">Worker not found.</p>
         ) : isRunning ? (
-          <ResourceConsole resourceType="atom" resourceId={atom.id} />
+          <ResourceConsole resourceType="worker" resourceId={worker.id} />
         ) : (
           <p className="text-sm text-ink-muted">
-            This atom is not running — start it from the atoms list to open a console.
+            This worker is not running — start it from the workers list to open a console.
           </p>
         )}
       </div>

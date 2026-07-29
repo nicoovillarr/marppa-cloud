@@ -189,6 +189,8 @@ model Worker {
   storages WorkerDisk[]
   sshKeys  WorkerSshKey[]
 
+  consolePassword String?
+
   node Node?
 }
 

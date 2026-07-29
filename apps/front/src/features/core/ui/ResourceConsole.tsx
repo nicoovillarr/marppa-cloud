@@ -4,10 +4,11 @@ import { useEffect, useRef } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
-import { useWebSocket } from "@/core/ui/WebsocketProvider";
+import { useWebSocket } from "./WebsocketProvider";
 
-interface AtomConsoleProps {
-  atomId: string;
+interface ResourceConsoleProps {
+  resourceType: "atom" | "worker";
+  resourceId: string;
 }
 
 function execClosedMessage(reason: string): string {
@@ -25,7 +26,7 @@ function execClosedMessage(reason: string): string {
   }
 }
 
-export function AtomConsole({ atomId }: AtomConsoleProps) {
+export function ResourceConsole({ resourceType, resourceId }: ResourceConsoleProps) {
   const { sendMessage, subscribeExec, connected } = useWebSocket();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +89,13 @@ export function AtomConsole({ atomId }: AtomConsoleProps) {
     document.fonts.ready.then(() => {
       if (disposed) return;
       fitAddon.fit();
-      sendMessage("EXEC_OPEN", { sessionId, atomId, cols: term.cols, rows: term.rows });
+      sendMessage("EXEC_OPEN", {
+        sessionId,
+        resourceType,
+        resourceId,
+        cols: term.cols,
+        rows: term.rows,
+      });
     });
 
     return () => {
@@ -99,7 +106,7 @@ export function AtomConsole({ atomId }: AtomConsoleProps) {
       sendMessage("EXEC_CLOSE", { sessionId });
       term.dispose();
     };
-  }, [atomId, sendMessage, subscribeExec]);
+  }, [resourceType, resourceId, sendMessage, subscribeExec]);
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-2">

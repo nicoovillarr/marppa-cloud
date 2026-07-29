@@ -15,13 +15,13 @@ export type WorkerNetworkConfig = {
 export abstract class HiveService {
   abstract ensureWorkerImageExists(workerImage: WorkerImageSource): Promise<boolean>;
   
-  abstract createWorker(id: string, name: string, mac: string, workerImage: WorkerImageSource, workerInstance: WorkerInstanceSource, publicSshKeys: string[]): Promise<void>;
-  
+  abstract createWorker(id: string, name: string, mac: string, workerImage: WorkerImageSource, workerInstance: WorkerInstanceSource, publicSshKeys: string[], consolePassword: string): Promise<void>;
+
   abstract addSerialConsoleToGrub(imgPath: string): Promise<void>;
-  
+
   abstract addSerialTTYToSecuretty(imgPath: string): Promise<void>;
-  
-  abstract createCloudInitISO(id: string, name: string, mac: string, destDir: string, sshPublicKeys: string[], net?: WorkerNetworkConfig): Promise<string>;
+
+  abstract createCloudInitISO(id: string, name: string, mac: string, destDir: string, sshPublicKeys: string[], consolePassword: string, net?: WorkerNetworkConfig): Promise<string>;
 
   /**
    * Rebuilds the cloud-init seed ISO in place once the worker's IP is known

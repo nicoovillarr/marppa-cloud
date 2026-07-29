@@ -116,6 +116,7 @@ export class LinuxHiveService extends HiveService {
     workerImage: WorkerImageSource,
     workerInstance: WorkerInstanceSource,
     publicSshKeys: string[],
+    consolePassword: string,
   ): Promise<void> {
     if (
       id == null ||
@@ -168,6 +169,7 @@ export class LinuxHiveService extends HiveService {
       mac,
       cloudInitPath,
       publicSshKeys,
+      consolePassword,
     );
 
     await this.defineVM(id, memory, cpus, size, imgPath, isoPath);
@@ -327,6 +329,7 @@ export class LinuxHiveService extends HiveService {
     mac: string,
     destDir: string,
     sshPublicKeys: string[],
+    consolePassword: string,
     net?: WorkerNetworkConfig,
   ): Promise<string> {
     console.log(`Creating cloud-init ISO for VM: ${name}`);
@@ -343,6 +346,10 @@ export class LinuxHiveService extends HiveService {
       }
     }
 
+    if (!consolePassword || /[\r\n]/.test(consolePassword)) {
+      throw new Error('Invalid console password');
+    }
+
     const sshKeysYaml =
       sshPublicKeys.length > 0
         ? `ssh_authorized_keys:\n${sshPublicKeys
@@ -353,11 +360,14 @@ export class LinuxHiveService extends HiveService {
     const userData = `#cloud-config
 hostname: ${name}
 ssh_pwauth: false
+chpasswd:
+  list: |
+    ubuntu:${consolePassword}
+  expire: false
 users:
   - name: ubuntu
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     shell: /bin/bash
-    lock_passwd: true
     ${sshKeysYaml}
 
   - name: root

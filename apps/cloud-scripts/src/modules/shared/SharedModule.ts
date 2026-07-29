@@ -6,6 +6,8 @@ import { WebSocketServer } from './infrastructure/http/WebSocketServer';
 import { ResourceQueueService } from './infrastructure/services/ResourceQueueService';
 import { ParentStateService } from './infrastructure/services/ParentStateService';
 import { DockerExecService } from './infrastructure/services/DockerExecService';
+import { SecretCipher } from './infrastructure/services/SecretCipher';
+import { WorkerConsoleService } from './infrastructure/services/WorkerConsoleService';
 
 @Module({
   providers: [
@@ -16,6 +18,8 @@ import { DockerExecService } from './infrastructure/services/DockerExecService';
     ResourceQueueService,
     ParentStateService,
     DockerExecService,
+    SecretCipher,
+    WorkerConsoleService,
   ],
   exports: [
     PrismaService,
@@ -25,6 +29,8 @@ import { DockerExecService } from './infrastructure/services/DockerExecService';
     ResourceQueueService,
     ParentStateService,
     DockerExecService,
+    SecretCipher,
+    WorkerConsoleService,
   ],
 })
 export class SharedModule {}

@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import type { Prisma } from '@marppa-cloud/db';
 import { IEventProcessor } from '@/event/application/EventWorker';
@@ -13,6 +14,7 @@ import { AbortError } from '@/event/domain/errors/AbortError';
 import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
 import { HIVE_SERVICE_TOKEN, HiveService } from '../domain/services/HiveService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
+import { SecretCipher } from '@/shared/infrastructure/services/SecretCipher';
 import { Inject } from '@/decorators/Inject';
 import { getEventStates } from '@/shared/domain/EventStateMachine';
 
@@ -24,6 +26,7 @@ export class WorkerCreateProcessor implements IEventProcessor {
   constructor(
     private readonly prisma: PrismaService,
     private readonly wsServer: WebSocketServer,
+    private readonly cipher: SecretCipher,
 
     @Inject(EVENT_REPOSITORY_TOKEN)
     private readonly repository: EventRepository,
@@ -88,6 +91,8 @@ export class WorkerCreateProcessor implements IEventProcessor {
 
       await updateWorkerStatus(STATES.work);
 
+      const consolePassword = randomBytes(24).toString('base64url');
+
       await this.hiveService.createWorker(
         worker.id,
         worker.name,
@@ -95,7 +100,13 @@ export class WorkerCreateProcessor implements IEventProcessor {
         worker.image,
         worker.flavor,
         [publicSshProp.value],
+        consolePassword,
       );
+
+      await this.prisma.worker.update({
+        where: { id: worker.id },
+        data: { consolePassword: this.cipher.encrypt(consolePassword) },
+      });
 
       await updateWorkerStatus(STATES.ok);
 

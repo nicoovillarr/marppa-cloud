@@ -213,6 +213,31 @@ comes from wrapping that command in a locally-allocated pseudo-tty via
 `cloud-scripts` — the self-hosted CI runner in this pipeline, since it's the
 one executing `npm ci`.
 
+### Worker console
+
+Same `node-pty` wrapper, but around `sudo virsh console <vmName> --force`
+instead of `docker exec`. Unlike Docker containers, the cloud image's `ubuntu`
+user has no password (`lock_passwd: true`, `ssh_pwauth: false`) — a serial
+console login prompt is otherwise a dead end if SSH itself is what broke, which
+is exactly the scenario this exists for.
+
+`WorkerCreateProcessor` generates a random password per worker, bakes it into
+the cloud-init `chpasswd` module (local console login only — `ssh_pwauth`
+stays `false`, so it's useless over the network), and stores it **encrypted**
+in `Worker.consolePassword` via `SecretCipher` (AES-256-GCM). Nothing ever
+shows this password to a human: `WorkerConsoleService.open()` decrypts it
+server-side and types it into the pty right after attaching, so opening a
+worker console lands you already logged in, same as the atom console.
+
+Requires `WORKER_CONSOLE_SECRET_KEY` in `.env.local` — a 64-char hex string
+(32 bytes). Generate with `openssl rand -hex 32`. Rotating it orphans every
+already-encrypted `consolePassword` in the DB (they become undecryptable) —
+existing workers keep running, they just lose console access until recreated.
+
+Only workers created **after** this feature shipped have a console password on
+record; earlier workers have `consolePassword = NULL` and the console stays
+unavailable for them.
+
 ## Secrets / `.env`
 
 Nothing goes into GitHub secrets. The host keeps its own
