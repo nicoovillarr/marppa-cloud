@@ -45,9 +45,25 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const reconnectRef = useRef<NodeJS.Timeout | null>(null);
   const isAuthenticatedRef = useRef(false);
   const tokenRefreshedRef = useRef(false);
+  const authRetryRef = useRef<NodeJS.Timeout | null>(null);
+  const intentionalCloseRef = useRef(false);
   const error = useRef<boolean>(false);
 
   const url = process.env.NEXT_PUBLIC_WS_URL;
+
+  const abortReconnect = useCallback(() => {
+    if (reconnectRef.current) {
+      clearTimeout(reconnectRef.current);
+      reconnectRef.current = null;
+    }
+  }, []);
+
+  const clearAuthRetry = useCallback(() => {
+    if (authRetryRef.current) {
+      clearTimeout(authRetryRef.current);
+      authRetryRef.current = null;
+    }
+  }, []);
 
   const connect = useCallback(() => {
     if (socketRef.current || !url) return;
@@ -69,11 +85,18 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
     socket.onclose = () => {
       console.warn("[WebSocket]: WebSocket closed");
+      if (socketRef.current === socket) socketRef.current = null;
+      isAuthenticatedRef.current = false;
+      clearAuthRetry();
+      setConnected(false);
+
+      if (intentionalCloseRef.current) {
+        intentionalCloseRef.current = false;
+        return;
+      }
+
       if (!error.current) toast.error("The connection to the server was lost.");
       error.current = true;
-      socketRef.current = null;
-      isAuthenticatedRef.current = false;
-      setConnected(false);
       abortReconnect();
       scheduleReconnect();
     };
@@ -92,23 +115,23 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         console.error("[WebSocket]: Failed to parse WS message:", e);
       }
     };
-  }, [url]);
+  }, [url, abortReconnect, clearAuthRetry]);
 
   const disconnect = useCallback(() => {
-    reconnectRef.current && clearTimeout(reconnectRef.current);
+    abortReconnect();
+    clearAuthRetry();
     isAuthenticatedRef.current = false;
-    queueRef.current = [];
-    subsRef.current = {};
     reconnectAttemptsRef.current = 0;
-    if (socketRef.current) {
-      if (socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current.close();
-      }
 
-      socketRef.current = null;
+    const socket = socketRef.current;
+    socketRef.current = null;
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      intentionalCloseRef.current = true;
+      socket.close();
     }
+
     setConnected(false);
-  }, []);
+  }, [abortReconnect, clearAuthRetry]);
 
   const scheduleReconnect = useCallback(() => {
     if (reconnectRef.current || socketRef.current) return;
@@ -128,26 +151,26 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     }, delay);
   }, [connect]);
 
-  const abortReconnect = useCallback(() => {
-    if (reconnectRef.current) {
-      clearTimeout(reconnectRef.current);
-      reconnectRef.current = null;
-    }
-  }, []);
-
   const authenticate = useCallback(() => {
     if (!accessToken) return;
     sendMessage("AUTH", { accessToken });
 
-    const timeout = setTimeout(() => {
+    clearAuthRetry();
+    authRetryRef.current = setTimeout(() => {
+      authRetryRef.current = null;
       if (socketRef.current && !isAuthenticatedRef.current) {
         console.warn("[WebSocket]: Retrying AUTH after timeout...");
         sendMessage("AUTH", { accessToken });
       }
     }, 3000);
+  }, [accessToken, clearAuthRetry]);
 
-    return () => clearTimeout(timeout);
-  }, [accessToken]);
+  const dropQueuedChannelMessages = () => {
+    queueRef.current = queueRef.current.filter(
+      ({ type }) =>
+        type !== "SUBSCRIBE_CHANNEL" && type !== "UNSUBSCRIBE_CHANNEL",
+    );
+  };
 
   const flushQueue = () => {
     const socket = socketRef.current;
@@ -166,7 +189,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
   const sendMessage = useCallback((type: string, data?: any) => {
     const socket = socketRef.current;
-    const msgWithToken = { type, data, token: accessToken };
+    const message = { type, data };
     if (
       socket &&
       socket.readyState === WebSocket.OPEN &&
@@ -177,9 +200,9 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
           data
         )}`
       );
-      socket.send(JSON.stringify(msgWithToken));
+      socket.send(JSON.stringify(message));
     } else {
-      queueRef.current.push(msgWithToken);
+      queueRef.current.push(message);
     }
   }, []);
 
@@ -228,6 +251,8 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       case "AUTH_SUCCESS":
         isAuthenticatedRef.current = true;
         tokenRefreshedRef.current = false;
+        clearAuthRetry();
+        dropQueuedChannelMessages();
         Object.keys(subsRef.current).forEach((channel) => {
           sendMessage("SUBSCRIBE_CHANNEL", { channel });
         });

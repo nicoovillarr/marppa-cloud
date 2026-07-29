@@ -21,6 +21,7 @@ export function useMeshRealtime() {
     const channel = `company:${companyId}:mesh`;
 
     const unsubscribe = subscribe(channel, (message) => {
+      const type: string | undefined = message?.type;
       const payload = message?.data ?? {};
       const zoneId: string | undefined = payload.zoneId;
       const status: ResourceStatus | undefined = payload.data?.status;
@@ -28,7 +29,7 @@ export function useMeshRealtime() {
       const zones = useZoneStore.getState().zones;
       const knownZone = zoneId && zones.some((z) => z.id === zoneId);
 
-      if (zoneId && status && knownZone) {
+      if (type === "UPDATED" && zoneId && status && knownZone) {
         setZones(
           zones.map((z) => (z.id === zoneId ? { ...z, status } : z)),
         );
