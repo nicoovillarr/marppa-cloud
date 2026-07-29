@@ -13,7 +13,7 @@ Derived from the exhaustive audit on 2026-07-28. `[○]` pending, `[✓]` done.
 
 ## Short term (1-2 weeks)
 
-- [○] Global rate limiting + login lockout (`@nestjs/throttler`)
+- [✓] Global rate limiting + login lockout (`@nestjs/throttler`)
 - [○] Full security headers on the frontend (CSP, HSTS, X-Frame-Options, Permissions-Policy)
 - [○] `helmet()` in NestJS
 - [○] Next.js middleware with a real session-cookie check
@@ -43,4 +43,4 @@ Derived from the exhaustive audit on 2026-07-28. `[○]` pending, `[✓]` done.
 
 ## Cleanup / dead code
 
-- [○] Finish implementing or remove `AuthCache.isUserAdmin()/setIsUserAdmin()` (security dead code)
+- [✓] Finish implementing or remove `AuthCache.isUserAdmin()/setIsUserAdmin()` (security dead code)

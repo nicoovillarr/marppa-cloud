@@ -18,6 +18,7 @@ import { TokenType } from '@/tokens/domain/enums/token-types.enum';
 import { getFrontendUrl } from '@/auth/domain/config/frontend-url';
 import { isRegistrationEnabled } from '@/auth/domain/config/registration';
 import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
+import { TooManyRequestsError } from '@/shared/domain/errors/too-many-requests.error';
 
 @Injectable()
 export class AuthApiService {
@@ -62,20 +63,24 @@ export class AuthApiService {
     await CaptchaService.verify(req);
 
     const { email, password } = data;
-    const user = await this.userService.findUserByEmail(email);
 
-    if (!user) {
+    if (await this.cache.isLoginLockedOut(email)) {
+      throw new TooManyRequestsError(
+        'Demasiados intentos fallidos. Probá de nuevo más tarde.',
+      );
+    }
+
+    const user = await this.userService.findUserByEmailOrNull(email);
+    const isPasswordValid =
+      user != null &&
+      (await this.userService.comparePassword(password, user.password));
+
+    if (!user || !isPasswordValid) {
+      await this.cache.recordFailedLogin(email);
       throw new Error('Invalid credentials');
     }
 
-    const isPasswordValid = await this.userService.comparePassword(
-      password,
-      user.password,
-    );
-
-    if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
-    }
+    await this.cache.clearFailedLogins(email);
 
     const { refreshToken } =
       await this.authService.generateAndSaveUserTokens(user);

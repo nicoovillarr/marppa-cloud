@@ -15,6 +15,8 @@ import { OrbitModule } from '@/orbit/orbit.module';
 import { SystemModule } from '@/system/system.module';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 const env = process.env.NODE_ENV ?? 'development';
 
@@ -32,6 +34,13 @@ const env = process.env.NODE_ENV ?? 'development';
 
     ScheduleModule.forRoot(),
 
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000,
+        limit: 120,
+      },
+    ]),
+
     SharedModule,
     AuthModule,
     UserModule,
@@ -42,6 +51,12 @@ const env = process.env.NODE_ENV ?? 'development';
     NucleusModule,
     OrbitModule,
     SystemModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {
