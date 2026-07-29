@@ -1,5 +1,6 @@
 import WebSocket, { WebSocketServer as WsServer } from 'ws';
 import type { IncomingMessage } from 'http';
+import { JWT_AUDIENCE, JWT_ISSUER } from '@marppa-cloud/api-types';
 import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '../services/LoggerService';
 import { PrismaService } from '../services/PrismaService';
@@ -197,6 +198,8 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       const secret = new TextEncoder().encode(JWT_SECRET);
       const { payload } = await jwtVerify(accessToken, secret, {
         algorithms: ['HS256'],
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
       });
 
       if (payload.type !== 'access') throw new Error('Not an access token');

@@ -28,7 +28,7 @@ Derived from the exhaustive audit on 2026-07-28. `[○]` pending, `[✓]` done.
 - [○] Full CSRF token (double-submit) replacing the Origin mitigation
 - [○] Second confirmation barrier for `SYSTEM_RESET_HARD`
 - [✓] Align the major version of `jose` between back and cloud-scripts
-- [○] Add `aud`/`iss` claims to JWTs and verify them at every consumer
+- [✓] Add `aud`/`iss` claims to JWTs and verify them at every consumer
 - [○] Integrate `npm audit`/`osv-scanner` into CI
 - [○] Remove or harden `companyId`/`createdBy` in `CreateEventDto`
 

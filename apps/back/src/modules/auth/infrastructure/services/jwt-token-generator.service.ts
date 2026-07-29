@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { JWT_AUDIENCE, JWT_ISSUER } from '@marppa-cloud/api-types';
 
 import { TokenGenerator } from '@/auth/domain/services/token-generator.service';
 import { UserEntity } from '@/user/domain/entities/user.entity';
@@ -19,6 +20,8 @@ export class JwtTokenGenerator implements TokenGenerator {
     return await new SignJWT({ ...jwtEntity })
       .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
       .setIssuedAt()
+      .setIssuer(JWT_ISSUER)
+      .setAudience(JWT_AUDIENCE)
       .setExpirationTime(type === 'access' ? '15m' : '7d')
       .sign(new TextEncoder().encode(process.env.JWT_SECRET));
   }
@@ -28,6 +31,7 @@ export class JwtTokenGenerator implements TokenGenerator {
     const { payload } = await jwtVerify(
       token,
       new TextEncoder().encode(process.env.JWT_SECRET),
+      { issuer: JWT_ISSUER, audience: JWT_AUDIENCE, algorithms: ['HS256'] },
     );
 
     return new JwtEntity(
