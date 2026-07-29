@@ -2,9 +2,11 @@
   "name": "front",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "dev:debug": "cross-env NODE_OPTIONS='--inspect' next dev",
+    "dev:prod-api": "cross-env NEXT_PUBLIC_API_URL=https://api.cloud.marppa.com NEXT_PUBLIC_WS_URL=wss://ws.cloud.marppa.com NEXT_PUBLIC_HOST_ADDRESS=host.cloud.marppa.com NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAD7ug9708uV0hoDo next dev --experimental-https --experimental-https-key certificates/local-key.pem --experimental-https-cert certificates/local.pem -H local.cloud.marppa.com",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

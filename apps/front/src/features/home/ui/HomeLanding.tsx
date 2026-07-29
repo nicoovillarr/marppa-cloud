@@ -1,237 +1,250 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { IconType } from "react-icons";
 import {
   LuArrowRight,
   LuBox,
-  LuContainer,
-  LuNetwork,
+  LuExternalLink,
+  LuGithub,
+  LuGlobe,
+  LuInfo,
+  LuLinkedin,
+  LuScale,
   LuServer,
+  LuWaypoints,
 } from "react-icons/lu";
 import { useAuth } from "@/auth/models/useAuth";
+import { EXTERNAL_LINKS } from "@/core/models/external-links";
+import { ConsolePanel } from "./ConsolePanel";
 
-const TICKER_STEPS = [
-  "Creating the bridge",
-  "Configuring DHCP",
-  "Applying firewall rules",
-  "Zone is live",
+const PROPERTIES: { key: string; value: string }[] = [
+  { key: "Repository", value: "nicoovillarr/marppa-cloud" },
+  { key: "License", value: "MIT" },
+  { key: "Console", value: "Next.js 15, Tailwind, Zustand" },
+  { key: "API", value: "NestJS, PostgreSQL, Redis" },
+  { key: "Host agent", value: "Node, libvirt, nftables" },
+  { key: "Runs on", value: "One machine you already own" },
 ];
 
-function OperationTicker() {
-  const [activeStep, setActiveStep] = useState(0);
-
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setActiveStep(TICKER_STEPS.length);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setActiveStep((step) => (step + 1) % (TICKER_STEPS.length + 1));
-    }, 1400);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="w-full max-w-md rounded-2xl border border-border bg-surface-raised shadow-xl overflow-hidden">
-      <div className="flex items-center gap-2 border-b border-border bg-surface-sunken px-4 py-3">
-        <span className="h-2 w-2 rounded-full bg-status-progress animate-pulse" />
-        <span className="font-mono text-xs uppercase tracking-wide text-ink-muted">
-          Operation — creating Zone
-        </span>
-      </div>
-      <div className="p-4 sm:p-5 font-mono text-sm">
-        <p className="mb-3 text-ink">
-          <span className="text-ink-muted">$</span> zone create prod-net
-        </p>
-        <ul className="space-y-2.5">
-          {TICKER_STEPS.map((step, index) => {
-            const done = index < activeStep;
-            const active = index === activeStep;
-            return (
-              <li key={step} className="flex items-center gap-2.5">
-                <span
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] transition-colors ${done
-                    ? "bg-status-active text-surface"
-                    : active
-                      ? "bg-status-progress text-surface animate-pulse"
-                      : "bg-surface-sunken text-ink-faint"
-                    }`}
-                >
-                  {done ? "✓" : ""}
-                </span>
-                <span
-                  className={
-                    done || active ? "text-ink" : "text-ink-faint"
-                  }
-                >
-                  {step}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-const PILLARS = [
+const MODULES: {
+  icon: IconType;
+  module: string;
+  resource: string;
+  managed: string;
+}[] = [
   {
     icon: LuServer,
     module: "Hive",
-    name: "Workers",
-    copy: "Real virtual machines, provisioned with virt-install and cloud-init. You pick the size, the image, the state.",
+    resource: "Workers",
+    managed: "libvirt virtual machines provisioned with cloud-init",
   },
   {
-    icon: LuNetwork,
+    icon: LuWaypoints,
     module: "Mesh",
-    name: "Zones",
-    copy: "Subnets with their own bridge, DHCP, and firewall rules. Connect a Worker and you'll know exactly which IP it got.",
+    resource: "Zones",
+    managed: "Linux bridges, DHCP leases and nftables rules",
   },
   {
     icon: LuBox,
     module: "Nucleus",
-    name: "Atoms",
-    copy: "Containers with every requested capability graded by blast radius — nothing runs with more permission than it declared.",
+    resource: "Atoms",
+    managed: "Containers, with each capability graded by blast radius",
   },
   {
-    icon: LuContainer,
+    icon: LuGlobe,
     module: "Orbit",
-    name: "Portals",
-    copy: "DDNS and tunnels so your infrastructure stays reachable, without exposing more than you meant to.",
+    resource: "Portals",
+    managed: "DDNS records and TCP tunnels into the host",
   },
 ];
 
-const STORY_STEPS = [
+const LINKS: {
+  icon: IconType;
+  label: string;
+  detail: string;
+  href: string;
+}[] = [
   {
-    step: "1",
-    title: "You ask for something",
-    copy: "A short, honest form — a name, a network range, a size. No hidden defaults.",
+    icon: LuGithub,
+    label: "Source code",
+    detail: "github.com/nicoovillarr/marppa-cloud",
+    href: EXTERNAL_LINKS.repository,
   },
   {
-    step: "2",
-    title: "You watch it happen",
-    copy: "No anonymous spinner. An Operation appears, with its steps ticking from pending to done.",
+    icon: LuLinkedin,
+    label: "Nicolás Villar",
+    detail: "linkedin.com/in/nicolás-villar",
+    href: EXTERNAL_LINKS.linkedin,
   },
   {
-    step: "3",
-    title: "You get the result",
-    copy: "The IP it landed on, the credentials it generated, the state it's in now — handed to you once, clearly.",
+    icon: LuScale,
+    label: "License",
+    detail: "MIT",
+    href: EXTERNAL_LINKS.license,
   },
 ];
+
+function ResourceHeader({ consoleHref, consoleLabel }: {
+  consoleHref: string;
+  consoleLabel: string;
+}) {
+  return (
+    <header className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="min-w-0">
+        <p className="font-mono text-xs uppercase tracking-widest text-ink-faint">
+          Open source · Self-hosted IaaS
+        </p>
+        <h1 className="mt-2 font-display text-3xl font-bold sm:text-4xl">
+          marppa-cloud
+        </h1>
+        <p className="mt-3 max-w-2xl text-base text-ink-muted">
+          A control plane for a single physical host: create virtual machines,
+          networks and containers from a web console instead of ssh-ing in and
+          running scripts by hand.
+        </p>
+      </div>
+
+      <div className="flex shrink-0 flex-wrap gap-3">
+        <a
+          href={EXTERNAL_LINKS.repository}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 font-medium text-white transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+        >
+          <LuGithub className="h-4 w-4" />
+          View the code
+        </a>
+        <Link
+          href={consoleHref}
+          className="inline-flex items-center gap-2 rounded-md border border-border bg-surface-raised px-4 py-2 font-medium text-ink transition hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+        >
+          {consoleLabel}
+          <LuArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    </header>
+  );
+}
+
+function DeploymentNotice() {
+  return (
+    <div className="flex items-start gap-3 rounded-md border border-accent/25 bg-accent-tint px-4 py-3">
+      <LuInfo className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+      <p className="text-sm text-accent-ink">
+        The console at this address is a live deployment running on my own
+        hardware. Sign in to look around — provisioning real resources is
+        limited to my account.
+      </p>
+    </div>
+  );
+}
 
 export function HomeLanding() {
   const { isLoggedIn } = useAuth();
-  const primaryHref = isLoggedIn ? "/dashboard" : "/login";
 
   return (
-    <div className="w-full">
-      <section className="w-full border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16 sm:py-24 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-16 items-center">
-          <div>
-            <span className="font-mono text-xs uppercase tracking-widest text-accent-ink">
-              Self-hosted infrastructure
-            </span>
-            <h1 className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] mt-4 mb-6">
-              You'll never look at your infrastructure and wonder what's
-              happening.
-            </h1>
-            <p className="text-base sm:text-lg text-ink-muted max-w-lg mb-8">
-              Marppa Cloud runs your VMs, networks, and containers on your own
-              hardware. Every action it takes shows up as a live operation —
-              not a black box.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href={primaryHref}
-                className="inline-flex items-center gap-2 rounded-lg bg-accent text-white px-5 py-3 font-medium hover:brightness-95 transition"
-              >
-                {isLoggedIn ? "Go to dashboard" : "Enter the console"}
-                <LuArrowRight />
-              </Link>
-              <a
-                href="#pillars"
-                className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-3 font-medium text-ink hover:bg-surface-sunken transition"
-              >
-                See how it works
-              </a>
-            </div>
-          </div>
+    <main className="h-full overflow-y-auto">
+      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10">
+        <ResourceHeader
+          consoleHref={isLoggedIn ? "/dashboard" : "/login"}
+          consoleLabel={isLoggedIn ? "Open the console" : "Sign in"}
+        />
 
-          <div className="flex justify-center lg:justify-end">
-            <OperationTicker />
-          </div>
-        </div>
-      </section>
+        <DeploymentNotice />
 
-      <section id="pillars" className="w-full border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16 sm:py-20">
-          <h2 className="font-display font-bold text-2xl sm:text-3xl mb-2">
-            Four modules, one host
-          </h2>
-          <p className="text-ink-muted mb-10 max-w-2xl">
-            Every module maps to a real, observable part of your
-            infrastructure — nothing here is a rented abstraction.
+        <ConsolePanel title="Summary" meta="Overview">
+          <p className="max-w-3xl text-sm text-ink-muted">
+            The console talks to a NestJS API, which queues work for an agent
+            running on the host. The agent is what actually calls libvirt,
+            writes nftables rules and starts containers, and reports every step
+            back over a WebSocket, so an action in the UI maps to something you
+            can verify on the machine.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {PILLARS.map(({ icon: Icon, module, name, copy }) => (
+
+          <dl className="mt-5 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+            {PROPERTIES.map(({ key, value }) => (
               <div
-                key={module}
-                className="rounded-xl border border-border bg-surface-raised p-5 flex flex-col gap-3"
+                key={key}
+                className="flex flex-col gap-0.5 border-t border-border pt-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
               >
-                <Icon className="h-5 w-5 text-accent" />
-                <div>
-                  <p className="font-mono text-xs uppercase tracking-wide text-ink-faint">
-                    {module}
-                  </p>
-                  <h3 className="font-display font-semibold text-lg">
-                    {name}
-                  </h3>
-                </div>
-                <p className="text-sm text-ink-muted">{copy}</p>
+                <dt className="font-mono text-xs uppercase tracking-wide text-ink-faint">
+                  {key}
+                </dt>
+                <dd className="text-sm text-ink sm:text-right">{value}</dd>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
+          </dl>
+        </ConsolePanel>
 
-      <section className="w-full border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16 sm:py-20">
-          <h2 className="font-display font-bold text-2xl sm:text-3xl mb-10">
-            Creating infrastructure feels less like praying, more like
-            watching a recipe execute.
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            {STORY_STEPS.map(({ step, title, copy }) => (
-              <div key={step}>
-                <span className="font-display text-3xl text-accent">
-                  {step}
-                </span>
-                <h3 className="font-semibold text-lg mt-2 mb-1">{title}</h3>
-                <p className="text-sm text-ink-muted">{copy}</p>
-              </div>
+        <ConsolePanel
+          title="Modules"
+          description="Each module owns one kind of resource on the host."
+          meta={`${MODULES.length} modules`}
+        >
+          <div className="-mx-4 overflow-x-auto sm:-mx-5">
+            <table className="w-full min-w-[560px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="px-4 pb-2 font-mono text-xs font-medium uppercase tracking-wide text-ink-faint sm:px-5">
+                    Module
+                  </th>
+                  <th className="px-4 pb-2 font-mono text-xs font-medium uppercase tracking-wide text-ink-faint">
+                    Resource
+                  </th>
+                  <th className="px-4 pb-2 font-mono text-xs font-medium uppercase tracking-wide text-ink-faint sm:px-5">
+                    Managed with
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {MODULES.map(({ icon: Icon, module, resource, managed }) => (
+                  <tr key={module} className="border-b border-border last:border-b-0">
+                    <td className="px-4 py-3 sm:px-5">
+                      <span className="flex items-center gap-2 font-medium text-ink">
+                        <Icon className="h-4 w-4 shrink-0 text-accent" />
+                        {module}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-sm text-ink-muted">
+                      {resource}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-ink-muted sm:px-5">
+                      {managed}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ConsolePanel>
+
+        <ConsolePanel title="Links">
+          <ul className="flex flex-col">
+            {LINKS.map(({ icon: Icon, label, detail, href }) => (
+              <li key={href} className="border-b border-border last:border-b-0">
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-3 transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-ink-muted" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-ink">
+                      {label}
+                    </span>
+                    <span className="block truncate font-mono text-xs text-ink-faint">
+                      {detail}
+                    </span>
+                  </span>
+                  <LuExternalLink className="h-4 w-4 shrink-0 text-ink-faint transition-colors group-hover:text-accent" />
+                </a>
+              </li>
             ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="w-full">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16 sm:py-20 flex flex-col items-center text-center gap-6">
-          <h2 className="font-display font-bold text-2xl sm:text-3xl max-w-xl">
-            It's your hardware. You should be able to see everything it's
-            doing.
-          </h2>
-          <Link
-            href={primaryHref}
-            className="inline-flex items-center gap-2 rounded-lg bg-accent text-white px-6 py-3 font-medium hover:brightness-95 transition"
-          >
-            {isLoggedIn ? "Go to dashboard" : "Enter the console"}
-            <LuArrowRight />
-          </Link>
-        </div>
-      </section>
-    </div>
+          </ul>
+        </ConsolePanel>
+      </div>
+    </main>
   );
 }

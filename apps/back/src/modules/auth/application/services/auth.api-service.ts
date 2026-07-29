@@ -116,7 +116,7 @@ export class AuthApiService {
       return false;
     }
 
-    const user = await this.userService.findUserById(userId);
+    const user = await this.userService.findUserForSessionRefresh(userId);
     if (!user) {
       return false;
     }

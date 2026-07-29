@@ -1,15 +1,35 @@
+import { EXTERNAL_LINKS } from "@/core/models/external-links";
+
 export function Footer() {
   return (
-    <footer className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 sm:px-6 bg-surface-raised border-t border-border">
-      <p className="text-sm text-ink-faint">
-        Marppa Cloud — your infrastructure, in view.
+    <footer className="flex flex-col items-start justify-between gap-2 border-t border-border bg-surface-raised p-4 sm:flex-row sm:items-center sm:px-6">
+      <p className="font-mono text-xs uppercase tracking-wide text-ink-faint">
+        Marppa Cloud — self-hosted infrastructure control plane
       </p>
       <nav className="flex items-center gap-4">
-        <a href="/privacy" className="text-sm text-ink-muted hover:text-accent-ink">
-          Privacy
+        <a
+          href={EXTERNAL_LINKS.repository}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-ink-muted hover:text-accent-ink"
+        >
+          Repository
         </a>
-        <a href="/terms" className="text-sm text-ink-muted hover:text-accent-ink">
-          Terms
+        <a
+          href={EXTERNAL_LINKS.linkedin}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-ink-muted hover:text-accent-ink"
+        >
+          LinkedIn
+        </a>
+        <a
+          href={EXTERNAL_LINKS.license}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-ink-muted hover:text-accent-ink"
+        >
+          MIT License
         </a>
       </nav>
     </footer>

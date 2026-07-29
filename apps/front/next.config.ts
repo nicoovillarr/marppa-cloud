@@ -3,9 +3,12 @@ import type { NextConfig } from "next";
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "";
 
+const isDevelopment = process.env.NODE_ENV !== "production";
+const evalSource = isDevelopment ? " 'unsafe-eval'" : "";
+
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+  `script-src 'self' 'unsafe-inline'${evalSource} https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

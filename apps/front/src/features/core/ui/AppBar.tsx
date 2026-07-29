@@ -4,8 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { useAuth } from "@/auth/models/useAuth";
-import { LuMenu, LuX } from "react-icons/lu";
+import { LuGithub, LuLinkedin, LuMenu, LuX } from "react-icons/lu";
 import { MODULE_LINKS } from "./Sidebar";
+import { EXTERNAL_LINKS } from "@/core/models/external-links";
 
 function BrandMark() {
   return (
@@ -63,6 +64,25 @@ export function AppBar() {
       </Link>
 
       <div className="hidden md:flex items-center gap-4">
+        <a
+          href={EXTERNAL_LINKS.repository}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 text-sm text-sidebar-ink transition-colors hover:text-sidebar-ink-active"
+        >
+          <LuGithub className="h-4 w-4" />
+          Repository
+        </a>
+        <a
+          href={EXTERNAL_LINKS.linkedin}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="LinkedIn"
+          className="text-sidebar-ink transition-colors hover:text-sidebar-ink-active"
+        >
+          <LuLinkedin className="h-4 w-4" />
+        </a>
+        <span className="h-4 w-px bg-sidebar-hover" />
         {isLoggedIn ? (
           <button
             className="text-sm text-sidebar-ink hover:text-sidebar-ink-active transition-colors"
@@ -102,6 +122,26 @@ export function AppBar() {
                 {label}
               </Link>
             ))}
+          <a
+            href={EXTERNAL_LINKS.repository}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-3 px-6 py-3 text-sm border-t border-sidebar-hover text-sidebar-ink"
+            onClick={() => setMenuOpen(false)}
+          >
+            <LuGithub className="h-4 w-4 shrink-0" />
+            Repository
+          </a>
+          <a
+            href={EXTERNAL_LINKS.linkedin}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-3 px-6 py-3 text-sm border-t border-sidebar-hover text-sidebar-ink"
+            onClick={() => setMenuOpen(false)}
+          >
+            <LuLinkedin className="h-4 w-4 shrink-0" />
+            LinkedIn
+          </a>
           {isLoggedIn ? (
             <button
               className="px-6 py-3 text-sm text-left text-sidebar-ink border-t border-sidebar-hover"

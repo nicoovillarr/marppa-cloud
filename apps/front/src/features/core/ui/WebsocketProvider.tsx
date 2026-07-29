@@ -44,6 +44,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const reconnectAttemptsRef = useRef(0);
   const reconnectRef = useRef<NodeJS.Timeout | null>(null);
   const isAuthenticatedRef = useRef(false);
+  const tokenRefreshedRef = useRef(false);
   const error = useRef<boolean>(false);
 
   const url = process.env.NEXT_PUBLIC_WS_URL;
@@ -226,10 +227,24 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     switch (message.type) {
       case "AUTH_SUCCESS":
         isAuthenticatedRef.current = true;
+        tokenRefreshedRef.current = false;
         Object.keys(subsRef.current).forEach((channel) => {
           sendMessage("SUBSCRIBE_CHANNEL", { channel });
         });
         flushQueue();
+        return;
+      case "AUTH_FAILURE":
+        isAuthenticatedRef.current = false;
+
+        if (tokenRefreshedRef.current) {
+          console.error(
+            "[WebSocket]: A freshly issued token was rejected, giving up",
+          );
+          return;
+        }
+
+        tokenRefreshedRef.current = true;
+        setAccessToken(null);
         return;
       default:
         if (message.type.startsWith("EXEC_")) {
@@ -254,17 +269,17 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  useEffect(() => {
-    connect();
-    return () => {
-      disconnect();
-    };
-  }, []);
-
   // The access token is an httpOnly cookie: ask the backend for it once the
   // session is confirmed, so the WS handshake can present it.
   useEffect(() => {
-    if (isLoading || !isLoggedIn || accessToken) return;
+    if (isLoading) return;
+
+    if (!isLoggedIn) {
+      setAccessToken(null);
+      return;
+    }
+
+    if (accessToken) return;
 
     fetcher<{ token: string }>("/auth/ws-token")
       .then(({ token }) => setAccessToken(token ?? null))
@@ -274,10 +289,18 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   }, [isLoading, isLoggedIn, accessToken]);
 
   useEffect(() => {
-    if (isLoading || !accessToken || !connected || isAuthenticatedRef.current)
-      return;
+    if (!accessToken) return;
+
+    connect();
+    return () => {
+      disconnect();
+    };
+  }, [accessToken, connect, disconnect]);
+
+  useEffect(() => {
+    if (!accessToken || !connected || isAuthenticatedRef.current) return;
     authenticate();
-  }, [isLoading, accessToken, connected, authenticate]);
+  }, [accessToken, connected, authenticate]);
 
   const value = { sendMessage, subscribe, unsubscribe, subscribeExec, connected };
 
