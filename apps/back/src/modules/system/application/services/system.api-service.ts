@@ -1,12 +1,12 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { UserRole } from '@marppa-cloud/db';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 import { EventService } from '@/event/domain/services/event.service';
 import { EventQueueService } from '@/shared/infrastructure/services/event-queue.service';
 import { CompanyService } from '@/company/domain/services/company.service';
 import { UserService } from '@/user/domain/services/user.service';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import { defineAbilityFor, policySubject } from '@/shared/domain/policy/ability';
 
 export interface SystemResetAvailability {
   enabled: boolean;
@@ -53,7 +53,8 @@ export class SystemApiService {
     }
 
     if (hard) {
-      if (user.role !== UserRole.OWNER) {
+      const ability = defineAbilityFor(user);
+      if (ability.cannot('manage', policySubject('SystemReset', user.companyId))) {
         throw new ForbiddenException(
           'Solo un owner puede hacer un reset destructivo del sistema.',
         );

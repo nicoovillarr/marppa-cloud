@@ -28,6 +28,7 @@
     "prisma:studio:prod": "npx cross-env NODE_ENV=production npx prisma studio"
   },
   "dependencies": {
+    "@casl/ability": "^7.0.1",
     "@marppa-cloud/api-types": "*",
     "@marppa-cloud/db": "*",
     "@marppa-cloud/shared": "*",

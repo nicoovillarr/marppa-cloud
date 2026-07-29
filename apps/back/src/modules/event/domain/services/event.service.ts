@@ -13,7 +13,7 @@ import {
   getCurrentUser,
 } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
-import { assertCompanyOwnership } from '@/shared/domain/services/ownership.service';
+import { authorize } from '@/shared/domain/policy/authorize';
 import { EventResourceRole } from '@marppa-cloud/db';
 
 @Injectable()
@@ -68,7 +68,7 @@ export class EventService {
       return null;
     }
 
-    assertCompanyOwnership(event.event.companyId);
+    authorize('read', 'Event', event.event.companyId);
     return event;
   }
 

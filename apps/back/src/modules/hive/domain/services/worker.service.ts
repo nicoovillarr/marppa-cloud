@@ -14,7 +14,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { MacAddressService } from './mac-address.service';
 import { WorkerInvalidStatusError } from '../errors/worker-invalid-status.error';
-import { assertCompanyOwnership } from '@/shared/domain/services/ownership.service';
+import { authorize } from '@/shared/domain/policy/authorize';
 
 @Injectable()
 export class WorkerService {
@@ -31,7 +31,7 @@ export class WorkerService {
       throw new NotFoundError();
     }
 
-    assertCompanyOwnership(worker.ownerId);
+    authorize('manage', 'Worker', worker.ownerId);
     return worker;
   }
 
@@ -41,7 +41,7 @@ export class WorkerService {
       throw new NotFoundError();
     }
 
-    assertCompanyOwnership(worker.worker.ownerId);
+    authorize('manage', 'Worker', worker.worker.ownerId);
     return worker;
   }
 

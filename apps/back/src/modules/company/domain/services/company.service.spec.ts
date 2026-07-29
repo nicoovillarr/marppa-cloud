@@ -9,6 +9,7 @@ import { CreateCompanyDto } from '../../presentation/dtos/create-company.dto';
 import { UpdateCompanyDto } from '../../presentation/dtos/update-company.dto';
 import * as sessionContext from '@/auth/infrastructure/als/session.context';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { UserRole } from '@marppa-cloud/db';
 
 describe('CompanyService', () => {
   let service: CompanyService;
@@ -46,6 +47,7 @@ describe('CompanyService', () => {
       companyId: '1',
       email: 'test@test.com',
       type: 'access',
+      role: UserRole.OWNER,
     } as any);
   });
 
@@ -92,6 +94,22 @@ describe('CompanyService', () => {
       );
       expect(result).toEqual(updatedCompany);
     });
+
+    it('should reject a MEMBER trying to update their own company', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000002',
+        companyId: '1',
+        email: 'member@test.com',
+        type: 'access',
+        role: UserRole.MEMBER,
+      } as any);
+
+      await expect(
+        service.update('1', {
+          name: 'Updated Company',
+        } as UpdateCompanyDto),
+      ).rejects.toThrow(NotFoundError);
+    });
   });
 
   describe('delete', () => {
@@ -101,6 +119,18 @@ describe('CompanyService', () => {
       await service.delete('1');
 
       expect(repository.delete).toHaveBeenCalledWith('1');
+    });
+
+    it('should reject a MEMBER trying to delete their own company', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000002',
+        companyId: '1',
+        email: 'member@test.com',
+        type: 'access',
+        role: UserRole.MEMBER,
+      } as any);
+
+      await expect(service.delete('1')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -133,6 +163,21 @@ describe('CompanyService', () => {
       await expect(service.findById('other-company')).rejects.toThrow(
         NotFoundError,
       );
+    });
+
+    it('should let a MEMBER read their own company', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000002',
+        companyId: '1',
+        email: 'member@test.com',
+        type: 'access',
+        role: UserRole.MEMBER,
+      } as any);
+      mockCompanyRepository.findById.mockResolvedValue(mockCompany);
+
+      const result = await service.findById('1');
+
+      expect(result).toEqual(mockCompany);
     });
   });
 });

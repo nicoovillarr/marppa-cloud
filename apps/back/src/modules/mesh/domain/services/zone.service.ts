@@ -13,7 +13,7 @@ import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { ZoneWithNodesModel } from '../models/zone-with-nodes.model';
 import { ZoneWithNodesAndFibersModel } from '../models/zone-with-nodes-and-fibers.model';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
-import { assertCompanyOwnership } from '@/shared/domain/services/ownership.service';
+import { authorize } from '@/shared/domain/policy/authorize';
 
 @Injectable()
 export class ZoneService {
@@ -28,7 +28,7 @@ export class ZoneService {
       throw new NotFoundError();
     }
 
-    assertCompanyOwnership(entity.ownerId);
+    authorize('manage', 'Zone', entity.ownerId);
     return entity;
   }
 
@@ -38,7 +38,7 @@ export class ZoneService {
       throw new NotFoundError();
     }
 
-    assertCompanyOwnership(entity.zone.ownerId);
+    authorize('manage', 'Zone', entity.zone.ownerId);
     return entity;
   }
 
@@ -48,7 +48,7 @@ export class ZoneService {
       throw new NotFoundError();
     }
 
-    assertCompanyOwnership(entity.zone.ownerId);
+    authorize('manage', 'Zone', entity.zone.ownerId);
     return entity;
   }
 

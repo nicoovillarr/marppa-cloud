@@ -12,6 +12,7 @@ import { InvalidEmailError } from '../errors/invalid-email.error';
 import { EmailConflictError } from '../errors/email-conflict.error';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { InvalidCredentialsError } from '../errors/invalid-credentials.error';
+import { can } from '@/shared/domain/policy/authorize';
 
 @Injectable()
 export class UserService {
@@ -70,13 +71,12 @@ export class UserService {
   }
 
   async findUserById(userId: string): Promise<UserEntity | null> {
-    const requester = getCurrentUser();
-    if (!requester) {
+    if (!getCurrentUser()) {
       throw new UnauthorizedError();
     }
 
     const user = await this.userRepository.findUserById(userId);
-    if (!user || user.companyId !== requester.companyId) {
+    if (!user || !can('read', 'User', user.companyId)) {
       return null;
     }
 

@@ -36,7 +36,7 @@ Derived from the exhaustive audit on 2026-07-28. `[○]` pending, `[✓]` done.
 
 - [✓] Dedicated HMAC secret for the Backend↔Cloud Scripts queueing flow (independent of `JWT_SECRET`)
 - [✓] Traceability/audit: record `actorUserId` + IP on every `Event`, immutable audit view
-- [○] Centralized authorization policy layer (CASL/OPA) instead of checks scattered across controllers
+- [✓] Centralized authorization policy layer (CASL/OPA) instead of checks scattered across controllers
 - [✓] Rate-limit event queueing per `companyId`
 - [✓] Validate at boot that `REDIS_URL` uses TLS + password in production (fail-closed)
 - [○] Network segmentation (VLAN/DMZ) for the final production environment — infrastructure, non-blocking
