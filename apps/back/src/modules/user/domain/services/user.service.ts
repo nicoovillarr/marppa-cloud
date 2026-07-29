@@ -70,6 +70,10 @@ export class UserService {
     return await this.userRepository.findUserById(user.userId);
   }
 
+  async findUserForSessionRefresh(userId: string): Promise<UserEntity | null> {
+    return await this.userRepository.findUserById(userId);
+  }
+
   async findUserById(userId: string): Promise<UserEntity | null> {
     if (!getCurrentUser()) {
       throw new UnauthorizedError();

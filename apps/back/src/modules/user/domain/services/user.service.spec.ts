@@ -260,6 +260,27 @@ describe('UserService', () => {
     });
   });
 
+  describe('findUserForSessionRefresh', () => {
+    it('should return the user without a session in context', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue(null);
+      mockUserRepository.findUserById.mockResolvedValue(mockUser);
+
+      const result = await service.findUserForSessionRefresh('u-000001');
+
+      expect(repository.findUserById).toHaveBeenCalledWith('u-000001');
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should return null if user not found', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue(null);
+      mockUserRepository.findUserById.mockResolvedValue(null);
+
+      const result = await service.findUserForSessionRefresh('u-999999');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('findUserByEmail', () => {
     it('should return a user by email', async () => {
       mockUserRepository.findUserByEmail.mockResolvedValue(mockUser);
