@@ -4,7 +4,8 @@ import type { NextRequest } from "next/server";
 const AUTH_ROUTES = ["/login", "/reset-password"];
 
 export async function middleware(request: NextRequest) {
-    const hasSession = request.cookies.has("access_token");
+    const hasSession =
+        request.cookies.has("has_session") || request.cookies.has("access_token");
     const { pathname } = request.nextUrl;
 
     if (pathname.startsWith("/dashboard") && !hasSession) {
