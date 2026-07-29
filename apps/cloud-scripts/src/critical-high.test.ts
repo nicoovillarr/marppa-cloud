@@ -7,9 +7,13 @@ import { LinuxOrbitService } from '@/orbit/infrastructure/services/LinuxOrbitSer
 import { LinuxHiveService } from '@/worker/infrastructure/LinuxHiveService';
 import { WorkerStartProcessor } from '@/worker/application/WorkerStartProcessor';
 import { Command } from '@/libs/Command';
-import { isValidSshPublicKey, eventJobId } from '@marppa-cloud/shared';
+import { isValidSshPublicKey, eventJobId, signEventJob } from '@marppa-cloud/shared';
 import { AppContainer } from '@/libs/Container';
 import { IPChecker } from '@/system/application/IPChecker';
+
+process.env.EVENT_QUEUE_HMAC_SECRET ??= 'test-event-queue-hmac-secret';
+const testEventSignature = (eventId: number) =>
+  signEventJob(eventId, process.env.EVENT_QUEUE_HMAC_SECRET!);
 
 test('EventWorker marks aborted events as failed', async () => {
   let markFailedCalls = 0;
@@ -71,10 +75,50 @@ test('EventWorker marks aborted events as failed', async () => {
     repository as any,
   );
 
-  await (worker as any).process({ data: { eventId: 42 } });
+  await (worker as any).process({
+    data: { eventId: 42, signature: testEventSignature(42) },
+  });
 
   assert.equal(markFailedCalls, 1);
   assert.equal(incrementRetryCalls, 0);
+});
+
+test('EventWorker drops a job with a missing or forged signature', async () => {
+  let findByIdCalls = 0;
+
+  const repository = {
+    findById: async () => {
+      findByIdCalls += 1;
+      return {} as any;
+    },
+    markProcessed: async () => undefined,
+    markFailed: async () => undefined,
+    incrementRetry: async () => undefined,
+    createEvent: async () => 1,
+    addEventResource: async () => undefined,
+  };
+
+  const logger = {
+    info: () => undefined,
+    log: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  };
+
+  const worker = new EventWorker(
+    {} as any,
+    {} as any,
+    logger as any,
+    {} as any,
+    repository as any,
+  );
+
+  await (worker as any).process({ data: { eventId: 42 } });
+  await (worker as any).process({
+    data: { eventId: 42, signature: 'not-the-real-signature' },
+  });
+
+  assert.equal(findByIdCalls, 0);
 });
 
 test('LinuxHiveService rejects invalid VM names before invoking virsh', async () => {
@@ -143,7 +187,9 @@ test('EventWorker accepts system events with no primary resource', async () => {
     repository as any,
   );
 
-  await (worker as any).process({ data: { eventId: 48 } });
+  await (worker as any).process({
+    data: { eventId: 48, signature: testEventSignature(48) },
+  });
 
   assert.equal(handled, 1);
   assert.equal(markFailedCalls, 0);

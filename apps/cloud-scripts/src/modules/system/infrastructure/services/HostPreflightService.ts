@@ -17,7 +17,7 @@ const REQUIRED_ENV_VARS = [
   'BRIDGE_NAME', 'USERNAME', 'MIN_PORT', 'MAX_PORT',
   'NFTABLES_RESET_SOURCE', 'ALLOWED_IMAGE_DOMAINS',
   // Services this app cannot run without
-  'DATABASE_URL', 'REDIS_URL', 'WS_PORT', 'JWT_SECRET',
+  'DATABASE_URL', 'REDIS_URL', 'WS_PORT', 'JWT_SECRET', 'EVENT_QUEUE_HMAC_SECRET',
 ];
 
 /** Env vars that must parse as a positive integer. */

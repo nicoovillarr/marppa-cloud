@@ -34,7 +34,7 @@ Derived from the exhaustive audit on 2026-07-28. `[○]` pending, `[✓]` done.
 
 ## Long term (architecture)
 
-- [○] Dedicated HMAC secret for the Backend↔Cloud Scripts queueing flow (independent of `JWT_SECRET`)
+- [✓] Dedicated HMAC secret for the Backend↔Cloud Scripts queueing flow (independent of `JWT_SECRET`)
 - [○] Traceability/audit: record `actorUserId` + IP on every `Event`, immutable audit view
 - [○] Centralized authorization policy layer (CASL/OPA) instead of checks scattered across controllers
 - [○] Rate-limit event queueing per `companyId`
