@@ -246,7 +246,12 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     const uuid = crypto.randomUUID();
     this.clients[userId].set(uuid, socket);
 
-    socket.send(JSON.stringify({ type: 'AUTH_SUCCESS', data: uuid }));
+    socket.send(
+      JSON.stringify({
+        type: 'AUTH_SUCCESS',
+        data: { clientId: uuid, companyId },
+      }),
+    );
     this.logger.log(`[WebSocketServer] ${userId} authenticated`);
   }
 

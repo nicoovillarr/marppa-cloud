@@ -3,17 +3,13 @@
 import { useEffect } from "react";
 import { useWebSocket } from "@/core/ui/WebsocketProvider";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
-import { useUser } from "../../users/model/useUser";
 import { useZoneStore } from "./zone.store";
 import { useZone } from "./use-zone";
 
 export function useMeshRealtime() {
-  const { subscribe } = useWebSocket();
-  const { user } = useUser();
+  const { subscribe, companyId } = useWebSocket();
   const setZones = useZoneStore((s) => s.setZones);
   const { fetchZones } = useZone();
-
-  const companyId = user?.companyId;
 
   useEffect(() => {
     if (!companyId) return;

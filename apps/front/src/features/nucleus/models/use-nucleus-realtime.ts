@@ -3,17 +3,13 @@
 import { useEffect } from "react";
 import { useWebSocket } from "@/core/ui/WebsocketProvider";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
-import { useUser } from "../../users/model/useUser";
 import { useAtomStore } from "./atom.store";
 import { useAtom } from "./use-atom";
 
 export function useNucleusRealtime() {
-  const { subscribe } = useWebSocket();
-  const { user } = useUser();
+  const { subscribe, companyId } = useWebSocket();
   const setAtoms = useAtomStore((s) => s.setAtoms);
   const { fetchAtoms } = useAtom();
-
-  const companyId = user?.companyId;
 
   useEffect(() => {
     if (!companyId) return;

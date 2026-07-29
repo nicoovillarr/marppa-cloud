@@ -29,6 +29,7 @@ interface IWebSocketContext {
   unsubscribe: (channel: string) => void;
   subscribeExec: (sessionId: string, callback: MessageHandler) => () => void;
   connected: boolean;
+  companyId: string | null;
 }
 
 const WebSocketContext = createContext<IWebSocketContext | null>(null);
@@ -36,6 +37,7 @@ const WebSocketContext = createContext<IWebSocketContext | null>(null);
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const { isLoading, isLoggedIn } = useAuth();
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const queueRef = useRef<{ type: string; data?: any }[]>([]);
@@ -251,6 +253,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       case "AUTH_SUCCESS":
         isAuthenticatedRef.current = true;
         tokenRefreshedRef.current = false;
+        setCompanyId(message.data?.companyId ?? null);
         clearAuthRetry();
         dropQueuedChannelMessages();
         Object.keys(subsRef.current).forEach((channel) => {
@@ -327,7 +330,14 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     authenticate();
   }, [accessToken, connected, authenticate]);
 
-  const value = { sendMessage, subscribe, unsubscribe, subscribeExec, connected };
+  const value = {
+    sendMessage,
+    subscribe,
+    unsubscribe,
+    subscribeExec,
+    connected,
+    companyId,
+  };
 
   return (
     <WebSocketContext.Provider value={value}>

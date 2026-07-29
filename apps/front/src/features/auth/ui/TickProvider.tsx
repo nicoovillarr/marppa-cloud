@@ -48,7 +48,9 @@ export function TickProvider({
         if (!initializedRef.current) return;
 
         if (isLoggedIn) {
-            me();
+            me().catch((e) =>
+                console.error("[TickProvider]: Failed to load the current user", e),
+            );
 
             if (!intervalRef.current) {
                 intervalRef.current = setInterval(() => {

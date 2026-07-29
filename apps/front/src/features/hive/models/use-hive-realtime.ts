@@ -3,17 +3,13 @@
 import { useEffect } from "react";
 import { useWebSocket } from "@/core/ui/WebsocketProvider";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
-import { useUser } from "../../users/model/useUser";
 import { useWorkerStore } from "./worker.store";
 import { useWorker } from "./use-worker";
 
 export function useHiveRealtime() {
-  const { subscribe } = useWebSocket();
-  const { user } = useUser();
+  const { subscribe, companyId } = useWebSocket();
   const setWorkers = useWorkerStore((s) => s.setWorkers);
   const { fetchWorkers } = useWorker();
-
-  const companyId = user?.companyId;
 
   useEffect(() => {
     if (!companyId) return;
