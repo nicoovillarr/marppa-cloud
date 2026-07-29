@@ -8,7 +8,7 @@ Derived from the exhaustive audit on 2026-07-28. `[○]` pending, `[✓]` done.
 - [✓] Ownership/hierarchy in Company and User controllers
 - [✓] Origin/Referer check on mutations (quick CSRF mitigation)
 - [✓] Fail-closed `TURNSTILE_SECRET` in production
-- [○] Rotate/invalidate the old session in `tick()` (refresh token reuse)
+- [✓] Rotate/invalidate the old session in `tick()` (refresh token reuse)
 - [✓] `forbidNonWhitelisted: true` in ValidationPipe
 
 ## Short term (1-2 weeks)

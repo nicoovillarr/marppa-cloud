@@ -125,6 +125,8 @@ export class AuthApiService {
       requestData,
     );
 
+    await this.authService.deleteSession(oldRefreshToken);
+
     return true;
   }
 

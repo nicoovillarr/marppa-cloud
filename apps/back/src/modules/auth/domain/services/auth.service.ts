@@ -68,6 +68,10 @@ export class AuthService {
     this.tokenStorageService.clear();
   }
 
+  async deleteSession(refreshToken: string): Promise<void> {
+    await this.repo.deleteSessionByRefreshToken(refreshToken);
+  }
+
   async findSessionByRefreshToken(
     refreshToken: string,
   ): Promise<SessionEntity | null> {

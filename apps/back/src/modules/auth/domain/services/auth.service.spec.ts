@@ -179,6 +179,21 @@ describe('AuthService', () => {
     });
   });
 
+  describe('deleteSession', () => {
+    it('should delete a session by refresh token without touching cookies', async () => {
+      mockAuthRepository.deleteSessionByRefreshToken.mockResolvedValue(
+        undefined,
+      );
+
+      await service.deleteSession('refresh-token-123');
+
+      expect(repository.deleteSessionByRefreshToken).toHaveBeenCalledWith(
+        'refresh-token-123',
+      );
+      expect(tokenStorageService.clear).not.toHaveBeenCalled();
+    });
+  });
+
   describe('findSessionByRefreshToken', () => {
     it('should return a session by refresh token', async () => {
       mockAuthRepository.findSessionByRefreshToken.mockResolvedValue(
