@@ -12,11 +12,15 @@ type ChannelMap = Record<string, Set<string>>;
 type ClientMap = Record<string, Map<string, WebSocket>>;
 type ExecResourceType = 'atom' | 'worker';
 
+type RateWindow = { count: number; windowStart: number };
+
 type AuthedSocket = WebSocket & {
   userId?: string;
   companyId?: string;
   authTimer?: NodeJS.Timeout;
   isAlive?: boolean;
+  messageRate?: RateWindow;
+  execOpenRate?: RateWindow;
 };
 
 type ExecSessionEntry = {
@@ -39,6 +43,18 @@ const EXEC_BACKPRESSURE_CHECK_MS = 100;
 const EXEC_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 const EXEC_SWEEP_INTERVAL_MS = 30 * 1000;
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
+const MAX_MESSAGES_PER_WINDOW = 50;
+const MESSAGE_RATE_WINDOW_MS = 5_000;
+const MAX_EXEC_OPENS_PER_WINDOW = 10;
+const EXEC_OPEN_RATE_WINDOW_MS = 60_000;
+
+function nextRateWindow(state: RateWindow | undefined, now: number, windowMs: number): RateWindow {
+  if (!state || now - state.windowStart >= windowMs) {
+    return { count: 1, windowStart: now };
+  }
+
+  return { count: state.count + 1, windowStart: state.windowStart };
+}
 
 @Injectable()
 export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
@@ -137,6 +153,11 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       }
 
       if (!socket.userId) return;
+
+      socket.messageRate = nextRateWindow(socket.messageRate, Date.now(), MESSAGE_RATE_WINDOW_MS);
+      if (socket.messageRate.count > MAX_MESSAGES_PER_WINDOW) {
+        return;
+      }
 
       if (type === 'EXEC_OPEN') {
         await this.handleExecOpen(socket, data);
@@ -281,6 +302,17 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       return;
     }
     if (this.execSessions.has(sessionId) || this.pendingExecOpens.has(sessionId)) return;
+
+    socket.execOpenRate = nextRateWindow(socket.execOpenRate, Date.now(), EXEC_OPEN_RATE_WINDOW_MS);
+    if (socket.execOpenRate.count > MAX_EXEC_OPENS_PER_WINDOW) {
+      socket.send(
+        JSON.stringify({
+          type: 'EXEC_ERROR',
+          data: { sessionId, message: 'Too many console sessions opened, slow down' },
+        }),
+      );
+      return;
+    }
 
     const sessionsForSocket =
       [...this.execSessions.values()].filter((entry) => entry.socket === socket).length +

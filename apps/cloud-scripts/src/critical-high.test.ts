@@ -10,6 +10,7 @@ import { Command } from '@/libs/Command';
 import { isValidSshPublicKey, eventJobId, signEventJob } from '@marppa-cloud/shared';
 import { AppContainer } from '@/libs/Container';
 import { IPChecker } from '@/system/application/IPChecker';
+import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 
 process.env.EVENT_QUEUE_HMAC_SECRET ??= 'test-event-queue-hmac-secret';
 const testEventSignature = (eventId: number) =>
@@ -193,6 +194,74 @@ test('EventWorker accepts system events with no primary resource', async () => {
 
   assert.equal(handled, 1);
   assert.equal(markFailedCalls, 0);
+});
+
+test('WebSocketServer throttles a socket that floods EXEC_OPEN', async () => {
+  const logger = {
+    info: () => undefined,
+    log: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  };
+
+  const server = new WebSocketServer(
+    logger as any,
+    {} as any,
+    { open: async () => { throw new Error('should not reach exec service'); } } as any,
+    { open: async () => { throw new Error('should not reach console service'); } } as any,
+  );
+
+  const sent: any[] = [];
+  const socket = {
+    userId: 'u-1',
+    companyId: 'c-1',
+    readyState: 1,
+    send: (raw: string) => sent.push(JSON.parse(raw)),
+    execOpenRate: { count: Number.MAX_SAFE_INTEGER, windowStart: Date.now() },
+  };
+
+  await (server as any).handleExecOpen(socket, {
+    sessionId: '11111111-1111-1111-1111-111111111111',
+    resourceType: 'worker',
+    resourceId: 'w-1',
+    cols: 80,
+    rows: 24,
+  });
+
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].type, 'EXEC_ERROR');
+  assert.match(sent[0].data.message, /Too many console sessions/);
+});
+
+test('WebSocketServer drops messages once a socket exceeds the generic flood limit', async () => {
+  const logger = {
+    info: () => undefined,
+    log: () => undefined,
+    warn: () => undefined,
+    error: () => undefined,
+  };
+
+  const server = new WebSocketServer(logger as any, {} as any, {} as any, {} as any);
+
+  let unsubscribeCalls = 0;
+  (server as any).handleUnsubscribe = () => {
+    unsubscribeCalls += 1;
+  };
+
+  const socket = {
+    userId: 'u-1',
+    companyId: 'c-1',
+    messageRate: { count: Number.MAX_SAFE_INTEGER, windowStart: Date.now() },
+  };
+
+  await (server as any).onMessage(
+    socket,
+    Buffer.from(
+      JSON.stringify({ type: 'UNSUBSCRIBE_CHANNEL', data: { channel: 'hive:worker:w-1' } }),
+    ),
+  );
+
+  assert.equal(unsubscribeCalls, 0);
 });
 
 test('LinuxOrbitService rejects injected proxy config values', () => {
