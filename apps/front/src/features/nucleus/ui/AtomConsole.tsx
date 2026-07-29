@@ -106,10 +106,9 @@ export function AtomConsole({ atomId }: AtomConsoleProps) {
       {!connected && (
         <p className="text-xs text-status-danger">Reconnecting to the server…</p>
       )}
-      <div
-        ref={containerRef}
-        className="flex-1 min-h-0 rounded-lg overflow-hidden bg-[#0b0f14] p-2"
-      />
+      <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-[#0b0f14] p-2">
+        <div ref={containerRef} className="w-full h-full" />
+      </div>
     </div>
   );
 }
