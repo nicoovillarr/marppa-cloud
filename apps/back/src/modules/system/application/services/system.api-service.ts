@@ -4,6 +4,7 @@ import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 import { EventService } from '@/event/domain/services/event.service';
 import { EventQueueService } from '@/shared/infrastructure/services/event-queue.service';
 import { CompanyService } from '@/company/domain/services/company.service';
+import { UserService } from '@/user/domain/services/user.service';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 
 export interface SystemResetAvailability {
@@ -19,6 +20,7 @@ export class SystemApiService {
     private readonly eventService: EventService,
     private readonly eventQueueService: EventQueueService,
     private readonly companyService: CompanyService,
+    private readonly userService: UserService,
   ) {}
 
   public async availability(): Promise<SystemResetAvailability> {
@@ -28,7 +30,10 @@ export class SystemApiService {
     return { enabled, isRootCompany, canReset: enabled && isRootCompany };
   }
 
-  public async reset(hard: boolean): Promise<{ eventId: number }> {
+  public async reset(
+    hard: boolean,
+    confirmPassword?: string,
+  ): Promise<{ eventId: number }> {
     const user = getCurrentUser();
     if (!user) {
       throw new UnauthorizedException();
@@ -44,6 +49,23 @@ export class SystemApiService {
       throw new ForbiddenException(
         'Only members of the root company can reset the system.',
       );
+    }
+
+    if (hard) {
+      const fullUser = await this.userService.findUserById(user.userId);
+      const passwordMatches =
+        fullUser != null &&
+        confirmPassword != null &&
+        (await this.userService.comparePassword(
+          confirmPassword,
+          fullUser.password,
+        ));
+
+      if (!passwordMatches) {
+        throw new ForbiddenException(
+          'Confirmá tu contraseña para hacer un reset destructivo del sistema.',
+        );
+      }
     }
 
     const type = hard
