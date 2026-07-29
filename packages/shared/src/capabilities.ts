@@ -9,8 +9,10 @@
  * Root on the host under another name. `SYS_MODULE` loads a kernel module, which
  * is one step from unloading the nftables rules that isolate every zone;
  * `SYS_ADMIN` covers mount and namespace operations that walk straight out of
- * the container. Refused for everyone, root company included: no approval
- * upstream can make them safe.
+ * the container; `SYS_TIME` changes the kernel clock, which is not namespaced
+ * here and so is the host's clock, not the container's — JWT expiry, TLS certs
+ * and every timer in the app read it too. Refused for everyone, root company
+ * included: no approval upstream can make them safe.
  */
 export const FORBIDDEN_CAPABILITIES: ReadonlySet<string> = new Set([
   'ALL',
@@ -24,6 +26,7 @@ export const FORBIDDEN_CAPABILITIES: ReadonlySet<string> = new Set([
   'SYS_MODULE',
   'SYS_PTRACE',
   'SYS_RAWIO',
+  'SYS_TIME',
 ]);
 
 /**

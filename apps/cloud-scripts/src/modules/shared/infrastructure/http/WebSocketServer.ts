@@ -42,6 +42,7 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
   private readonly channels: ChannelMap = {};
   private readonly clients: ClientMap = {};
   private readonly execSessions: Map<string, ExecSessionEntry> = new Map();
+  private readonly pendingExecOpens: Map<string, AuthedSocket> = new Map();
   private wss: WsServer | null = null;
   private execSweepTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
@@ -53,7 +54,14 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   public onModuleInit(): void {
-    const { WS_PORT, WS_HOST } = process.env;
+    const { WS_PORT, WS_HOST, WS_ALLOWED_ORIGINS } = process.env;
+
+    if (!WS_ALLOWED_ORIGINS?.trim()) {
+      throw new Error(
+        'WS_ALLOWED_ORIGINS is required: without it origin checks would fail open ' +
+        'and accept a WebSocket handshake from any site.',
+      );
+    }
 
     this.wss = new WsServer({
       port: Number(WS_PORT),
@@ -257,14 +265,16 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     const rows = Number(data?.rows);
 
     if (!sessionId || !atomId || !SAFE_EXEC_SESSION_ID.test(sessionId)) return;
-    if (this.execSessions.has(sessionId)) return;
+    if (this.execSessions.has(sessionId) || this.pendingExecOpens.has(sessionId)) return;
 
-    const sessionsForSocket = [...this.execSessions.values()].filter(
-      (entry) => entry.socket === socket,
-    ).length;
-    const sessionsForCompany = [...this.execSessions.values()].filter(
-      (entry) => entry.socket.companyId === socket.companyId,
-    ).length;
+    const sessionsForSocket =
+      [...this.execSessions.values()].filter((entry) => entry.socket === socket).length +
+      [...this.pendingExecOpens.values()].filter((s) => s === socket).length;
+    const sessionsForCompany =
+      [...this.execSessions.values()].filter(
+        (entry) => entry.socket.companyId === socket.companyId,
+      ).length +
+      [...this.pendingExecOpens.values()].filter((s) => s.companyId === socket.companyId).length;
 
     if (
       sessionsForSocket >= MAX_EXEC_SESSIONS_PER_SOCKET ||
@@ -279,24 +289,29 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const authorized = await this.isChannelAuthorized(
-      socket,
-      `nucleus:atom:${atomId}`,
-    );
-    if (!authorized) {
-      socket.send(
-        JSON.stringify({
-          type: 'EXEC_ERROR',
-          data: { sessionId, message: 'Not authorized' },
-        }),
-      );
-      this.logger.warn(
-        `[WebSocketServer] ${socket.userId} denied exec on atom ${atomId}`,
-      );
-      return;
-    }
+    // Reserved synchronously, before the first await below — every check above
+    // this line and this line itself run in the same tick, so a burst of
+    // concurrent EXEC_OPEN messages can never all read the same stale count.
+    this.pendingExecOpens.set(sessionId, socket);
 
     try {
+      const authorized = await this.isChannelAuthorized(
+        socket,
+        `nucleus:atom:${atomId}`,
+      );
+      if (!authorized) {
+        socket.send(
+          JSON.stringify({
+            type: 'EXEC_ERROR',
+            data: { sessionId, message: 'Not authorized' },
+          }),
+        );
+        this.logger.warn(
+          `[WebSocketServer] ${socket.userId} denied exec on atom ${atomId}`,
+        );
+        return;
+      }
+
       const session = this.execService.open(
         atomId,
         cols,
@@ -327,6 +342,8 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       this.logger.error(
         `[WebSocketServer] Exec open failed for atom ${atomId}: ${String(err)}`,
       );
+    } finally {
+      this.pendingExecOpens.delete(sessionId);
     }
   }
 
@@ -460,9 +477,9 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
   }
 
   private isOriginAllowed(origin?: string): boolean {
-    const raw = process.env.WS_ALLOWED_ORIGINS?.trim();
-    if (!raw || !origin) return true;
+    if (!origin) return false;
 
+    const raw = process.env.WS_ALLOWED_ORIGINS?.trim() ?? '';
     const allowed = raw.split(',').map((o) => o.trim()).filter(Boolean);
     return allowed.includes(origin);
   }

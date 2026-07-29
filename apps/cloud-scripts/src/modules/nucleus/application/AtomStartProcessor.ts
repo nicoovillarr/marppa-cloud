@@ -15,6 +15,7 @@ import { NUCLEUS_SERVICE_TOKEN, NucleusService } from '../domain/services/Nucleu
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
 import { getEventStates } from '@/shared/domain/EventStateMachine';
+import { rootOnlyCapabilities } from '@marppa-cloud/shared';
 
 type AtomWithRelations = Prisma.AtomGetPayload<{
   include: { image: true; envVars: true; node: { include: { zone: true } } };
@@ -102,6 +103,23 @@ export class AtomStartProcessor implements IEventProcessor {
           `${missingEnvVars.join(', ')}`,
           EventType.ATOM_START_FAILED,
         );
+      }
+
+      const rootOnly = rootOnlyCapabilities(atom.image.capabilities);
+      if (rootOnly.length) {
+        const owner = await this.prisma.company.findUnique({
+          where: { id: atom.ownerId },
+          select: { parentCompanyId: true },
+        });
+        const isRootCompany = !!owner && !owner.parentCompanyId;
+
+        if (!isRootCompany) {
+          throw new AbortError(
+            `Atom ${atom.id} requests host capabilities (${rootOnly.join(', ')}) ` +
+            `reserved for the root company, image "${atom.image.name}"`,
+            EventType.ATOM_START_FAILED,
+          );
+        }
       }
 
       await updateAtomStatus(STATES.work);
