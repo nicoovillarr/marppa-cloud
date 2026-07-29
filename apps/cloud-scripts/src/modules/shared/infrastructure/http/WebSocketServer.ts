@@ -1,6 +1,5 @@
 import WebSocket, { WebSocketServer as WsServer } from 'ws';
 import type { IncomingMessage } from 'http';
-import { jwtVerify } from 'jose';
 import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '../services/LoggerService';
 import { PrismaService } from '../services/PrismaService';
@@ -194,6 +193,7 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     let userId: string;
     let companyId: string;
     try {
+      const { jwtVerify } = await import('jose');
       const secret = new TextEncoder().encode(JWT_SECRET);
       const { payload } = await jwtVerify(accessToken, secret, {
         algorithms: ['HS256'],
