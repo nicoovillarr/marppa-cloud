@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { UserRole } from '@marppa-cloud/db';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 import { EventService } from '@/event/domain/services/event.service';
 import { EventQueueService } from '@/shared/infrastructure/services/event-queue.service';
@@ -52,6 +53,12 @@ export class SystemApiService {
     }
 
     if (hard) {
+      if (user.role !== UserRole.OWNER) {
+        throw new ForbiddenException(
+          'Solo un owner puede hacer un reset destructivo del sistema.',
+        );
+      }
+
       const fullUser = await this.userService.findUserById(user.userId);
       const passwordMatches =
         fullUser != null &&

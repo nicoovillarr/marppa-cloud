@@ -16,6 +16,7 @@ import { SessionEntity } from '../entities/session.entity';
 import { UserEntity } from '@/user/domain/entities/user.entity';
 import { JwtEntity } from '../entities/jwt.entity';
 import { RequestData } from '../../../../libs/utils';
+import { UserRole } from '@marppa-cloud/db';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -58,6 +59,7 @@ describe('AuthService', () => {
     'test@example.com',
     'c-000001',
     'refresh',
+    UserRole.OWNER,
   );
 
   const mockAuthRepository = {

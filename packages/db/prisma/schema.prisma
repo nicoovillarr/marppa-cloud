@@ -495,11 +495,17 @@ model Company {
   children Company[] @relation("CompanyHierarchy")
 }
 
+enum UserRole {
+  OWNER
+  MEMBER
+}
+
 model User {
   id        String   @id @default(dbgenerated())
   email     String   @unique
   password  String
   name      String
+  role      UserRole @default(OWNER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

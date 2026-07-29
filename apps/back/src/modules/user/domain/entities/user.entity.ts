@@ -1,8 +1,10 @@
+import { UserRole } from '@marppa-cloud/db';
 import { PrimaryKey } from '@/shared/domain/decorators/primary-key.decorator';
 import { PatchableEntity } from '@/shared/domain/entities/patchable-base.entity';
 
 interface UserOptionalProps {
   id?: string;
+  role?: UserRole;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -11,6 +13,7 @@ export class UserEntity extends PatchableEntity {
   @PrimaryKey()
   public readonly id?: string;
 
+  public readonly role: UserRole;
   public readonly createdAt?: Date;
   public readonly updatedAt?: Date;
 
@@ -24,6 +27,7 @@ export class UserEntity extends PatchableEntity {
     super();
 
     this.id = options.id;
+    this.role = options.role ?? UserRole.OWNER;
     this.createdAt = options.createdAt;
     this.updatedAt = options.updatedAt;
   }
@@ -35,6 +39,7 @@ export class UserEntity extends PatchableEntity {
       password: this.password,
       name: this.name,
       companyId: this.companyId,
+      role: this.role,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };
@@ -43,6 +48,7 @@ export class UserEntity extends PatchableEntity {
   static fromObject(obj: Record<string, any>): UserEntity {
     return new UserEntity(obj.email, obj.password, obj.name, obj.companyId, {
       id: obj.id,
+      role: obj.role,
       createdAt: obj.createdAt,
       updatedAt: obj.updatedAt,
     });

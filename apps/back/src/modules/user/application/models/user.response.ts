@@ -1,3 +1,4 @@
+import { UserRole } from '@marppa-cloud/db';
 import { UserEntity } from '@/user/domain/entities/user.entity';
 
 export interface UserResponse {
@@ -5,6 +6,7 @@ export interface UserResponse {
   email: string;
   name: string;
   companyId: string;
+  role: UserRole;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -15,6 +17,7 @@ export function toUserResponse(user: UserEntity): UserResponse {
     email: user.email,
     name: user.name,
     companyId: user.companyId,
+    role: user.role,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };

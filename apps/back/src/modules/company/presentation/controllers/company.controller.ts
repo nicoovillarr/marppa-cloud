@@ -13,6 +13,8 @@ import { CreateCompanyDto } from '../dtos/create-company.dto';
 import { CompanyEntity } from '../../domain/entities/company.entity';
 import { UpdateCompanyDto } from '../dtos/update-company.dto';
 import { LoggedInGuard } from '@/auth/presentation/guards/logged-in.guard';
+import { Roles } from '@/auth/presentation/decorators/roles.decorator';
+import { UserRole } from '@marppa-cloud/db';
 
 @Controller('company')
 @UseGuards(LoggedInGuard)
@@ -25,6 +27,7 @@ export class CompanyController {
   }
 
   @Put(':id')
+  @Roles(UserRole.OWNER)
   public async update(
     @Param('id') id: string,
     @Body() data: UpdateCompanyDto,
@@ -33,6 +36,7 @@ export class CompanyController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.OWNER)
   public async delete(@Param('id') id: string): Promise<void> {
     return this.companyApiService.delete(id);
   }
