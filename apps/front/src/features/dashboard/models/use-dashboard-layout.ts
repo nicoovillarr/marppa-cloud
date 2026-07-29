@@ -10,6 +10,9 @@ export const useDashboardLayout = () => {
 
         subtitle,
         setSubtitle,
+
+        fillHeight,
+        setFillHeight,
     } = useDashboardLayoutStore();
 
     const addBreadcrumbNode = (node: BreadcrumbNode) => {
@@ -29,6 +32,8 @@ export const useDashboardLayout = () => {
         setTitle,
         subtitle,
         setSubtitle,
+        fillHeight,
+        setFillHeight,
         breadcrumbNodes,
         setBreadcrumbNodes,
         addBreadcrumbNode,

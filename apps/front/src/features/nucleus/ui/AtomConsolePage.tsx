@@ -9,6 +9,7 @@ import { Button } from "@/core/ui/Button";
 import { StatusBadge } from "@/core/ui/StatusBadge";
 import { InlineCode } from "@/core/ui/InlineCode";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
+import { useDashboardLayout } from "@/dashboard/models/use-dashboard-layout";
 import { useAtom } from "../models/use-atom";
 import { imageRef } from "./AtomManageDialog";
 
@@ -21,6 +22,7 @@ export function AtomConsolePage() {
   const { atomId } = useParams<{ atomId: string }>();
   const router = useRouter();
   const { atoms, fetchAtom } = useAtom();
+  const { setFillHeight } = useDashboardLayout();
   const [loaded, setLoaded] = useState(false);
 
   const atom = atoms.find((a) => a.id === atomId);
@@ -30,11 +32,16 @@ export function AtomConsolePage() {
     fetchAtom(atomId).finally(() => setLoaded(true));
   }, [atomId]);
 
+  useEffect(() => {
+    setFillHeight(true);
+    return () => setFillHeight(false);
+  }, []);
+
   const goBack = () => router.push("/dashboard/nucleus/atoms");
 
   return (
-    <div className="fixed inset-0 z-30 grid grid-rows-[auto_1fr] bg-surface text-ink">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-3">
+    <div className="flex flex-col h-full min-h-0 gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
         <div className="flex items-center gap-3 min-w-0">
           <Button icon={<LuArrowLeft />} style="secondary" onClick={goBack} />
           <div className="min-w-0">
@@ -67,7 +74,7 @@ export function AtomConsolePage() {
         )}
       </header>
 
-      <div className="min-h-0 min-w-0 p-3">
+      <div className="flex-1 min-h-0 min-w-0">
         {!loaded ? (
           <p className="text-sm text-ink-muted">Loading…</p>
         ) : !atom ? (

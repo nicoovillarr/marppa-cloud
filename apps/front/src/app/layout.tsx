@@ -34,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${plexSans.variable} ${plexMono.variable} antialiased grid min-h-dvh grid-rows-[48px_1fr_auto] bg-surface text-ink`}
+        className={`${plexSans.variable} ${plexMono.variable} antialiased grid h-dvh grid-rows-[48px_1fr_auto] overflow-hidden bg-surface text-ink`}
       >
         <TickProvider>
           <WebSocketProvider>

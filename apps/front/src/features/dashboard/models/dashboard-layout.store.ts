@@ -16,6 +16,9 @@ interface DashboardLayoutStore {
   subtitle: string;
   setSubtitle: (subtitle: string) => void;
 
+  fillHeight: boolean;
+  setFillHeight: (fillHeight: boolean) => void;
+
   reset: () => void;
 }
 
@@ -23,6 +26,7 @@ const defaultState = {
   breadcrumbNodes: [],
   title: null,
   subtitle: null,
+  fillHeight: false,
 };
 
 export const useDashboardLayoutStore = create<DashboardLayoutStore>()((set) => ({
@@ -34,6 +38,8 @@ export const useDashboardLayoutStore = create<DashboardLayoutStore>()((set) => (
   setTitle: (title: string) => set({ title }),
 
   setSubtitle: (subtitle: string) => set({ subtitle }),
+
+  setFillHeight: (fillHeight: boolean) => set({ fillHeight }),
 
   reset: () => set({ ...defaultState }),
 }));

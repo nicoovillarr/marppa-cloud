@@ -11,10 +11,11 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { title, subtitle } = useDashboardLayoutStore(
+  const { title, subtitle, fillHeight } = useDashboardLayoutStore(
     useShallow((store) => ({
       title: store.title,
       subtitle: store.subtitle,
+      fillHeight: store.fillHeight,
     }))
   );
 
@@ -22,23 +23,32 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="flex h-full min-h-0 min-w-0">
       <Sidebar />
 
-      <main className="flex-1 min-h-0 min-w-0 overflow-y-auto">
-        <div className="flex flex-col gap-6 w-full max-w-[1440px] mx-auto p-4 md:p-8">
-          <BreadCrumb />
+      <main
+        className={`flex-1 min-h-0 min-w-0 ${fillHeight ? "overflow-hidden" : "overflow-y-auto"}`}
+      >
+        {fillHeight ? (
+          <div className="flex flex-col h-full min-h-0 w-full p-2 md:p-4">
+            <BreadCrumb />
+            <div className="flex-1 min-h-0 mt-2">{children}</div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6 w-full max-w-[1440px] mx-auto p-4 md:p-8">
+            <BreadCrumb />
 
-          {(title || subtitle) && (
-            <header className="w-full flex flex-col">
-              {title && (
-                <h1 className="font-display font-bold text-2xl sm:text-3xl">
-                  {title}
-                </h1>
-              )}
-              {subtitle && <p className="text-sm text-ink-muted">{subtitle}</p>}
-            </header>
-          )}
+            {(title || subtitle) && (
+              <header className="w-full flex flex-col">
+                {title && (
+                  <h1 className="font-display font-bold text-2xl sm:text-3xl">
+                    {title}
+                  </h1>
+                )}
+                {subtitle && <p className="text-sm text-ink-muted">{subtitle}</p>}
+              </header>
+            )}
 
-          {children}
-        </div>
+            {children}
+          </div>
+        )}
       </main>
     </div>
   );
