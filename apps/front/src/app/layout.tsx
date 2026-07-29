@@ -23,7 +23,8 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "Marppa Cloud",
-  description: "Your infrastructure, in view.",
+  description:
+    "Open-source control plane for a self-hosted IaaS: virtual machines, networks and containers on one host.",
 };
 
 export default function RootLayout({
