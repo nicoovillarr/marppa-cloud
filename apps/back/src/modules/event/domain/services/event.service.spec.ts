@@ -166,16 +166,34 @@ describe('EventService', () => {
       expect(repository.findById).toHaveBeenCalledWith(999);
       expect(result).toBeNull();
     });
+
+    it('should throw when the event belongs to another company', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue({
+        userId: 'u-000002',
+        companyId: 'c-other',
+        email: 'test@test.com',
+        type: 'access',
+      } as any);
+      mockEventRepository.findById.mockResolvedValue(mockEventWithRelations);
+
+      await expect(service.findById(1)).rejects.toThrow();
+    });
   });
 
   describe('findMany', () => {
-    it('should return all events', async () => {
+    it('should scope the query to the caller company', async () => {
       mockEventRepository.findMany.mockResolvedValue([mockEvent]);
 
       const result = await service.findMany();
 
-      expect(repository.findMany).toHaveBeenCalled();
+      expect(repository.findMany).toHaveBeenCalledWith('c-000001');
       expect(result).toEqual([mockEvent]);
+    });
+
+    it('should throw UnauthorizedError if there is no session', async () => {
+      jest.spyOn(sessionContext, 'getCurrentUser').mockReturnValue(null);
+
+      await expect(service.findMany()).rejects.toThrow(UnauthorizedError);
     });
   });
 });

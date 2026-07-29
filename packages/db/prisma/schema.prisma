@@ -554,8 +554,9 @@ model Event {
   notes String?
   data  Json?
 
-  createdAt DateTime @default(now())
-  createdBy String
+  createdAt   DateTime @default(now())
+  createdBy   String
+  createdByIp String?
 
   retries     Int       @default(0)
   processedAt DateTime?

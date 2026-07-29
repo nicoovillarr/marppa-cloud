@@ -3,6 +3,7 @@ import { AsyncLocalStorage } from 'async_hooks';
 
 export interface SessionStore {
   user: JwtEntity;
+  ipAddress?: string;
 }
 
 export const sessionStorage = new AsyncLocalStorage<SessionStore>();
@@ -15,4 +16,8 @@ export const getCurrentUser = () => {
   if (!user) return null;
 
   return user;
+};
+
+export const getCurrentIpAddress = (): string | undefined => {
+  return sessionStorage.getStore()?.ipAddress;
 };

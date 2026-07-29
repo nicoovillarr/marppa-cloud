@@ -13,6 +13,7 @@ export class EventPrismaMapper {
         notes: raw.notes ?? undefined,
         data:
           (raw.data as Record<string, unknown> | unknown[] | null) ?? undefined,
+        createdByIp: raw.createdByIp ?? undefined,
         retries: raw.retries ?? undefined,
         processedAt: raw.processedAt ?? undefined,
         failedAt: raw.failedAt ?? undefined,

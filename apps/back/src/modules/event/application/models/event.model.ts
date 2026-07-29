@@ -10,4 +10,5 @@ export class EventModel {
   @Expose() failedAt: Date | null;
   @Expose() companyId: string | null;
   @Expose() createdBy: string;
+  @Expose() createdByIp: string | null;
 }

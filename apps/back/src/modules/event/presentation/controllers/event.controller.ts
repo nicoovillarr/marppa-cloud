@@ -1,9 +1,11 @@
 import { EventApiService } from '@/event/application/services/event-api.service';
 import { EventModel } from '@/event/application/models/event.model';
 import { EventWithRelationsModel } from '@/event/application/models/event-with-relations.model';
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { LoggedInGuard } from '@/auth/presentation/guards/logged-in.guard';
 
 @Controller('events')
+@UseGuards(LoggedInGuard)
 export class EventController {
   constructor(private readonly eventApiService: EventApiService) {}
 

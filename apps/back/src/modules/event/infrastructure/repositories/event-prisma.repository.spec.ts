@@ -123,7 +123,7 @@ describe('EventPrismaRepository (Integration)', () => {
     });
 
     it('should find all events', async () => {
-      const result = await repository.findMany();
+      const result = await repository.findMany(companyId);
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
