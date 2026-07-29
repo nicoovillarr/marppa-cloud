@@ -30,7 +30,7 @@ Derived from the exhaustive audit on 2026-07-28. `[○]` pending, `[✓]` done.
 - [✓] Align the major version of `jose` between back and cloud-scripts
 - [✓] Add `aud`/`iss` claims to JWTs and verify them at every consumer
 - [○] Integrate `npm audit`/`osv-scanner` into CI
-- [○] Remove or harden `companyId`/`createdBy` in `CreateEventDto`
+- [✓] Remove or harden `companyId`/`createdBy` in `CreateEventDto`
 
 ## Long term (architecture)
 

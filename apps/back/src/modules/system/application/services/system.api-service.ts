@@ -50,11 +50,7 @@ export class SystemApiService {
       ? EventTypeKey.SYSTEM_RESET_HARD
       : EventTypeKey.SYSTEM_RESET;
 
-    const { id: eventId } = await this.eventService.create({
-      type,
-      createdBy: user.userId,
-      companyId: user.companyId,
-    });
+    const { id: eventId } = await this.eventService.create({ type });
 
     if (eventId == null) {
       throw new Error('SystemApiService: created event missing id');

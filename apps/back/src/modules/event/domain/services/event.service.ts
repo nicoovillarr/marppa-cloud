@@ -20,19 +20,12 @@ export class EventService {
   ) {}
 
   async create(data: CreateEventDto): Promise<EventEntity> {
-    let { createdBy, companyId } = data;
-
-    if (createdBy == null || companyId == null) {
-      const user = getCurrentUser();
-      if (user == null) {
-        throw new UnauthorizedError();
-      }
-
-      createdBy ??= user.userId;
-      companyId ??= user.companyId;
+    const user = getCurrentUser();
+    if (user == null) {
+      throw new UnauthorizedError();
     }
 
-    const event = new EventEntity(data.type, createdBy, companyId, {
+    const event = new EventEntity(data.type, user.userId, user.companyId, {
       notes: data.notes,
       data: data.data,
     });
