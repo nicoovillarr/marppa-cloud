@@ -1,48 +1,47 @@
-# Pendiente: rate limiting en nftables (defensa contra DoS)
+# Pending: nftables rate limiting (DoS defense)
 
-**Estado:** no implementado. Anotado el 2026-07-24 para encararlo más adelante.
+**Status:** not implemented. Noted on 2026-07-24 to tackle later.
 
-## La necesidad
+## The need
 
-Proteger el host de un atacante **dentro de la red local** que intente saturarlo:
-flood de conexiones, agotamiento de sockets, escaneo agresivo.
+Protect the host from an attacker **inside the local network** trying to saturate it:
+connection floods, socket exhaustion, aggressive scanning.
 
-## Por qué fail2ban no lo cubre
+## Why fail2ban doesn't cover this
 
-fail2ban ya está corriendo en el host (jail `sshd`, `banaction = nftables-multiport`,
-`maxretry 3`, `bantime 1h`) y **no resuelve este problema**. Reacciona a patrones en los
-logs: N fallos de autenticación dentro de una ventana, y recién ahí banea. Contra un
-flood no hace nada — los paquetes ya llegaron y el servicio ya está saturado antes de
-que aparezca la primera línea en el log.
+fail2ban already runs on the host (`sshd` jail, `banaction = nftables-multiport`,
+`maxretry 3`, `bantime 1h`) and **doesn't solve this problem**. It reacts to patterns in
+the logs: N auth failures within a window, only then does it ban. Against a flood it
+does nothing — the packets already arrived and the service is already saturated before
+the first log line even appears.
 
-fail2ban cubre **brute force**. Esto es un frente distinto y necesita otra herramienta.
+fail2ban covers **brute force**. This is a different front and needs another tool.
 
-## Por dónde va la solución
+## Where the solution goes
 
-Rate limiting nativo de nftables en la chain `input`, algo del estilo:
+Native nftables rate limiting on the `input` chain, something like:
 
-- `ct count` por IP de origen para topear conexiones concurrentes
-- `limit rate` sobre conexiones nuevas (`ct state new`) hacia 22, 80 y 443
+- `ct count` per source IP to cap concurrent connections
+- `limit rate` on new connections (`ct state new`) towards 22, 80 and 443
 
-Los números concretos hay que medirlos contra el tráfico real antes de fijarlos: un
-límite mal calibrado corta usuarios legítimos y es peor que no tener nada.
+The actual numbers need to be measured against real traffic before fixing them: a
+badly-calibrated limit cuts off legitimate users and is worse than having nothing.
 
-## Restricción de diseño — importante
+## Design constraint — important
 
-Las reglas **van en `/etc/nftables-base.conf`**, el archivo apuntado por
-`NFTABLES_RESET_SOURCE`. No en el ruleset vivo.
+The rules **go in `/etc/nftables-base.conf`**, the file pointed at by
+`NFTABLES_RESET_SOURCE`. Not in the live ruleset.
 
-Motivo: `saveNftConfiguration` persiste lo que haya en `inet filter` e `ip nat`, así que
-una regla agregada a mano sobrevive reboots. Pero `forceResetMesh` (evento
-`SYSTEM_RESET`) **recrea ambas tablas desde el base file**, y se lleva puesto todo lo que
-no esté ahí. Una regla de rate limiting agregada en vivo desaparece en el primer reset,
-en silencio.
+Reason: `saveNftConfiguration` persists whatever is in `inet filter` and `ip nat`, so a
+rule added by hand survives reboots. But `forceResetMesh` (the `SYSTEM_RESET` event)
+**recreates both tables from the base file**, and takes with it anything not there. A
+rate-limiting rule added live disappears on the first reset, silently.
 
-El preflight valida que el base file declare solo `inet filter` e `ip nat`, así que las
-reglas nuevas tienen que ir dentro de esas tablas, no en una tabla aparte.
+The preflight validates that the base file only declares `inet filter` and `ip nat`, so
+new rules have to go inside those tables, not a separate one.
 
-## Contexto relacionado
+## Related context
 
-- `apps/cloud-scripts/README.md` → "nftables base ruleset" y "Coexisting with fail2ban
+- `apps/cloud-scripts/README.md` → "nftables base ruleset" and "Coexisting with fail2ban
   and other nftables users"
-- El runbook del host, en `/home/nvillar/docs/cloud-ops.md`
+- The host runbook, at `/home/nvillar/docs/cloud-ops.md`

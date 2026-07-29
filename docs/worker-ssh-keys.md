@@ -1,111 +1,112 @@
-# Administrar claves SSH de un worker
+# Managing a worker's SSH keys
 
-**Estado:** implementado el 2026-07-25, **sin probar contra una VM real**. Lo que sigue
-describe el diseño y lo que quedó afuera.
+**Status:** implemented on 2026-07-25, **not tested against a real VM**. What follows
+describes the design and what was left out.
 
-Implementado: tabla `WorkerSshKey`, endpoints `GET/POST/DELETE
-/hive/workers/:id/ssh-keys`, evento `WORKER_UPDATE_SSH_KEYS` con su processor, y la
-sección de claves en el diálogo de administración del worker.
+Implemented: `WorkerSshKey` table, `GET/POST/DELETE /hive/workers/:id/ssh-keys`
+endpoints, the `WORKER_UPDATE_SSH_KEYS` event with its processor, and the keys section
+in the worker's admin dialog.
 
-El processor elige el camino según el estado de la VM: **encendida** escribe por el
-guest agent, **apagada** escribe directo en el disco con `virt-customize`. Si la VM está
-encendida pero el agente no responde, falla y pide apagarla — editar el disco de una VM
-corriendo corrompe el filesystem.
+The processor picks the path based on the VM's state: **powered on** writes through the
+guest agent, **powered off** writes straight to disk with `virt-customize`. If the VM is
+on but the agent doesn't respond, it fails and asks to power it off — editing a running
+VM's disk corrupts the filesystem.
 
-## La necesidad
+## The need
 
-Poder agregar, rotar y quitar claves públicas de un worker desde la UI **en cualquier
-momento**, incluso con la VM ya iniciada. Hoy solo se puede al crearla.
+Being able to add, rotate and remove a worker's public keys from the UI **at any time**,
+even with the VM already running. Today it's only possible at creation time.
 
-## Cómo funciona hoy
+## How it works today
 
-1. `CreateWorkerForm.tsx:177` genera un par RSA 2048 **en el navegador** con node-forge.
-2. La privada se muestra una sola vez para descargar; nunca sale del cliente.
-3. La pública viaja al back como `publicSSH`, que la despacha como propiedad
-   `PublicSSH` del evento `WORKER_CREATE`.
-4. `WorkerCreateProcessor` la lee y `LinuxHiveService` la escribe en el
-   `ssh_authorized_keys` del cloud-init.
+1. `CreateWorkerForm.tsx:177` generates an RSA 2048 pair **in the browser** with
+   node-forge.
+2. The private key is shown once to download; it never leaves the client.
+3. The public key travels to the back as `publicSSH`, which dispatches it as the
+   `PublicSSH` property of the `WORKER_CREATE` event.
+4. `WorkerCreateProcessor` reads it and `LinuxHiveService` writes it into cloud-init's
+   `ssh_authorized_keys`.
 
-**Cloud-init corre solo en el primer boot.** Después de eso nada vuelve a tocar
-`authorized_keys`.
+**Cloud-init only runs on first boot.** After that, nothing touches
+`authorized_keys` again.
 
-## Restricción que hay que resolver primero
+## Constraint that needs solving first
 
-**La clave pública no se persiste en ninguna parte.** No hay campo `ssh` en el schema —
-ni en `Worker` ni en ningún otro modelo. Viaja como propiedad transitoria del evento y
-se pierde.
+**The public key isn't persisted anywhere.** There's no `ssh` field in the schema —
+neither on `Worker` nor any other model. It travels as a transient event property and
+gets lost.
 
-Para administrar claves hace falta una fuente de verdad: un campo en `Worker` o, mejor,
-una tabla aparte (varias claves por worker, con nombre y fecha, para poder rotar una sin
-tocar el resto).
+Managing keys needs a source of truth: a field on `Worker` or, better, a separate table
+(several keys per worker, with a name and date, so one can be rotated without touching
+the rest).
 
-## Cómo llegar a una VM ya iniciada
+## How to reach an already-running VM
 
-Tres capas, en orden de preferencia. Ninguna depende de SSH, que es el punto: si el
-usuario borró `authorized_keys`, SSH ya no es una opción.
+Three layers, in order of preference. None depends on SSH, which is the whole point: if
+the user deleted `authorized_keys`, SSH is no longer an option.
 
-### 1. qemu-guest-agent (vía rápida, sin downtime)
+### 1. qemu-guest-agent (fast path, no downtime)
 
-Habla por el canal virtio serial (`org.qemu.guest_agent.0`), no por la red. Sigue
-funcionando con `sshd` parado, con `authorized_keys` borrado y con ufw cerrando el 22.
+Talks over the virtio serial channel (`org.qemu.guest_agent.0`), not over the network.
+Keeps working with `sshd` stopped, `authorized_keys` deleted, and ufw blocking port 22.
 
 ```bash
 virsh qemu-agent-command w-xxxxxx '{"execute":"guest-ping"}'
 ```
 
-Para escribir el archivo conviene `guest-file-open` / `guest-file-write` /
-`guest-file-close` antes que `guest-exec`: no depende de que el shell del guest esté
-sano y algunas distros restringen `guest-exec` por configuración de qemu-ga.
+To write the file, `guest-file-open` / `guest-file-write` / `guest-file-close` is
+preferable to `guest-exec`: it doesn't depend on the guest's shell being healthy, and
+some distros restrict `guest-exec` via qemu-ga configuration.
 
-**Requisito:** el paquete `qemu-guest-agent` tiene que estar instalado y habilitado en
-el guest. Se agregó a `BASE_IMAGE_PACKAGES` en `LinuxHiveService`, pero eso **solo
-aplica a imágenes nuevas** — las VMs creadas antes dependen de si la imagen de Ubuntu ya
-lo traía. Verificar con el `guest-ping` de arriba antes de asumirlo.
+**Requirement:** the `qemu-guest-agent` package must be installed and enabled in the
+guest. It was added to `BASE_IMAGE_PACKAGES` in `LinuxHiveService`, but that **only
+applies to new images** — VMs created before that depend on whether the Ubuntu image
+already shipped it. Verify with the `guest-ping` above before assuming it.
 
-### 2. Edición offline del disco (respaldo incondicional)
+### 2. Offline disk editing (unconditional fallback)
 
-Con la VM apagada, `virt-customize` o `guestfish` montan el `.img` y reescriben
-`authorized_keys` en el filesystem. Los dos binarios ya están en el sudoers; se usan
-para preparar la imagen base.
+With the VM powered off, `virt-customize` or `guestfish` mount the `.img` and rewrite
+`authorized_keys` on the filesystem. Both binaries are already in the sudoers; they're
+used to prepare the base image.
 
-Requiere apagar la VM, pero **siempre funciona**: el host es dueño del disco y nada de
-lo que se haga desde adentro puede impedirlo.
+Requires powering off the VM, but **always works**: the host owns the disk and nothing
+done from inside can prevent it.
 
-### 3. Consola serie
+### 3. Serial console
 
-**Implementado el 2026-07-29** (ver `docs/worker-console.md`). Cada worker nuevo recibe
-una password random al crearse, guardada cifrada (`Worker.consolePassword`,
-`SecretCipher`), horneada en el `chpasswd` del cloud-init — login solo local, `ssh_pwauth`
-sigue en `false`. Al abrir la consola desde la UI, `cloud-scripts` la descifra y hace el
-login por vos; nadie ve la password en texto plano. Sigue siendo la única vía que no
-depende de nada de lo que el usuario pueda romper desde adentro (guest agent parado,
-`authorized_keys` borrado, firewall del guest cerrado) — es el último recurso real.
+**Implemented on 2026-07-29** (see `docs/worker-console.md`). Every new worker gets a
+random password at creation time, stored encrypted (`Worker.consolePassword`,
+`SecretCipher`), baked into cloud-init's `chpasswd` — local login only, `ssh_pwauth`
+stays `false`. When the console is opened from the UI, `cloud-scripts` decrypts it and
+logs in for you; nobody sees the plaintext password. It remains the only path that
+doesn't depend on anything the user could break from inside (guest agent stopped,
+`authorized_keys` deleted, guest firewall closed) — it's the real last resort.
 
-Limitación: solo los workers creados después de este cambio tienen `consolePassword`. Los
-anteriores quedan sin consola hasta que se recreen.
+Limitation: only workers created after this change have `consolePassword`. Earlier ones
+have no console until they're recreated.
 
-## Límite que no se puede cerrar
+## Limit that can't be closed
 
-El usuario es root dentro de su VM, así que **puede parar el guest agent** y dejar la
-capa 1 inservible. No es un agujero tapable: es consecuencia de darle root. Lo que lo
-vuelve tolerable es que la capa 2 es incondicional.
+The user is root inside their VM, so **they can stop the guest agent** and render layer
+1 useless. It's not a pluggable hole: it's a consequence of giving them root. What makes
+it tolerable is that layer 2 is unconditional.
 
-Por eso el diseño debería ser **agente primero, offline como respaldo explícito**, con
-la UI avisando que esa segunda vía implica apagar la VM.
+That's why the design should be **agent first, offline as an explicit fallback**, with
+the UI warning that the second path means powering off the VM.
 
-## Boceto de implementación
+## Implementation sketch
 
-- Tabla o campo para las claves públicas de cada worker (fuente de verdad)
-- Evento `WORKER_UPDATE_SSH_KEYS` + su processor
-- Método nuevo en `HiveService` que intente el agente y reporte con claridad si no
-  responde
-- Flag opcional de "forzar (apaga y reinicia la VM)" para el camino offline
-- Diálogo en la UI de detalle del worker, disponible en cualquier estado
+- Table or field for each worker's public keys (source of truth)
+- `WORKER_UPDATE_SSH_KEYS` event + its processor
+- New method on `HiveService` that tries the agent and reports clearly if it doesn't
+  respond
+- Optional "force (powers off and restarts the VM)" flag for the offline path
+- Dialog in the worker detail UI, available in any state
 
-## Relacionado
+## Related
 
-- `SshKeyPermissionsNote.tsx` — parche actual al problema de permisos en Windows al
-  descargar la privada. Si se deja de generar el par en el navegador, deja de hacer
-  falta.
-- El par generado es RSA 2048; ed25519 sería lo actual, pero node-forge no lo soporta
-  bien.
+- `SshKeyPermissionsNote.tsx` — current patch for the Windows permissions issue when
+  downloading the private key. If the pair stops being generated in the browser, this
+  stops being needed.
+- The generated pair is RSA 2048; ed25519 would be current practice, but node-forge
+  doesn't support it well.

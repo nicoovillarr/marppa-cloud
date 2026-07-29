@@ -28,9 +28,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       });
     }
 
-    // Guards, ValidationPipe and the throttler already craft a safe status +
-    // message (no stack traces, no internals) — pass those through as-is
-    // instead of collapsing them into a generic 500.
     if (exception instanceof HttpException) {
       return res.status(exception.getStatus()).json(exception.getResponse());
     }

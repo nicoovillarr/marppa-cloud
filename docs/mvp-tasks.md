@@ -1,859 +1,861 @@
-# MVP — Checklist de ejecución (Release 0.1 + 0.2)
+# MVP — Execution checklist (Release 0.1 + 0.2)
 
-> Tareas ordenadas por dependencia dentro de cada épica: primero las fundacionales.
-
----
-
-# Épica: Mesh
-
-## [ ] Decidir el modelo de Mesh como equivalente a una subred (Zone)
-
-**Descripción**
-
-Fijar que un Mesh == una Zone (un `cidr` + `gateway`) y dejar registrada la decisión.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Alinear el vocabulario Mesh en los tipos compartidos
-
-**Descripción**
-
-Actualizar `api-types` para usar el nombre Mesh de forma consistente.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Alinear el vocabulario Mesh en las rutas de la API
-
-**Descripción**
-
-Exponer las operaciones de red bajo el nombre Mesh (o alias sobre Zone).
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Alinear el vocabulario Mesh en la UI
-
-**Descripción**
-
-Renombrar labels, navegación y breadcrumbs de Zone a Mesh.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Mostrar CIDR y gateway en el detalle de Mesh
-
-**Descripción**
-
-Agregar los datos de red básicos a la vista de detalle.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Mostrar el rango DHCP en el detalle de Mesh
-
-**Descripción**
-
-Mostrar el rango de direcciones que reparte la red.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Listar las IPs ocupadas por Nodes en el detalle de Mesh
-
-**Descripción**
-
-Mostrar qué IPs del rango están asignadas y a qué Worker.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Indicar visualmente IPs libres y ocupadas
-
-**Descripción**
-
-Diferenciar de un vistazo las direcciones disponibles de las usadas.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
+> Tasks ordered by dependency within each epic: foundational ones first.
 
 ---
 
-# Épica: Workers
+# Epic: Mesh
 
-## [ ] Crear el Worker en estado QUEUED
+## [ ] Decide the Mesh model as equivalent to a subnet (Zone)
 
-**Descripción**
+**Description**
 
-Cambiar el estado inicial de la creación de `PROVISIONING` a `QUEUED`.
+Fix that a Mesh == a Zone (a `cidr` + `gateway`) and record the decision.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Verificar la transición PROVISIONING → INACTIVE en el procesador
+## [ ] Align the Mesh vocabulary in the shared types
 
-**Descripción**
+**Description**
 
-Confirmar que el procesador toma el Worker en `QUEUED` y completa el flujo.
+Update `api-types` to use the Mesh name consistently.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Agregar test de integración de creación de Worker con StubHiveService
+## [ ] Align the Mesh vocabulary in the API routes
 
-**Descripción**
+**Description**
 
-Cubrir el flujo completo de creación sin depender de un host real.
+Expose network operations under the Mesh name (or an alias over Zone).
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Reemplazar la imagen seed por una cloud image qcow2 válida
+## [ ] Align the Mesh vocabulary in the UI
 
-**Descripción**
+**Description**
 
-Cambiar la URL de la imagen por defecto por una cloud image compatible con `virt-install --import`.
+Rename labels, navigation and breadcrumbs from Zone to Mesh.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Corregir nombre, versión y tipo del registro de imagen seed
+## [ ] Show CIDR and gateway in the Mesh detail view
 
-**Descripción**
+**Description**
 
-Dejar coherentes los metadatos de la imagen con la cloud image real.
+Add the basic network data to the detail view.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Verificar el arranque de una VM con la nueva imagen
+## [ ] Show the DHCP range in the Mesh detail view
 
-**Descripción**
+**Description**
 
-Probar end-to-end que un Worker creado arranca correctamente.
+Show the range of addresses the network hands out.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Generar y entregar las credenciales SSH al crear el Worker
+## [ ] List IPs taken by Nodes in the Mesh detail view
 
-**Descripción**
+**Description**
 
-Confirmar que la clave privada se muestra una sola vez con aviso de guardado.
+Show which IPs in the range are assigned and to which Worker.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Mostrar el motivo de fallo en el detalle del Worker
+## [ ] Visually indicate free vs. taken IPs
 
-**Descripción**
+**Description**
 
-Exponer el motivo del último evento de fallo cuando el Worker queda en `FAILED`.
+Distinguish available from used addresses at a glance.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
 ---
 
-# Épica: Nodes (conectar Worker ↔ Mesh)
+# Epic: Workers
 
-## [ ] Inyectar EventDispatchService en NodeApiService
+## [ ] Create the Worker in QUEUED state
 
-**Descripción**
+**Description**
 
-Habilitar el despacho de eventos desde el alta de Node.
+Change the initial creation state from `PROVISIONING` to `QUEUED`.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Persistir el Node en estado QUEUED al crearlo
+## [ ] Verify the PROVISIONING → INACTIVE transition in the processor
 
-**Descripción**
+**Description**
 
-Cambiar el estado inicial del Node de `ACTIVE` a `QUEUED`.
+Confirm the processor picks up the Worker in `QUEUED` and completes the flow.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Despachar el evento NODE_ASSIGN_WORKER al crear un Node
+## [ ] Add a Worker-creation integration test with StubHiveService
 
-**Descripción**
+**Description**
 
-Encolar el aprovisionamiento de red al asignar un Worker a una Mesh.
+Cover the full creation flow without depending on a real host.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Reflejar las transiciones QUEUED → PROVISIONING → ACTIVE del Node
+## [ ] Replace the seed image with a valid qcow2 cloud image
 
-**Descripción**
+**Description**
 
-Actualizar el estado del Node según avanza el procesamiento.
+Change the default image URL to a cloud image compatible with `virt-install --import`.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Emitir NODE_ASSIGN_WORKER_FAILED y marcar FAILED ante error
+## [ ] Fix the seed image record's name, version and type
 
-**Descripción**
+**Description**
 
-Comunicar el fallo de asignación con el estado y evento correspondientes.
+Make the image metadata consistent with the real cloud image.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Verificar la reserva DHCP y la NIC adjunta tras asignar
+## [ ] Verify a VM boots with the new image
 
-**Descripción**
+**Description**
 
-Confirmar que aparece la reserva `dhcp-host` y la interfaz conectada al bridge.
+Test end-to-end that a created Worker boots correctly.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Despachar NODE_UNASSIGN_WORKER al eliminar un Node
+## [ ] Generate and deliver SSH credentials on Worker creation
 
-**Descripción**
+**Description**
 
-Encolar la reversión de red al desasignar.
+Confirm the private key is shown once with a save warning.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Verificar la reversión de DHCP y la desconexión de la NIC
+## [ ] Show the failure reason in the Worker detail view
 
-**Descripción**
+**Description**
 
-Confirmar que se elimina la reserva y se desconecta la interfaz.
+Expose the last failure event's reason when the Worker ends up in `FAILED`.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Validar que un Worker ya asignado no pueda reasignarse
-
-**Descripción**
-
-Rechazar la asignación si el Worker ya tiene un Node.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Validar que la IP asignada esté dentro del rango de la Mesh
-
-**Descripción**
-
-Impedir asignaciones fuera del rango DHCP de la red.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Devolver errores claros ante asignaciones inválidas
-
-**Descripción**
-
-Responder `409/400` con mensajes entendibles en los casos inválidos.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Agregar tests de asignación y desasignación de Node
-
-**Descripción**
-
-Cubrir los caminos feliz e inválido del flujo de Node.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Agregar el botón "Asignar Worker" en el detalle de Mesh
-
-**Descripción**
-
-Punto de entrada de la asignación desde la red.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Crear el selector de Workers no asignados
-
-**Descripción**
-
-Listar los Workers disponibles para asignar a la Mesh.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Llamar al alta de Node desde la UI de asignación
-
-**Descripción**
-
-Conectar el selector con el endpoint de creación de Node.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Actualizar la lista de Nodes tras asignar
-
-**Descripción**
-
-Refrescar la tabla de Nodes al completar la asignación.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Mostrar la IP asignada al Worker
-
-**Descripción**
-
-Exponer la dirección resultante de la asignación.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Mostrar el estado en vivo de la asignación
-
-**Descripción**
-
-Reflejar el progreso de la asignación vía WebSocket sin refrescar.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Mostrar el error si la asignación falla
-
-**Descripción**
-
-Indicar claramente el fallo de asignación en la UI.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Agregar la acción "Desasignar" con confirmación
-
-**Descripción**
-
-Permitir revertir la relación Worker ↔ Mesh desde la lista de Nodes.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Actualizar la lista de Nodes tras desasignar
-
-**Descripción**
-
-Refrescar la tabla al completar la desasignación.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
 ---
 
-# Épica: Operations UX
+# Epic: Nodes (connecting Worker ↔ Mesh)
 
-## [ ] Exponer la operación en curso de cada recurso al front
+## [ ] Inject EventDispatchService into NodeApiService
 
-**Descripción**
+**Description**
 
-Hacer consultable el estado de la operación actual desde el recurso.
+Enable event dispatch from Node creation.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Mostrar la operación en curso en el detalle de cada recurso
+## [ ] Persist the Node in QUEUED state on creation
 
-**Descripción**
+**Description**
 
-Reflejar que una acción está en progreso al abrir el recurso.
+Change the Node's initial state from `ACTIVE` to `QUEUED`.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Actualizar el estado de la operación en vivo sin refrescar
+## [ ] Dispatch the NODE_ASSIGN_WORKER event on Node creation
 
-**Descripción**
+**Description**
 
-Empujar cambios de estado por WebSocket mientras la operación avanza.
+Queue the network provisioning when a Worker is assigned to a Mesh.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Mostrar el estado final Completada o Fallida de la operación
+## [ ] Reflect the Node's QUEUED → PROVISIONING → ACTIVE transitions
 
-**Descripción**
+**Description**
 
-Cerrar la operación con un resultado inequívoco.
+Update the Node's state as processing progresses.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Definir el vocabulario de pasos del Worker
+## [ ] Emit NODE_ASSIGN_WORKER_FAILED and mark FAILED on error
 
-**Descripción**
+**Description**
 
-Listar los pasos con etiqueta humana (descargar imagen, crear disco, cloud-init, etc.).
+Communicate an assignment failure with the corresponding state and event.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Definir el vocabulario de pasos del Mesh
+## [ ] Verify the DHCP reservation and attached NIC after assignment
 
-**Descripción**
+**Description**
 
-Listar los pasos de creación de red (bridge, DHCP, firewall).
+Confirm the `dhcp-host` reservation appears and the interface is connected to the
+bridge.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Definir el vocabulario de pasos del Node
+## [ ] Dispatch NODE_UNASSIGN_WORKER on Node deletion
 
-**Descripción**
+**Description**
 
-Listar los pasos de asignación (reservar IP, conectar NIC, verificar conectividad).
+Queue the network rollback on unassignment.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Mostrar el paso actual con su etiqueta humana
+## [ ] Verify the DHCP rollback and NIC disconnection
 
-**Descripción**
+**Description**
 
-Reflejar en la UI el paso concreto en curso, no un genérico "procesando".
+Confirm the reservation is removed and the interface disconnected.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Estilar el estado FAILED con color e ícono distintivos
+## [ ] Validate that an already-assigned Worker can't be reassigned
 
-**Descripción**
+**Description**
 
-Que un fallo se vea claramente diferenciado.
+Reject the assignment if the Worker already has a Node.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Mostrar un resumen de una línea del motivo de fallo
+## [ ] Validate that the assigned IP is within the Mesh's range
 
-**Descripción**
+**Description**
 
-Acompañar el estado fallido con la causa resumida.
+Prevent assignments outside the network's DHCP range.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Crear la guía visual de estados
+## [ ] Return clear errors on invalid assignments
 
-**Descripción**
+**Description**
 
-Definir colores, íconos y etiquetas por estado de recurso.
+Respond with `409/400` and understandable messages in invalid cases.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Aplicar la guía visual de estados en todos los listados y recursos
+## [ ] Add Node assignment/unassignment tests
 
-**Descripción**
+**Description**
 
-Usar el mismo lenguaje visual para Workers, Meshes, Nodes y Fibers.
+Cover the happy and invalid paths of the Node flow.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Reflejar cambios de estado en vivo en los listados
+## [ ] Add the "Assign Worker" button to the Mesh detail view
 
-**Descripción**
+**Description**
 
-Actualizar las tablas de recursos sin necesidad de refrescar.
+Entry point for assignment from the network side.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Crear el componente de timeline vertical de operación
+## [ ] Create the unassigned-Workers picker
 
-**Descripción**
+**Description**
 
-Mostrar los pasos de una operación en una línea de tiempo.
+List the Workers available to assign to the Mesh.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Marcar en el timeline pasos hechos, actual, pendientes y fallido
+## [ ] Call the Node creation endpoint from the assignment UI
 
-**Descripción**
+**Description**
 
-Distinguir visualmente el estado de cada paso.
+Wire the picker to the Node creation endpoint.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Abrir el timeline desde el recurso y desde el feed
+## [ ] Refresh the Node list after assignment
 
-**Descripción**
+**Description**
 
-Permitir acceder al detalle de la operación desde ambos lugares.
+Refresh the Node table once assignment completes.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Agregar barra de progreso derivada de los pasos completados
+## [ ] Show the IP assigned to the Worker
 
-**Descripción**
+**Description**
 
-Comunicar cuánto falta según pasos hechos vs. totales.
+Expose the address resulting from the assignment.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Mostrar el paso donde falló y la causa en lenguaje humano
+## [ ] Show the assignment's live status
 
-**Descripción**
+**Description**
 
-Indicar el punto exacto del fallo y su motivo entendible.
+Reflect assignment progress via WebSocket without refreshing.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Mostrar una sugerencia de acción ante el error
+## [ ] Show the error if assignment fails
 
-**Descripción**
+**Description**
 
-Orientar al usuario sobre qué puede hacer para resolverlo.
+Clearly indicate the assignment failure in the UI.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Agregar el botón Reintentar en operaciones fallidas
+## [ ] Add the "Unassign" action with confirmation
 
-**Descripción**
+**Description**
 
-Permitir relanzar una operación fallida reintentable.
+Allow reverting the Worker ↔ Mesh relation from the Node list.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Relanzar la operación y reanimar el timeline al reintentar
+## [ ] Refresh the Node list after unassignment
 
-**Descripción**
+**Description**
 
-Volver la operación a "En progreso" y continuar los pasos.
+Refresh the table once unassignment completes.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Agregar el botón Abortar con confirmación
-
-**Descripción**
-
-Permitir cancelar una operación en curso.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Dejar el recurso en estado coherente tras abortar
-
-**Descripción**
-
-Garantizar que el recurso no quede en un estado ambiguo.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Agregar la pestaña "Actividad" con el historial por recurso
-
-**Descripción**
-
-Listar cronológicamente las operaciones pasadas de un recurso.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Crear la vista global "Actividad"
-
-**Descripción**
-
-Mostrar las operaciones en curso y recientes de toda la infraestructura.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Agregar filtros por recurso y estado en el feed global
-
-**Descripción**
-
-Permitir acotar la vista de actividad.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Mostrar la duración de cada paso en el timeline
-
-**Descripción**
-
-Exponer cuánto tardó cada etapa.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Mostrar la duración total de la operación
-
-**Descripción**
-
-Exponer el tiempo total en formato humano.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Agregar la sección "Recursos afectados" con enlaces
-
-**Descripción**
-
-Listar los recursos que toca la operación y enlazarlos.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Traducir los mensajes por paso a lenguaje humano
-
-**Descripción**
-
-Reemplazar la salida técnica cruda por mensajes legibles.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Colapsar el detalle técnico crudo
-
-**Descripción**
-
-Mantener el log técnico disponible pero oculto por defecto.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Agregar estados vacíos con call-to-action
-
-**Descripción**
-
-Guiar la siguiente acción cuando no hay recursos.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Agregar skeletons en las cargas
-
-**Descripción**
-
-Mostrar placeholders mientras se cargan los datos.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Agregar confirmación al eliminar Worker, Mesh o Node
-
-**Descripción**
-
-Pedir confirmación explícita en operaciones destructivas.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Mostrar una notificación al completar o fallar una operación
-
-**Descripción**
-
-Avisar al usuario aunque haya navegado a otra parte.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
-
-## [ ] Enlazar al recurso desde la notificación
-
-**Descripción**
-
-Permitir ir directo al recurso desde el aviso.
-
-**Estado**
-
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
 ---
 
-# Épica: Plataforma
+# Epic: Operations UX
 
-## [ ] Redirigir a login al acceder a /dashboard sin sesión
+## [ ] Expose each resource's in-progress operation to the front end
 
-**Descripción**
+**Description**
 
-Proteger las rutas del dashboard en el front.
+Make the current operation's status queryable from the resource.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Hacer el seed idempotente
+## [ ] Show the in-progress operation in each resource's detail view
 
-**Descripción**
+**Description**
 
-Garantizar que ejecutar el seed varias veces no duplique datos.
+Reflect that an action is in progress when opening the resource.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
 
-## [ ] Crear la compañía y el usuario inicial en el seed
+## [ ] Update the operation's status live without refreshing
 
-**Descripción**
+**Description**
 
-Dejar un punto de entrada listo para el primer uso.
+Push status changes over WebSocket as the operation progresses.
 
-**Estado**
+**Status**
 
-- [x] Pendiente
-- [ ] Completada
+- [x] Pending
+- [ ] Done
+
+## [ ] Show the operation's final Completed or Failed status
+
+**Description**
+
+Close the operation with an unambiguous result.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Define the Worker step vocabulary
+
+**Description**
+
+List the steps with human-readable labels (download image, create disk,
+cloud-init, etc.).
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Define the Mesh step vocabulary
+
+**Description**
+
+List the network creation steps (bridge, DHCP, firewall).
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Define the Node step vocabulary
+
+**Description**
+
+List the assignment steps (reserve IP, connect NIC, verify connectivity).
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Show the current step with its human-readable label
+
+**Description**
+
+Reflect the concrete in-progress step in the UI, not a generic "processing".
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Style the FAILED status with a distinctive color and icon
+
+**Description**
+
+Make a failure clearly stand out.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Show a one-line summary of the failure reason
+
+**Description**
+
+Accompany the failed status with a summarized cause.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Create the status visual guide
+
+**Description**
+
+Define colors, icons and labels per resource status.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Apply the status visual guide across all lists and resources
+
+**Description**
+
+Use the same visual language for Workers, Meshes, Nodes and Fibers.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Reflect live status changes in lists
+
+**Description**
+
+Update resource tables without needing to refresh.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Create the vertical operation timeline component
+
+**Description**
+
+Show an operation's steps on a timeline.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Mark done, current, pending and failed steps on the timeline
+
+**Description**
+
+Visually distinguish each step's status.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Open the timeline from the resource and from the feed
+
+**Description**
+
+Allow reaching the operation detail from both places.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Add a progress bar derived from completed steps
+
+**Description**
+
+Communicate how much is left based on completed vs. total steps.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Show the step where it failed and the cause in human language
+
+**Description**
+
+Indicate the exact failure point and an understandable reason.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Show an action suggestion on error
+
+**Description**
+
+Guide the user on what they can do to resolve it.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Add a Retry button on failed operations
+
+**Description**
+
+Allow relaunching a retryable failed operation.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Relaunch the operation and revive the timeline on retry
+
+**Description**
+
+Bring the operation back to "In progress" and continue the steps.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Add an Abort button with confirmation
+
+**Description**
+
+Allow cancelling an in-progress operation.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Leave the resource in a consistent state after aborting
+
+**Description**
+
+Guarantee the resource doesn't end up in an ambiguous state.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Add the "Activity" tab with per-resource history
+
+**Description**
+
+Chronologically list a resource's past operations.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Create the global "Activity" view
+
+**Description**
+
+Show in-progress and recent operations across all infrastructure.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Add resource and status filters to the global feed
+
+**Description**
+
+Allow narrowing the activity view.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Show each step's duration on the timeline
+
+**Description**
+
+Expose how long each stage took.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Show the operation's total duration
+
+**Description**
+
+Expose the total time in human-readable format.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Add the "Affected resources" section with links
+
+**Description**
+
+List the resources the operation touches and link to them.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Translate per-step messages into human language
+
+**Description**
+
+Replace raw technical output with readable messages.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Collapse the raw technical detail
+
+**Description**
+
+Keep the technical log available but hidden by default.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Add empty states with a call-to-action
+
+**Description**
+
+Guide the next action when there are no resources.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Add skeletons while loading
+
+**Description**
+
+Show placeholders while data is loading.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Add confirmation when deleting a Worker, Mesh or Node
+
+**Description**
+
+Require explicit confirmation on destructive operations.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Show a notification when an operation completes or fails
+
+**Description**
+
+Notify the user even if they navigated elsewhere.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Link to the resource from the notification
+
+**Description**
+
+Allow going straight to the resource from the notification.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+---
+
+# Epic: Platform
+
+## [ ] Redirect to login when accessing /dashboard without a session
+
+**Description**
+
+Protect dashboard routes on the front end.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Make the seed idempotent
+
+**Description**
+
+Guarantee that running the seed multiple times doesn't duplicate data.
+
+**Status**
+
+- [x] Pending
+- [ ] Done
+
+## [ ] Create the initial company and user in the seed
+
+**Description**
+
+Leave a ready entry point for first use.
+
+**Status**
+
+- [x] Pending
+- [ ] Done

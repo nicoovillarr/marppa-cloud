@@ -11,6 +11,7 @@ import { isValidSshPublicKey, eventJobId, signEventJob } from '@marppa-cloud/sha
 import { AppContainer } from '@/libs/Container';
 import { IPChecker } from '@/system/application/IPChecker';
 import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
+import { NftablesRuleset } from '@/libs/NftablesRuleset';
 
 process.env.EVENT_QUEUE_HMAC_SECRET ??= 'test-event-queue-hmac-secret';
 const testEventSignature = (eventId: number) =>
@@ -471,6 +472,33 @@ ssh-rsa ${body}`), 'embedded newline');
 test('event job ids are never bare integers', () => {
   assert.equal(eventJobId(91), 'event-91');
   assert.ok(!/^\d+$/.test(eventJobId(91)), 'BullMQ rejects a fully numeric custom id');
+});
+
+test('NftablesRuleset detects a default-deny output policy', () => {
+  const hardened = `
+table inet filter {
+  chain input {
+    type filter hook input priority 0; policy drop;
+  }
+  chain output {
+    type filter hook output priority 0; policy drop;
+    udp dport 53 accept
+  }
+}
+`;
+
+  const openEgress = `
+table inet filter {
+  chain output {
+    type filter hook output priority 0;
+    udp dport 53 accept
+  }
+}
+`;
+
+  assert.equal(NftablesRuleset.hasDefaultDenyOutputPolicy(hardened), true);
+  assert.equal(NftablesRuleset.hasDefaultDenyOutputPolicy(openEgress), false);
+  assert.equal(NftablesRuleset.hasDefaultDenyOutputPolicy(''), false);
 });
 
 

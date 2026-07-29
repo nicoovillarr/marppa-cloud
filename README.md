@@ -161,6 +161,8 @@ Broad strokes for when that hardware is in place:
 
 None of this touches application code — it's purely router/switch configuration once the hardware supports it.
 
+**In the meantime — host-only substitute.** Full VLAN/DMZ isolation is a Layer 2 property (a firewall on the host alone can't stop another LAN device from reaching it at the wire level), but a host-side egress/ingress allowlist still meaningfully bounds what a compromised host could do: no scanning the LAN, no exfiltrating to arbitrary destinations, no reachability from the LAN beyond an explicit admin IP. Applied via `nftables`, opt-in and fail-closed at boot (`REQUIRE_EGRESS_HARDENING=true` in `apps/cloud-scripts`) — see `docs/host-network-hardening.md` for the concrete ruleset and the reasoning.
+
 ## Hive
 
 The Hive is a core module of the MCS that provides virtualization for running applications. It is designed to be lightweight and efficient, allowing for quick deployment and management of VMs. Within the Hive, users can create, manage, and scale Workers (VMs) as needed, providing a flexible environment for application development and deployment.
