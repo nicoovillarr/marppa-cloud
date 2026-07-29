@@ -19,7 +19,7 @@
     "node"
   ],
   "author": "Marppa SAS",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@marppa-cloud/api-types": "*",
     "@marppa-cloud/db": "*",
