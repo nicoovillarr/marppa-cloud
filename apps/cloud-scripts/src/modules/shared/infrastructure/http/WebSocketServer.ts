@@ -14,6 +14,7 @@ type AuthedSocket = WebSocket & {
   userId?: string;
   companyId?: string;
   authTimer?: NodeJS.Timeout;
+  isAlive?: boolean;
 };
 
 type ExecSessionEntry = {
@@ -34,6 +35,7 @@ const EXEC_BACKPRESSURE_LOW_WATERMARK = 256 * 1024;
 const EXEC_BACKPRESSURE_CHECK_MS = 100;
 const EXEC_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 const EXEC_SWEEP_INTERVAL_MS = 30 * 1000;
+const HEARTBEAT_INTERVAL_MS = 30 * 1000;
 
 @Injectable()
 export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
@@ -42,6 +44,7 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
   private readonly execSessions: Map<string, ExecSessionEntry> = new Map();
   private wss: WsServer | null = null;
   private execSweepTimer: NodeJS.Timeout | null = null;
+  private heartbeatTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly logger: LoggerService,
@@ -60,6 +63,11 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     });
 
     this.wss.on('connection', (socket: AuthedSocket) => {
+      socket.isAlive = true;
+      socket.on('pong', () => {
+        socket.isAlive = true;
+      });
+
       socket.authTimer = setTimeout(() => {
         if (!socket.userId) socket.close(4002, 'Authentication timeout');
       }, AUTH_GRACE_MS);
@@ -77,7 +85,27 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       EXEC_SWEEP_INTERVAL_MS,
     );
 
+    this.heartbeatTimer = setInterval(
+      () => this.pingClients(),
+      HEARTBEAT_INTERVAL_MS,
+    );
+
     this.logger.info(`[WebSocketServer] Listening on port ${WS_PORT}`);
+  }
+
+  private pingClients(): void {
+    if (!this.wss) return;
+
+    for (const socket of this.wss.clients as Set<AuthedSocket>) {
+      if (socket.isAlive === false) {
+        this.logger.warn('[WebSocketServer] Terminating unresponsive client');
+        socket.terminate();
+        continue;
+      }
+
+      socket.isAlive = false;
+      socket.ping();
+    }
   }
 
   private async onMessage(
@@ -496,6 +524,11 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     if (this.execSweepTimer) {
       clearInterval(this.execSweepTimer);
       this.execSweepTimer = null;
+    }
+
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
 
     if (!this.wss) {
