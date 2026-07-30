@@ -97,7 +97,7 @@ export function HiveCatalogAdmin() {
   const loadReferences = useCallback(async () => {
     const [types, loadedFamilies] = await Promise.all([
       workerStorageTypeApi.findAll(),
-      workerFamilyApi.findAll(),
+      workerFamilyApi.findAll(true),
     ]);
 
     setStorageTypes(types);
@@ -167,10 +167,12 @@ export function HiveCatalogAdmin() {
       type: "select",
       required: true,
       omitOnEdit: true,
-      options: families.map((family) => ({
-        value: family.id,
-        displayText: family.name,
-      })),
+      options: families
+        .filter((family) => family.deprecatedAt == null)
+        .map((family) => ({
+          value: family.id,
+          displayText: family.name,
+        })),
     },
     { name: "cpuCores", label: "vCPU", type: "number", required: true },
     { name: "ramMB", label: "RAM (MB)", type: "number", required: true },
@@ -191,7 +193,7 @@ export function HiveCatalogAdmin() {
         getKey={(row) => row.id}
         getLabel={(row) => row.name}
         api={{
-          list: workerImageApi.listImages,
+          list: () => workerImageApi.listImages(),
           create: workerImageApi.create,
           update: workerImageApi.update,
           remove: workerImageApi.delete,
@@ -208,8 +210,10 @@ export function HiveCatalogAdmin() {
         removeText="Deprecate"
         canRemove={(row) => row.deprecatedAt == null}
         onChanged={loadReferences}
+        canRestore={(row) => row.deprecatedAt != null}
         api={{
-          list: workerFamilyApi.findAll,
+          list: () => workerFamilyApi.findAll(true),
+          restore: workerFamilyApi.restore,
           create: workerFamilyApi.create,
           update: workerFamilyApi.update,
           remove: workerFamilyApi.deprecate,
@@ -225,8 +229,10 @@ export function HiveCatalogAdmin() {
         getLabel={(row) => `${row.name} v${row.version}`}
         removeText="Deprecate"
         canRemove={(row) => row.deprecatedAt == null}
+        canRestore={(row) => row.deprecatedAt != null}
         api={{
-          list: workerFlavorApi.findAll,
+          list: () => workerFlavorApi.findAll(true),
+          restore: workerFlavorApi.restore,
           create: workerFlavorApi.create,
           update: workerFlavorApi.revise,
           remove: workerFlavorApi.deprecate,
@@ -242,7 +248,7 @@ export function HiveCatalogAdmin() {
         getLabel={(row) => row.name}
         onChanged={loadReferences}
         api={{
-          list: workerStorageTypeApi.findAll,
+          list: () => workerStorageTypeApi.findAll(),
           create: workerStorageTypeApi.create,
           update: workerStorageTypeApi.update,
           remove: workerStorageTypeApi.delete,

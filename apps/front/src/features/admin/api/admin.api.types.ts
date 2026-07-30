@@ -1,6 +1,23 @@
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { UserRole } from "@/users/model/user.types";
 
+export type Paginated<T> = {
+    items: T[];
+    total: number;
+    page: number;
+    pageSize: number;
+}
+
+export type PageQuery = {
+    page?: number;
+    pageSize?: number;
+}
+
+export type AdminResourceQuery = PageQuery & {
+    type?: AdminResourceType;
+    companyId?: string;
+}
+
 export type AdminCompanyCounts = {
     users: number;
     workers: number;

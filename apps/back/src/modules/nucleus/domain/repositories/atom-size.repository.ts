@@ -8,4 +8,5 @@ export abstract class AtomSizeRepository {
   abstract findMaxVersion(name: string): Promise<number>;
   abstract create(atomSize: AtomSizeEntity): Promise<AtomSizeEntity>;
   abstract deprecate(id: number, deprecatedAt: Date): Promise<void>;
+  abstract restore(id: number): Promise<void>;
 }

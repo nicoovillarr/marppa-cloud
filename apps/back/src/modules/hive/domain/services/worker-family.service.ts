@@ -8,16 +8,27 @@ import { WORKER_FAMILY_REPOSITORY_SYMBOL } from '../repositories/worker-family.r
 import { WorkerFamilyWithFlavorsModel } from '../models/worker-family-with-flavors.model';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { PlatformAdminService } from '@/shared/domain/services/platform-admin.service';
 
 @Injectable()
 export class WorkerFamilyService {
   constructor(
     @Inject(WORKER_FAMILY_REPOSITORY_SYMBOL)
     private readonly workerFamilyRepository: WorkerFamilyRepository,
+    private readonly platformAdminService: PlatformAdminService,
   ) { }
 
-  async findAll(): Promise<WorkerFamilyWithFlavorsModel[]> {
-    return this.workerFamilyRepository.findAvailableFor(this.currentCompanyId());
+  async findAll(
+    includeDeprecated = false,
+  ): Promise<WorkerFamilyWithFlavorsModel[]> {
+    if (await this.platformAdminService.isPlatformAdmin()) {
+      return this.workerFamilyRepository.findAll(includeDeprecated);
+    }
+
+    return this.workerFamilyRepository.findAvailableFor(
+      this.currentCompanyId(),
+      includeDeprecated,
+    );
   }
 
   async findById(id: number): Promise<WorkerFamilyEntity> {
@@ -63,6 +74,15 @@ export class WorkerFamilyService {
     }
 
     await this.workerFamilyRepository.deprecate(entity.id!, new Date());
+  }
+
+  async restore(id: number): Promise<void> {
+    const entity = await this.findById(id);
+    if (!entity.isDeprecated) {
+      return;
+    }
+
+    await this.workerFamilyRepository.restore(entity.id!);
   }
 
   private currentCompanyId(): string {

@@ -35,6 +35,7 @@ export function FormFieldBase({
     <Controller
       name={controlName}
       control={control}
+      rules={{ required: required ? `${label ?? controlName} is required` : false }}
       render={({ field, fieldState }) => (
         <div className={`flex flex-col ${className}`}>
           {label && (

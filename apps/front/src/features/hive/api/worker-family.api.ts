@@ -4,8 +4,8 @@ import { CreateWorkerFamilyDto, WorkerFamilyResponseDto, WorkerFamilyWithRelatio
 const baseUrl = '/hive/families';
 
 export const workerFamilyApi = {
-    findAll(): Promise<WorkerFamilyWithRelationsResponseDto[]> {
-        return fetcher<WorkerFamilyWithRelationsResponseDto[]>(baseUrl);
+    findAll(includeDeprecated = false): Promise<WorkerFamilyWithRelationsResponseDto[]> {
+        return fetcher<WorkerFamilyWithRelationsResponseDto[]>(baseUrl, 'GET', { includeDeprecated });
     },
 
     create(data: CreateWorkerFamilyDto): Promise<WorkerFamilyResponseDto> {
@@ -18,5 +18,9 @@ export const workerFamilyApi = {
 
     deprecate(id: number): Promise<void> {
         return fetcher<void>(`${baseUrl}/${id}`, 'DELETE');
+    },
+
+    restore(id: number): Promise<void> {
+        return fetcher<void>(`${baseUrl}/${id}/restore`, 'POST');
     },
 }

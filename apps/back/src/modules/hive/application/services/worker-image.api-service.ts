@@ -46,12 +46,32 @@ export class WorkerImageApiService {
     data: UpdateWorkerImageDto,
   ): Promise<WorkerImageResponseModel> {
     const workerImage = await this.service.update(id, data);
+    await this.audit(
+      EventTypeKey.ADMIN_CATALOG_UPDATED,
+      workerImage.id!,
+      workerImage.name,
+    );
+
     return plainToInstance(WorkerImageResponseModel, workerImage, {
       excludeExtraneousValues: true,
     });
   }
 
   async delete(id: number): Promise<void> {
+    const workerImage = await this.service.findById(id);
     await this.service.delete(id);
+    await this.audit(
+      EventTypeKey.ADMIN_CATALOG_DELETED,
+      id,
+      workerImage.name,
+    );
+  }
+
+  private audit(type: EventTypeKey, id: number, name: string): Promise<number> {
+    return this.eventDispatch.record({
+      type,
+      primary: { type: 'WorkerImage', id: String(id) },
+      properties: { name },
+    });
   }
 }

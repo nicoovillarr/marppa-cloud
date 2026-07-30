@@ -2,9 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import {
   ADMIN_RESOURCE_REPOSITORY_SYMBOL,
+  AdminResourceFilter,
+  AdminResourcePage,
   AdminResourceRepository,
 } from '../repositories/admin-resource.repository';
-import { AdminResourceModel } from '../models/admin-resource.model';
 
 @Injectable()
 export class AdminResourceService {
@@ -13,7 +14,11 @@ export class AdminResourceService {
     private readonly repository: AdminResourceRepository,
   ) { }
 
-  findAll(): Promise<AdminResourceModel[]> {
-    return this.repository.findAll();
+  findPage(
+    skip: number,
+    take: number,
+    filter: AdminResourceFilter,
+  ): Promise<AdminResourcePage> {
+    return this.repository.findPage(skip, take, filter);
   }
 }

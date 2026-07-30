@@ -60,7 +60,7 @@ export function NucleusCatalogAdmin() {
   const [sizes, setSizes] = useState<AtomSizeResponseDto[]>([]);
 
   const loadSizes = useCallback(async () => {
-    setSizes(await atomSizeApi.listSizes());
+    setSizes(await atomSizeApi.listSizes(true));
   }, []);
 
   useEffect(() => {
@@ -136,7 +136,7 @@ export function NucleusCatalogAdmin() {
         getKey={(row) => row.id}
         getLabel={(row) => row.name}
         api={{
-          list: atomImageApi.listImages,
+          list: () => atomImageApi.listImages(),
           create: atomImageApi.create,
           update: atomImageApi.update,
           remove: atomImageApi.delete,
@@ -153,8 +153,10 @@ export function NucleusCatalogAdmin() {
         removeText="Deprecate"
         canRemove={(row) => row.deprecatedAt == null}
         onChanged={loadSizes}
+        canRestore={(row) => row.deprecatedAt != null}
         api={{
-          list: atomSizeApi.listSizes,
+          list: () => atomSizeApi.listSizes(true),
+          restore: atomSizeApi.restore,
           create: atomSizeApi.create,
           update: atomSizeApi.revise,
           remove: atomSizeApi.deprecate,

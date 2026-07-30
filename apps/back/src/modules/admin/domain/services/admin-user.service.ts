@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UserService } from '@/user/domain/services/user.service';
 import {
   ADMIN_USER_REPOSITORY_SYMBOL,
+  AdminUserPage,
   AdminUserRepository,
 } from '../repositories/admin-user.repository';
 import { AdminUserModel } from '../models/admin-user.model';
@@ -13,6 +14,11 @@ import { CreateAdminUserDto } from '@/admin/presentation/dtos/create-admin-user.
 import { UpdateAdminUserDto } from '@/admin/presentation/dtos/update-admin-user.dto';
 import { LastOwnerProtectedError } from '../errors/last-owner-protected.error';
 import { SelfDemotionError } from '../errors/self-demotion.error';
+
+export interface AdminUserUpdateResult {
+  user: AdminUserModel;
+  sessionsRevoked: boolean;
+}
 
 @Injectable()
 export class AdminUserService {
@@ -22,8 +28,8 @@ export class AdminUserService {
     private readonly userService: UserService,
   ) { }
 
-  findAll(): Promise<AdminUserModel[]> {
-    return this.repository.findAll();
+  findPage(skip: number, take: number): Promise<AdminUserPage> {
+    return this.repository.findPage(skip, take);
   }
 
   async findById(id: string): Promise<AdminUserModel> {
@@ -50,7 +56,10 @@ export class AdminUserService {
     return this.findById(created.id!);
   }
 
-  async update(id: string, data: UpdateAdminUserDto): Promise<AdminUserModel> {
+  async update(
+    id: string,
+    data: UpdateAdminUserDto,
+  ): Promise<AdminUserUpdateResult> {
     const user = await this.findById(id);
 
     if (user.id === getCurrentUser()?.userId && this.demotesSelf(user, data)) {
@@ -72,11 +81,12 @@ export class AdminUserService {
       await this.userService.updateUserPassword(id, data.password);
     }
 
-    if (this.invalidatesCredentials(user, data)) {
+    const sessionsRevoked = this.invalidatesCredentials(user, data);
+    if (sessionsRevoked) {
       await this.repository.revokeSessions(id);
     }
 
-    return updated;
+    return { user: updated, sessionsRevoked };
   }
 
   async delete(id: string): Promise<void> {

@@ -3,6 +3,7 @@ import { Prisma, UserRole } from '@prisma/client';
 
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import {
+  AdminUserPage,
   AdminUserRepository,
   AdminUserWrite,
 } from '@/admin/domain/repositories/admin-user.repository';
@@ -20,13 +21,18 @@ type UserWithCompany = Prisma.UserGetPayload<{ include: typeof withCompany }>;
 export class AdminUserPrismaRepository implements AdminUserRepository {
   constructor(private readonly prisma: PrismaService) { }
 
-  async findAll(): Promise<AdminUserModel[]> {
-    const users = await this.prisma.user.findMany({
-      include: withCompany,
-      orderBy: { email: 'asc' },
-    });
+  async findPage(skip: number, take: number): Promise<AdminUserPage> {
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        include: withCompany,
+        orderBy: { email: 'asc' },
+        skip,
+        take,
+      }),
+      this.prisma.user.count(),
+    ]);
 
-    return users.map(toModel);
+    return { items: users.map(toModel), total };
   }
 
   async findById(id: string): Promise<AdminUserModel | null> {

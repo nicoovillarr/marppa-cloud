@@ -6,6 +6,8 @@ import { adminApi } from "../api/admin.api";
 import { AdminHostCapacityResponseDto } from "../api/admin.api.types";
 import { AdminCrudSection } from "./AdminCrudSection";
 import { AdminField } from "./AdminCrudForm";
+import { Callout } from "@/core/ui/Callout";
+import { LuTriangleAlert } from "react-icons/lu";
 
 const COLUMNS: ColumnMapping<AdminHostCapacityResponseDto> = {
   hostname: { label: "Hostname", width: "100%", minWidth: "180px" },
@@ -30,20 +32,27 @@ const FIELDS: AdminField[] = [
 
 export function HostsAdmin() {
   return (
-    <AdminCrudSection<AdminHostCapacityResponseDto, string>
-      title="Host capacity"
-      description="Capacity the scheduler budgets against. Cloud Scripts overwrites these rows when it reports in."
-      columns={COLUMNS}
-      fields={FIELDS}
-      getKey={(row) => row.hostname}
-      getLabel={(row) => row.hostname}
-      emptyText="No host has reported capacity yet; the configured fallback budget is in use."
-      api={{
-        list: adminApi.findHosts,
-        create: (data) => adminApi.upsertHost(data.hostname, data),
-        update: (hostname, data) => adminApi.upsertHost(hostname, data),
-        remove: adminApi.deleteHost,
-      }}
-    />
+    <div className="flex flex-col gap-4">
+      <Callout
+        icon={<LuTriangleAlert />}
+        text="Cloud Scripts overwrites these rows whenever a host reports in, so an edit here holds only until the next report. The scheduler budgets against the sum of every row."
+      />
+
+      <AdminCrudSection<AdminHostCapacityResponseDto, string>
+        title="Host capacity"
+        description="Capacity the scheduler budgets against."
+        columns={COLUMNS}
+        fields={FIELDS}
+        getKey={(row) => row.hostname}
+        getLabel={(row) => row.hostname}
+        emptyText="No host has reported capacity yet; the configured fallback budget is in use."
+        api={{
+          list: () => adminApi.findHosts(),
+          create: (data) => adminApi.upsertHost(data.hostname, data),
+          update: (hostname, data) => adminApi.upsertHost(hostname, data),
+          remove: adminApi.deleteHost,
+        }}
+      />
+    </div>
   );
 }

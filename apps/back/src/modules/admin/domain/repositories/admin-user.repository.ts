@@ -10,8 +10,13 @@ export interface AdminUserWrite {
   companyId?: string;
 }
 
+export interface AdminUserPage {
+  items: AdminUserModel[];
+  total: number;
+}
+
 export abstract class AdminUserRepository {
-  abstract findAll(): Promise<AdminUserModel[]>;
+  abstract findPage(skip: number, take: number): Promise<AdminUserPage>;
   abstract findById(id: string): Promise<AdminUserModel | null>;
   abstract update(id: string, data: AdminUserWrite): Promise<AdminUserModel>;
   abstract delete(id: string): Promise<void>;

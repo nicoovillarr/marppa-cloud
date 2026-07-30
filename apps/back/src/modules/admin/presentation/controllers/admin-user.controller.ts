@@ -6,12 +6,15 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
 import { PlatformAdminGuard } from '@/shared/presentation/guards/platform-admin.guard';
 import { AdminApiService } from '@/admin/application/services/admin.api-service';
 import { AdminUserResponse } from '@/admin/application/models/admin.response';
+import { PaginationQuery } from '@/shared/presentation/dtos/pagination.query';
+import { PaginatedResponse } from '@/shared/presentation/dtos/paginated.response';
 import { CreateAdminUserDto } from '../dtos/create-admin-user.dto';
 import { UpdateAdminUserDto } from '../dtos/update-admin-user.dto';
 
@@ -21,8 +24,10 @@ export class AdminUserController {
   constructor(private readonly service: AdminApiService) { }
 
   @Get()
-  findAll(): Promise<AdminUserResponse[]> {
-    return this.service.findUsers();
+  findAll(
+    @Query() query: PaginationQuery,
+  ): Promise<PaginatedResponse<AdminUserResponse>> {
+    return this.service.findUsers(query);
   }
 
   @Post()

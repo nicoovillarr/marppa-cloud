@@ -84,9 +84,11 @@ export function UsersAdmin() {
       fields={fields}
       getKey={(row) => row.id}
       getLabel={(row) => row.email}
+      confirmRemoveByName
+      removeWarning="Deleting a user is permanent and drops all of their sessions."
       onChanged={loadCompanies}
       api={{
-        list: adminApi.findUsers,
+        list: (page, pageSize) => adminApi.findUsers({ page, pageSize }),
         create: adminApi.createUser,
         update: adminApi.updateUser,
         remove: adminApi.deleteUser,

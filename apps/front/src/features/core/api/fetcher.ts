@@ -24,10 +24,11 @@ function buildUrl(
   if (method !== "GET" || !body) return url;
 
   const query = Object.keys(body)
+    .filter((key) => body[key] !== undefined && body[key] !== null)
     .map((key) => `${key}=${encodeURIComponent(body[key])}`)
     .join("&");
 
-  return `${url}?${query}`;
+  return query ? `${url}?${query}` : url;
 }
 
 function buildRequest(method: RequestMethod, body?: RequestBody): RequestInit {
@@ -74,6 +75,15 @@ function refreshSession(): Promise<boolean> {
   return pendingSessionRefresh;
 }
 
+function toErrorMessage(data: any): string {
+  const { message } = data ?? {};
+
+  if (Array.isArray(message)) return message.join(". ");
+  if (typeof message === "string") return message;
+
+  return "Unknown error";
+}
+
 export const fetcher = async <T>(
   action: string,
   method: RequestMethod = "GET",
@@ -102,7 +112,7 @@ export const fetcher = async <T>(
   }
 
   if (!res.ok) {
-    throw new Error(data.message ?? "Unknown error");
+    throw new Error(toErrorMessage(data));
   }
 
   return data;

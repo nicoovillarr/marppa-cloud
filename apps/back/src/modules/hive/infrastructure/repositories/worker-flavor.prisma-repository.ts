@@ -74,6 +74,13 @@ export class WorkerFlavorPrismaRepository implements WorkerFlavorRepository {
     return WorkerFlavorPrismaMapper.toEntity(workerFlavor);
   }
 
+  async restore(id: number): Promise<void> {
+    await this.prisma.workerFlavor.update({
+      where: { id },
+      data: { deprecatedAt: null },
+    });
+  }
+
   async deprecate(id: number, deprecatedAt: Date): Promise<void> {
     await this.prisma.workerFlavor.update({
       where: {

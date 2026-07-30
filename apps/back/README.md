@@ -117,6 +117,22 @@ Guardrails live in the domain services, not the UI:
   atom tries to use them. `AtomService` and the worker still grade capabilities on
   create and start (that is the enforcement); rejecting them on the way in stops an
   image being approved that could never run.
+- **Every admin mutation is recorded** through `EventDispatchService.record()`, a
+  persist-without-enqueue sibling of `dispatch()`. Admin actions have no host work
+  to do, so putting them on the BullMQ queue would hand cloud-scripts events no
+  processor claims; they are audit rows, not jobs. They land on the acting admin's
+  company — the root one — because `Event.companyId` is required.
+
+### Catalog visibility
+
+`GET /hive/families` answers from the caller: a tenant sees public families plus
+its own, active only, while a platform admin sees every family from every company.
+Without that branch the admin dashboard could not administer a private family — it
+could not see one. `includeDeprecated=true` on families, flavors and sizes opts
+into deprecated rows, which the tenant-facing listings still hide. The admin UI
+passes it, so "deprecate" reads as a state change there rather than a row
+vanishing, and a deprecated row can be restored (`POST .../:id/restore`) instead of
+needing SQL. Restoring a flavor whose family is still deprecated is a `409`.
 
 ### Infra resource lifecycle
 

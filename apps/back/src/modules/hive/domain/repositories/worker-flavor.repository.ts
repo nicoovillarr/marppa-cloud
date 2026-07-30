@@ -16,4 +16,5 @@ export abstract class WorkerFlavorRepository {
     workerFlavor: WorkerFlavorEntity,
   ): Promise<WorkerFlavorEntity>;
   abstract deprecate(id: number, deprecatedAt: Date): Promise<void>;
+  abstract restore(id: number): Promise<void>;
 }

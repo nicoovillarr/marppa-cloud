@@ -6,6 +6,9 @@ import {
     AdminUserResponseDto,
     CreateAdminCompanyDto,
     CreateAdminUserDto,
+    AdminResourceQuery,
+    PageQuery,
+    Paginated,
     UpdateAdminUserDto,
     UpsertHostCapacityDto,
 } from "./admin.api.types";
@@ -29,8 +32,8 @@ export const adminApi = {
         return fetcher<void>(`${baseUrl}/companies/${id}`, 'DELETE');
     },
 
-    findUsers(): Promise<AdminUserResponseDto[]> {
-        return fetcher<AdminUserResponseDto[]>(`${baseUrl}/users`);
+    findUsers(query: PageQuery = {}): Promise<Paginated<AdminUserResponseDto>> {
+        return fetcher<Paginated<AdminUserResponseDto>>(`${baseUrl}/users`, 'GET', query);
     },
 
     createUser(data: CreateAdminUserDto): Promise<AdminUserResponseDto> {
@@ -57,7 +60,7 @@ export const adminApi = {
         return fetcher<void>(`${baseUrl}/hosts/${hostname}`, 'DELETE');
     },
 
-    findResources(): Promise<AdminResourceResponseDto[]> {
-        return fetcher<AdminResourceResponseDto[]>(`${baseUrl}/resources`);
+    findResources(query: AdminResourceQuery = {}): Promise<Paginated<AdminResourceResponseDto>> {
+        return fetcher<Paginated<AdminResourceResponseDto>>(`${baseUrl}/resources`, 'GET', query);
     },
 }

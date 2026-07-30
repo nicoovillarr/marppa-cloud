@@ -19,17 +19,19 @@ export const ADMIN_LINK = {
   icon: LuShieldCheck,
 };
 
+export function useModuleLinks() {
+  const { user } = useUser();
+
+  return user?.isPlatformAdmin ? [...MODULE_LINKS, ADMIN_LINK] : MODULE_LINKS;
+}
+
 export function isModuleActive(pathname: string | null, href: string): boolean {
   return !!pathname?.startsWith(href.split("/").slice(0, 3).join("/"));
 }
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user } = useUser();
-
-  const links = user?.isPlatformAdmin
-    ? [...MODULE_LINKS, ADMIN_LINK]
-    : MODULE_LINKS;
+  const links = useModuleLinks();
 
   return (
     <aside className="hidden md:flex flex-col w-56 shrink-0 h-full bg-sidebar overflow-y-auto">

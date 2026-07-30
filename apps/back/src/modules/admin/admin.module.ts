@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { SharedModule } from '@/shared/shared.module';
 import { AuthModule } from '@/auth/auth.module';
 import { UserModule } from '@/user/user.module';
+import { EventModule } from '@/event/event.module';
 
 import { AdminApiService } from './application/services/admin.api-service';
 import { AdminCompanyService } from './domain/services/admin-company.service';
@@ -23,7 +24,7 @@ import { AdminHostCapacityController } from './presentation/controllers/admin-ho
 import { AdminResourceController } from './presentation/controllers/admin-resource.controller';
 
 @Module({
-  imports: [SharedModule, AuthModule, UserModule],
+  imports: [SharedModule, AuthModule, UserModule, EventModule],
   controllers: [
     AdminCompanyController,
     AdminUserController,

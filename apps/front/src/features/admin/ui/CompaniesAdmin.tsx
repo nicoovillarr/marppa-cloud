@@ -63,10 +63,12 @@ export function CompaniesAdmin() {
       fields={fields}
       getKey={(row) => row.id}
       getLabel={(row) => row.name}
+      confirmRemoveByName
+      removeWarning="Deleting a company is permanent. It must have no users and no resources."
       canRemove={(row) => !row.isRoot}
       onChanged={loadCompanies}
       api={{
-        list: adminApi.findCompanies,
+        list: () => adminApi.findCompanies(),
         create: adminApi.createCompany,
         update: adminApi.updateCompany,
         remove: adminApi.deleteCompany,
