@@ -5,8 +5,8 @@ import { IEventProcessor } from '@/event/application/EventWorker';
 import type { EventPayload } from '@/event/domain/models/EventPayload';
 import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 
-type WorkerWithImageAndFlavor = Prisma.WorkerGetPayload<{
-  include: { image: true; flavor: true };
+type WorkerWithImage = Prisma.WorkerGetPayload<{
+  include: { image: true };
 }>;
 
 import { EventProcessor } from '@/decorators/EventProcessor';
@@ -36,7 +36,7 @@ export class WorkerCreateProcessor implements IEventProcessor {
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {
-    let worker: WorkerWithImageAndFlavor | null = null;
+    let worker: WorkerWithImage | null = null;
 
     const updateWorkerStatus = async (status: ResourceStatus) => {
       await this.prisma.worker.update({
@@ -57,7 +57,7 @@ export class WorkerCreateProcessor implements IEventProcessor {
 
       worker = await this.prisma.worker.findUnique({
         where: { id: resourceWorker.resourceId, status: { not: ResourceStatus.DELETED } },
-        include: { image: true, flavor: true },
+        include: { image: true },
       });
 
       if (!worker) {
@@ -98,7 +98,7 @@ export class WorkerCreateProcessor implements IEventProcessor {
         worker.name,
         worker.macAddress,
         worker.image,
-        worker.flavor,
+        worker,
         [publicSshProp.value],
         consolePassword,
       );

@@ -1,8 +1,8 @@
 "use client";
 
 import { Button, ButtonRef } from "@/core/ui/Button";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { useEffect, useMemo, useRef } from "react";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { toast } from "sonner";
 import { FormTable } from "@/core/ui/inputs/form/FormTableSelect";
@@ -22,8 +22,6 @@ import { isValidSshPublicKey } from "@marppa-cloud/shared";
 
 
 export function CreateWorkerForm() {
-  const [flavors, setFlavors] = useState<WorkerFlavorResponseDto[]>([]);
-
   const { showDialog } = useDialog();
 
   const {
@@ -46,36 +44,6 @@ export function CreateWorkerForm() {
     fetchImages,
   } = useWorkerImage();
 
-  const columns = useMemo<ColumnMapping<WorkerFlavorResponseDto>>(() => ({
-    id: {
-      label: "#",
-      width: "100%",
-      minWidth: "200px",
-      renderFn: (flavor: WorkerFlavorResponseDto) => {
-        const family = families.find(f => f.id === flavor.familyId);
-        if (!family) {
-          return "N/A";
-        }
-
-        return `${family?.name}.${flavor.name}`;
-      },
-    },
-    cpuCores: {
-      label: "vCPU Cores",
-      minWidth: "150px",
-    },
-    ramMB: {
-      label: "RAM (MB)",
-      minWidth: "150px",
-    },
-    diskGB: {
-      label: "Disk (GB)",
-      minWidth: "150px",
-    },
-  }), [families]);
-
-  const buttonRef = useRef<ButtonRef>(null);
-
   const methods = useForm<any>({
     defaultValues: {
       workerName: "",
@@ -87,6 +55,62 @@ export function CreateWorkerForm() {
   });
 
   const { handleSubmit, setError, setValue, control } = methods;
+
+  const selectedImageId = useWatch({ control, name: "workerImageId" });
+  const selectedFlavorId = useWatch({ control, name: "workerMmiId" });
+
+  const selectedImage = useMemo(
+    () => images.find((image) => Number(image.id) === Number(selectedImageId)),
+    [images, selectedImageId]
+  );
+
+  const flavors = useMemo(() => {
+    if (!selectedImage) {
+      return [];
+    }
+
+    return families
+      .filter((family) => family.architecture === selectedImage.architecture)
+      .flatMap((family) => family.flavors);
+  }, [families, selectedImage]);
+
+  useEffect(() => {
+    if (selectedFlavorId && !flavors.some((flavor) => flavor.id === Number(selectedFlavorId))) {
+      setValue("workerMmiId", "");
+    }
+  }, [flavors, selectedFlavorId, setValue]);
+
+  const columns = useMemo<ColumnMapping<WorkerFlavorResponseDto>>(() => ({
+    id: {
+      label: "Instance type",
+      width: "100%",
+      minWidth: "200px",
+      renderFn: (flavor: WorkerFlavorResponseDto) => {
+        const family = families.find(f => f.id === flavor.familyId);
+        if (!family) {
+          return "N/A";
+        }
+
+        return `${family?.name}.${flavor.name}`;
+      },
+    },
+    familyId: {
+      label: "Best for",
+      minWidth: "260px",
+      renderFn: (flavor: WorkerFlavorResponseDto) =>
+        families.find((family) => family.id === flavor.familyId)?.description ?? "",
+    },
+    cpuCores: {
+      label: "vCPU Cores",
+      minWidth: "150px",
+    },
+    ramMB: {
+      label: "RAM (MB)",
+      minWidth: "150px",
+    },
+  }), [families]);
+
+  const buttonRef = useRef<ButtonRef>(null);
 
   const onSubmit = async (data: any) => {
     console.log("Form submitted with data:", data);
@@ -114,19 +138,6 @@ export function CreateWorkerForm() {
     }
 
     if (
-      !workerMmiId ||
-      isNaN(Number(workerMmiId)) ||
-      !flavors.some((mmi) => mmi.id === Number(workerMmiId))
-    ) {
-      setError("workerMmiId", {
-        type: "manual",
-        message: "Invalid Instance Type selected",
-      });
-      await buttonRef.current?.setIsLoading(false);
-      return;
-    }
-
-    if (
       !workerImageId ||
       isNaN(Number(workerImageId)) ||
       !images.some((img) => Number(img.id) === Number(workerImageId))
@@ -134,6 +145,19 @@ export function CreateWorkerForm() {
       setError("workerImageId", {
         type: "manual",
         message: "Invalid Worker Image selected",
+      });
+      await buttonRef.current?.setIsLoading(false);
+      return;
+    }
+
+    if (
+      !workerMmiId ||
+      isNaN(Number(workerMmiId)) ||
+      !flavors.some((mmi) => mmi.id === Number(workerMmiId))
+    ) {
+      setError("workerMmiId", {
+        type: "manual",
+        message: `Pick an instance type available for ${selectedImage?.architecture} images`,
       });
       await buttonRef.current?.setIsLoading(false);
       return;
@@ -214,9 +238,7 @@ export function CreateWorkerForm() {
 
   useEffect(() => {
     fetchWorkers();
-    fetchFamilies().then((families) => {
-      setFlavors(families.flatMap((family) => family.flavors));
-    });
+    fetchFamilies();
     fetchImages();
   }, []);
 
@@ -231,16 +253,6 @@ export function CreateWorkerForm() {
           required
         />
 
-        <FormTable
-          controlName="workerMmiId"
-          control={control}
-          label="Instance Type"
-          data={flavors}
-          columns={columns}
-          getKey={(flavor) => flavor.id}
-          required
-        />
-
         <FormRadioCards
           controlName="workerImageId"
           control={control}
@@ -252,6 +264,36 @@ export function CreateWorkerForm() {
           }))}
           required
         />
+
+        {selectedImage ? (
+          <>
+            <FormTable
+              controlName="workerMmiId"
+              control={control}
+              label="Instance Type"
+              data={flavors}
+              columns={columns}
+              getKey={(flavor) => flavor.id}
+              required
+            />
+
+            <p className="text-xs text-ink-muted -mt-2">
+              Every instance type gets the same boot disk. Extra space comes from
+              attaching a volume, not from picking a bigger instance.
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-ink-muted">
+            Pick a worker image first: instance types are filtered by the
+            architecture the image runs on.
+          </p>
+        )}
+
+        {selectedImage && flavors.length === 0 && (
+          <p className="text-sm text-ink-muted">
+            No instance type available for {selectedImage.architecture} images.
+          </p>
+        )}
 
         <FormInput
           controlName="ownPublicKey"

@@ -38,17 +38,17 @@ const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
   cpuCores: {
     label: "vCPU Cores",
     minWidth: "150px",
-    renderFn: (value: WorkerWithRelationsResponseDto) => value.flavor.cpuCores,
+    renderFn: (value: WorkerWithRelationsResponseDto) => value.cpuCores,
   },
   ramMB: {
     label: "RAM (MB)",
     minWidth: "150px",
-    renderFn: (value: WorkerWithRelationsResponseDto) => value.flavor.ramMB,
+    renderFn: (value: WorkerWithRelationsResponseDto) => value.ramMB,
   },
   diskGB: {
     label: "Disk (GB)",
     minWidth: "150px",
-    renderFn: (value: WorkerWithRelationsResponseDto) => value.flavor.diskGB,
+    renderFn: (value: WorkerWithRelationsResponseDto) => value.diskGB,
   },
 };
 

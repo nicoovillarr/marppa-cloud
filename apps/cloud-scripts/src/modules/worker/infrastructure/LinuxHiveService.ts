@@ -30,6 +30,9 @@ const BASE_IMAGE_PACKAGES = [
   'qemu-guest-agent',
 ];
 
+const HOST_DISK_HEADROOM_GB = 20;
+const HOST_MEMORY_HEADROOM_MB = 2048;
+
 /** Budget for a guest to honour the ACPI shutdown before it is powered off. */
 const SHUTDOWN_TIMEOUT_MS = 60_000;
 const SHUTDOWN_POLL_MS = 2_000;
@@ -145,6 +148,8 @@ export class LinuxHiveService extends HiveService {
       throw new Error(`Base image not found at ${baseImgPath}`);
     }
 
+    await this.assertHostDiskAvailable(size);
+
     const imgPath = path.join(IMAGE_DIR, `${id}.img`);
 
     // WORKER_CREATE is retried on failure, and a half-finished attempt leaves a
@@ -178,6 +183,64 @@ export class LinuxHiveService extends HiveService {
     );
 
     await this.defineVM(id, memory, cpus, size, imgPath, isoPath);
+  }
+
+  private async assertHostDiskAvailable(diskGB: number): Promise<void> {
+    const output = await Command.runCommand('df', [
+      '--output=avail',
+      '--block-size=1G',
+      IMAGE_DIR,
+    ]);
+
+    const availableGB = Number(output.trim().split('\n').pop()?.trim());
+    if (!Number.isFinite(availableGB)) {
+      throw new Error(`Could not read available disk on ${IMAGE_DIR}`);
+    }
+
+    if (diskGB + HOST_DISK_HEADROOM_GB > availableGB) {
+      throw new Error(
+        `Not enough disk on ${IMAGE_DIR}: ${diskGB}GB requested plus ${HOST_DISK_HEADROOM_GB}GB headroom, ${availableGB}GB available`,
+      );
+    }
+  }
+
+  private async assertHostMemoryAvailable(vmName: string): Promise<void> {
+    const dominfo = await Command.runCommand('sudo', [
+      'virsh',
+      'dominfo',
+      vmName,
+    ]);
+
+    const maxMemoryKiB = Number(
+      /Max memory:\s+(\d+)\s+KiB/.exec(dominfo)?.[1],
+    );
+    if (!Number.isFinite(maxMemoryKiB)) {
+      throw new Error(`Could not read the configured memory of ${vmName}`);
+    }
+
+    const requiredMB = Math.ceil(maxMemoryKiB / 1024);
+    const availableMB = await this.hostAvailableMemoryMB();
+
+    if (requiredMB + HOST_MEMORY_HEADROOM_MB > availableMB) {
+      throw new Error(
+        `Not enough free memory to start ${vmName}: ${requiredMB}MB required plus ${HOST_MEMORY_HEADROOM_MB}MB headroom, ${availableMB}MB available`,
+      );
+    }
+  }
+
+  private async hostAvailableMemoryMB(): Promise<number> {
+    const output = await Command.runCommand('free', ['-m']);
+
+    const memLine = output
+      .split('\n')
+      .find((line) => line.trim().startsWith('Mem:'));
+    const availableMB = Number(memLine?.trim().split(/\s+/)[6]);
+
+    if (!Number.isFinite(availableMB)) {
+      throw new Error('Could not read available host memory');
+    }
+
+    return availableMB;
   }
 
   /** Removes leftovers of a previous failed WORKER_CREATE attempt. */
@@ -743,6 +806,8 @@ local-hostname: ${name}
       console.log(`VM ${vmName} is already running`);
       return;
     }
+
+    await this.assertHostMemoryAvailable(vmName);
 
     await Command.runCommand('sudo', ['virsh', 'start', vmName]);
   }

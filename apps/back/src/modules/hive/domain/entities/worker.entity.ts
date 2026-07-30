@@ -25,6 +25,9 @@ export class WorkerEntity extends PatchableEntity {
     public readonly imageId: number,
     public readonly flavorId: number,
     public readonly ownerId: string,
+    public readonly cpuCores: number,
+    public readonly ramMB: number,
+    public readonly diskGB: number,
     optionals: WorkerOptionalProps = {},
   ) {
     super();
@@ -48,6 +51,9 @@ export class WorkerEntity extends PatchableEntity {
       ownerId: this.ownerId,
       imageId: this.imageId,
       flavorId: this.flavorId,
+      cpuCores: this.cpuCores,
+      ramMB: this.ramMB,
+      diskGB: this.diskGB,
     };
   }
 
@@ -60,6 +66,9 @@ export class WorkerEntity extends PatchableEntity {
       data.imageId,
       data.flavorId,
       data.ownerId,
+      data.cpuCores,
+      data.ramMB,
+      data.diskGB,
       {
         id: data.id,
         createdAt: data.createdAt,

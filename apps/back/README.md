@@ -97,6 +97,75 @@ transponders) follows one rule, encoded in `EVENT_STATE_MACHINE`
 Portal `apiKey` and `sslKey` are write-only: accepted on create/update, never exposed
 in a response model.
 
+### Hive catalog (families, flavors, capacity)
+
+Hardware is chosen from a catalog — `WorkerFamily` (a hardware profile) with its
+`WorkerFlavor` sizes — never typed in free-form per VM. Discrete sizes are what make
+bin-packing, capacity accounting and (later) per-hour pricing tractable; arbitrary
+CPU/RAM/disk triples are an untestable surface and fragment the host. The escape hatch
+for a tenant that genuinely needs another shape is a **private family**, not a slider.
+
+- **Flavors are immutable.** `PUT /hive/flavors/:id` does not rewrite the row: it inserts
+  a new row with the same `name`, `version = max + 1`, and stamps `deprecatedAt` on the
+  previous one. Rationale: `Worker.flavorId` is a pointer, so editing specs in place
+  would silently resize every existing worker on its next recreate, and would rewrite
+  the history a bill is derived from. Only one active version per `(familyId, name)` is
+  expected; that invariant lives in `WorkerFlavorService`, not in a database constraint
+  (Prisma cannot express a partial unique index, and the flavor catalog is a
+  single-writer admin flow).
+- **Workers snapshot their specs.** `Worker.cpuCores/ramMB/diskGB` are copied from the
+  flavor at create time and are what cloud-scripts provisions from. A worker created
+  before a revision keeps its original size for its whole life; the flavor relation is
+  kept only for lineage and pricing.
+- **Deprecation replaces deletion.** `DELETE` on a family or flavor stamps `deprecatedAt`
+  (a family also deprecates its active flavors). Deprecated entries disappear from the
+  catalog listing but stay resolvable by id, so existing workers keep working. Creating a
+  worker on a deprecated flavor is a `409`.
+- **A family may be private.** `WorkerFamily.ownerId` is nullable: `null` is a public
+  family, a company id restricts it to that company. Listings return public families plus
+  the caller's own; a private family belonging to another company answers `404`, and an
+  `ownerId` in a create body is only accepted when it equals the caller's company.
+- **Architecture is a family property.** A worker is rejected when the image's
+  `architecture` differs from the family's, which is also what the create form filters
+  instance types by. Accepted values live in `WORKER_ARCHITECTURES`
+  (`@marppa-cloud/api-types`), alongside the `MIN_WORKER_*` floors the flavor DTOs
+  validate. The disk floor exists because a copied cloud image cannot be shrunk with
+  qcow2 — a flavor smaller than the base image fails at provisioning time.
+- **Disk is not part of a flavor.** A flavor is a CPU × RAM shape; there is no `diskGB`
+  column on it. The boot disk is one platform-wide value, `WORKER_BOOT_DISK_GB`
+  (`getWorkerBootDiskGB()`, default 20, floored at `MIN_WORKER_DISK_GB` because a copied
+  cloud image cannot be shrunk with qcow2). A workload that needs space gets an extra
+  volume rather than being pushed into cores it does not need.
+
+  `Worker.diskGB` still exists and is still a snapshot: raising the default does not
+  resize existing workers, and cloud-scripts grows the copied base image to the worker's
+  own value. The UI does not print the number before create — it says the boot disk is
+  fixed and shows the real size on the worker itself. If it should be visible up front,
+  that wants a small `GET /hive/config`, not a duplicated constant in the frontend.
+
+  The growth path is `WorkerDisk`, which is **not wired to provisioning yet** — it has
+  CRUD in the backend, nothing reads it, and its `isBoot` flag is unused. Until it is,
+  `WORKER_BOOT_DISK_GB` is a hard ceiling for every worker.
+- **Capacity is checked before an event is queued.** `HiveCapacityService` compares the
+  requested specs against a configured host budget and the sums already committed in the
+  database: on create it checks disk (the image file is allocated at create) and that the
+  flavor could ever fit at all; on start it checks memory and vCPU against everything
+  currently running, since RAM is only consumed while the domain is up. Budget comes from
+  the environment, with defaults matching the current host (12 cores, 32GB, 439GB volume):
+
+  | Variable | Default | Meaning |
+  |---|---|---|
+  | `HIVE_HOST_VCPU` | `12` | Physical cores available to guests. |
+  | `HIVE_VCPU_OVERCOMMIT` | `2` | Multiplier applied to `HIVE_HOST_VCPU`. |
+  | `HIVE_HOST_RAM_MB` | `24576` | Memory allocatable to guests, i.e. host RAM minus what the host and atoms need. |
+  | `HIVE_HOST_DISK_GB` | `380` | Space allocatable under `/var/lib/libvirt/images`. |
+  | `WORKER_BOOT_DISK_GB` | `20` | Boot disk every worker gets. Snapshotted per worker at create. |
+
+  This is accounting, not a measurement: cloud-scripts re-checks the real host with `df`
+  and `free` before it copies a disk or starts a domain, keeping a fixed headroom. The
+  backend check exists to answer `409` immediately instead of failing an event five
+  retries later. Per-company quotas are **not** implemented — the budget is host-wide.
+
 ### Nucleus (atoms)
 
 An `Atom` is a Docker container, and it sits in the mesh exactly where a worker

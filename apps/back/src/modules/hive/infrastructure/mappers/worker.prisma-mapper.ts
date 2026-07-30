@@ -12,6 +12,9 @@ export class WorkerPrismaMapper {
       raw.imageId,
       raw.flavorId,
       raw.ownerId,
+      raw.cpuCores,
+      raw.ramMB,
+      raw.diskGB,
       {
         id: raw.id,
         createdAt: raw.createdAt,

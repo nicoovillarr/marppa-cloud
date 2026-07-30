@@ -186,6 +186,10 @@ model Worker {
   flavorId Int
   flavor   WorkerFlavor @relation(fields: [flavorId], references: [id])
 
+  cpuCores Float
+  ramMB    Int
+  diskGB   Int
+
   storages WorkerDisk[]
   sshKeys  WorkerSshKey[]
 
@@ -229,9 +233,15 @@ model WorkerImage {
 }
 
 model WorkerFamily {
-  id          Int     @id @default(autoincrement())
-  name        String  @unique
-  description String?
+  id           Int     @id @default(autoincrement())
+  name         String  @unique
+  description  String?
+  architecture String
+
+  deprecatedAt DateTime?
+
+  ownerId String?
+  owner   Company? @relation(fields: [ownerId], references: [id])
 
   flavors WorkerFlavor[]
 }
@@ -239,16 +249,20 @@ model WorkerFamily {
 model WorkerFlavor {
   id       Int    @id @default(autoincrement())
   name     String
+  version  Int    @default(1)
   cpuCores Float
   ramMB    Int
-  diskGB   Int
+
+  pricePerHourCents Int @default(0)
+
+  deprecatedAt DateTime?
 
   familyId Int
   family   WorkerFamily @relation(fields: [familyId], references: [id])
 
   workers Worker[]
 
-  @@unique([familyId, name])
+  @@unique([familyId, name, version])
 }
 
 model WorkerStorageType {
@@ -296,7 +310,7 @@ model Atom {
   createdAt DateTime @default(now())
   createdBy String
 
-  updatedAt DateTime  @updatedAt
+  updatedAt DateTime @updatedAt
   updatedBy String?
 
   ownerId String
@@ -484,13 +498,14 @@ model Company {
   parentCompanyId String?
   parentCompany   Company? @relation("CompanyHierarchy", fields: [parentCompanyId], references: [id])
 
-  users    User[]
-  workers  Worker[]
-  zones    Zone[]
-  atoms    Atom[]
-  storages WorkerDisk[]
-  portals  Portal[]
-  events   Event[]
+  users          User[]
+  workers        Worker[]
+  workerFamilies WorkerFamily[]
+  zones          Zone[]
+  atoms          Atom[]
+  storages       WorkerDisk[]
+  portals        Portal[]
+  events         Event[]
 
   children Company[] @relation("CompanyHierarchy")
 }
@@ -522,12 +537,12 @@ enum TokenType {
 }
 
 model Token {
-  token     String   @id
+  token     String    @id
   expiresAt DateTime
   type      TokenType
 
   userId String
-  user   User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
@@ -571,7 +586,7 @@ model Event {
 }
 
 model EventResource {
-  id           Int                @id @default(autoincrement())
+  id           Int               @id @default(autoincrement())
   resourceType String
   resourceId   String
   role         EventResourceRole @default(RELATED)

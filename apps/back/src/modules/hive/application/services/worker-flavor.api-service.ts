@@ -32,17 +32,17 @@ export class WorkerFlavorApiService {
     });
   }
 
-  async update(
+  async revise(
     id: number,
     data: UpdateWorkerFlavorDto,
   ): Promise<WorkerFlavorResponseModel> {
-    const entity = await this.service.updateWorkerFlavor(id, data);
+    const entity = await this.service.reviseWorkerFlavor(id, data);
     return plainToInstance(WorkerFlavorResponseModel, entity, {
       excludeExtraneousValues: true,
     });
   }
 
-  async delete(id: number): Promise<void> {
-    await this.service.deleteWorkerFlavor(id);
+  async deprecate(id: number): Promise<void> {
+    await this.service.deprecateWorkerFlavor(id);
   }
 }

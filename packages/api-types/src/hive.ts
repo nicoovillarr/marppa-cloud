@@ -1,5 +1,15 @@
 import { NodeResponse } from './mesh';
 
+// --- Catalog constraints ---
+
+export const WORKER_ARCHITECTURES = ['amd64', 'arm64'] as const;
+
+export type WorkerArchitecture = (typeof WORKER_ARCHITECTURES)[number];
+
+export const MIN_WORKER_CPU_CORES = 0.25;
+export const MIN_WORKER_RAM_MB = 256;
+export const MIN_WORKER_DISK_GB = 10;
+
 // --- Requests ---
 
 export interface CreateWorkerRequest {
@@ -29,20 +39,28 @@ export type UpdateWorkerDiskRequest = CreateWorkerDiskRequest;
 
 export interface CreateWorkerFamilyRequest {
   name: string;
+  architecture: string;
   description?: string;
+  ownerId?: string;
 }
 
-export type UpdateWorkerFamilyRequest = CreateWorkerFamilyRequest;
+export interface UpdateWorkerFamilyRequest {
+  description?: string;
+}
 
 export interface CreateWorkerFlavorRequest {
   name: string;
   cpuCores: number;
   ramMB: number;
-  diskGB: number;
+  pricePerHourCents?: number;
   familyId: number;
 }
 
-export type UpdateWorkerFlavorRequest = CreateWorkerFlavorRequest;
+export interface UpdateWorkerFlavorRequest {
+  cpuCores: number;
+  ramMB: number;
+  pricePerHourCents?: number;
+}
 
 export interface CreateWorkerImageRequest {
   name: string;
@@ -78,6 +96,9 @@ export interface WorkerResponse {
   ownerId: string;
   imageId: number;
   flavorId: number;
+  cpuCores: number;
+  ramMB: number;
+  diskGB: number;
   createdAt: Date;
   createdBy: string;
   updatedAt: Date | null;
@@ -87,9 +108,11 @@ export interface WorkerResponse {
 export interface WorkerFlavorResponse {
   id: number;
   name: string;
+  version: number;
   cpuCores: number;
   ramMB: number;
-  diskGB: number;
+  pricePerHourCents: number;
+  deprecatedAt: Date | null;
   familyId: number;
 }
 
@@ -118,6 +141,9 @@ export interface WorkerFamilyResponse {
   id: string;
   name: string;
   description: string | null;
+  architecture: string;
+  ownerId: string | null;
+  deprecatedAt: Date | null;
 }
 
 export interface WorkerFamilyWithFlavorsResponse extends WorkerFamilyResponse {

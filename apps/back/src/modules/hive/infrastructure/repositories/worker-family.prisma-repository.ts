@@ -11,10 +11,18 @@ import { WorkerFamilyWithFlavorsPrismaMapper } from '../mappers/worker-family-wi
 export class WorkerFamilyPrismaRepository implements WorkerFamilyRepository {
   constructor(private readonly prisma: PrismaService) { }
 
-  async findAll(): Promise<WorkerFamilyWithFlavorsModel[]> {
+  async findAvailableFor(
+    companyId: string,
+  ): Promise<WorkerFamilyWithFlavorsModel[]> {
     const workerFamilies = await this.prisma.workerFamily.findMany({
+      where: {
+        deprecatedAt: null,
+        OR: [{ ownerId: null }, { ownerId: companyId }],
+      },
       include: {
-        flavors: true,
+        flavors: {
+          where: { deprecatedAt: null },
+        },
       },
     });
 
@@ -58,11 +66,16 @@ export class WorkerFamilyPrismaRepository implements WorkerFamilyRepository {
     return WorkerFamilyPrismaMapper.toEntity(workerFamily);
   }
 
-  async delete(id: number): Promise<void> {
-    await this.prisma.workerFamily.delete({
-      where: {
-        id,
-      },
-    });
+  async deprecate(id: number, deprecatedAt: Date): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.workerFamily.update({
+        where: { id },
+        data: { deprecatedAt },
+      }),
+      this.prisma.workerFlavor.updateMany({
+        where: { familyId: id, deprecatedAt: null },
+        data: { deprecatedAt },
+      }),
+    ]);
   }
 }

@@ -15,6 +15,15 @@ import * as sessionContext from '@/auth/infrastructure/als/session.context';
 import { MacAddressService } from './mac-address.service';
 import { WorkerFlavorEntity } from '../entities/worker-flavor.entity';
 import { NodeEntity } from '@/mesh/domain/entities/node.entity';
+import { WorkerFamilyEntity } from '../entities/worker-family.entity';
+import { WorkerImageEntity } from '../entities/worker-image.entity';
+import { WorkerFlavorWithFamilyModel } from '../models/worker-flavor-with-family.model';
+import { WorkerFlavorService } from './worker-flavor.service';
+import { WorkerImageService } from './worker-image.service';
+import { HiveCapacityService } from './hive-capacity.service';
+import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
+import { WorkerArchitectureMismatchError } from '../errors/worker-architecture-mismatch.error';
+import { HiveCapacityExceededError } from '../errors/hive-capacity-exceeded.error';
 
 describe('WorkerService', () => {
   let service: WorkerService;
@@ -28,6 +37,9 @@ describe('WorkerService', () => {
     1,
     1,
     'c-000001',
+    2,
+    4096,
+    50,
     {
       id: 'w-000001',
     },
@@ -37,8 +49,19 @@ describe('WorkerService', () => {
     'Test Flavor',
     2,
     4096,
-    50,
     1,
+    { id: 1 },
+  );
+
+  const mockFamily = new WorkerFamilyEntity('test', 'amd64', { id: 1 });
+
+  const mockImage = new WorkerImageEntity(
+    'ubuntu-24.04',
+    'linux',
+    'ubuntu',
+    'https://images.example/noble.img',
+    'amd64',
+    'qcow2',
     { id: 1 },
   );
 
@@ -63,9 +86,24 @@ describe('WorkerService', () => {
     findByOwnerId: jest.fn(),
     findByIdWithRelations: jest.fn(),
     findByOwnerIdWithRelations: jest.fn(),
+    sumProvisionedResources: jest.fn(),
+    sumRunningResources: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+  };
+
+  const mockWorkerFlavorService = {
+    findByIdWithFamily: jest.fn(),
+  };
+
+  const mockWorkerImageService = {
+    findById: jest.fn(),
+  };
+
+  const mockHiveCapacityService = {
+    assertFitsOnCreate: jest.fn(),
+    assertFitsOnStart: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -75,6 +113,18 @@ describe('WorkerService', () => {
         {
           provide: WORKER_REPOSITORY_SYMBOL,
           useValue: mockWorkerRepository,
+        },
+        {
+          provide: WorkerFlavorService,
+          useValue: mockWorkerFlavorService,
+        },
+        {
+          provide: WorkerImageService,
+          useValue: mockWorkerImageService,
+        },
+        {
+          provide: HiveCapacityService,
+          useValue: mockHiveCapacityService,
         },
 
         MacAddressService,
@@ -90,6 +140,11 @@ describe('WorkerService', () => {
       email: 'test@test.com',
       type: 'access',
     } as any);
+
+    mockWorkerFlavorService.findByIdWithFamily.mockResolvedValue(
+      new WorkerFlavorWithFamilyModel(mockFlavor, mockFamily),
+    );
+    mockWorkerImageService.findById.mockResolvedValue(mockImage);
   });
 
   afterEach(() => {
@@ -219,6 +274,110 @@ describe('WorkerService', () => {
 
       const createdEntity = (repository.create as jest.Mock).mock.calls[0][0];
       expect(createdEntity.ownerId).toBe('c-000001');
+    });
+
+    it('should snapshot the flavor specs onto the worker', async () => {
+      const dto: CreateWorkerDto = {
+        name: 'New Worker',
+        imageId: 1,
+        flavorId: 1,
+        publicSSH: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest test@test',
+      };
+
+      mockWorkerRepository.create.mockResolvedValue(mockWorker);
+
+      await service.createWorker(dto);
+
+      const createdEntity = (repository.create as jest.Mock).mock.calls[0][0];
+      expect(createdEntity.cpuCores).toBe(mockFlavor.cpuCores);
+      expect(createdEntity.ramMB).toBe(mockFlavor.ramMB);
+      expect(createdEntity.diskGB).toBe(20);
+    });
+
+    it('should reject a deprecated flavor', async () => {
+      const dto: CreateWorkerDto = {
+        name: 'New Worker',
+        imageId: 1,
+        flavorId: 1,
+        publicSSH: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest test@test',
+      };
+
+      mockWorkerFlavorService.findByIdWithFamily.mockResolvedValue(
+        new WorkerFlavorWithFamilyModel(
+          new WorkerFlavorEntity('Old Flavor', 2, 4096, 1, {
+            id: 1,
+            deprecatedAt: new Date(),
+          }),
+          mockFamily,
+        ),
+      );
+
+      await expect(service.createWorker(dto)).rejects.toThrow(
+        WorkerFlavorDeprecatedError,
+      );
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject an image whose architecture differs from the family', async () => {
+      const dto: CreateWorkerDto = {
+        name: 'New Worker',
+        imageId: 1,
+        flavorId: 1,
+        publicSSH: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest test@test',
+      };
+
+      mockWorkerImageService.findById.mockResolvedValue(
+        new WorkerImageEntity(
+          'ubuntu-24.04-arm',
+          'linux',
+          'ubuntu',
+          'https://images.example/noble-arm64.img',
+          'arm64',
+          'qcow2',
+          { id: 2 },
+        ),
+      );
+
+      await expect(service.createWorker(dto)).rejects.toThrow(
+        WorkerArchitectureMismatchError,
+      );
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject a flavor from another company private family', async () => {
+      const dto: CreateWorkerDto = {
+        name: 'New Worker',
+        imageId: 1,
+        flavorId: 1,
+        publicSSH: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITest test@test',
+      };
+
+      mockWorkerFlavorService.findByIdWithFamily.mockResolvedValue(
+        new WorkerFlavorWithFamilyModel(
+          mockFlavor,
+          new WorkerFamilyEntity('private', 'amd64', {
+            id: 2,
+            ownerId: 'c-999999',
+          }),
+        ),
+      );
+
+      await expect(service.createWorker(dto)).rejects.toThrow(NotFoundError);
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('startWorker', () => {
+    it('should refuse to start when the host has no room left', async () => {
+      mockWorkerRepository.findById.mockResolvedValue(mockWorker);
+      mockHiveCapacityService.assertFitsOnStart.mockRejectedValue(
+        new HiveCapacityExceededError('memory', 4096, 1024, 'MB'),
+      );
+
+      await expect(service.startWorker('w-000001')).rejects.toThrow(
+        HiveCapacityExceededError,
+      );
+      expect(repository.update).not.toHaveBeenCalled();
     });
   });
 

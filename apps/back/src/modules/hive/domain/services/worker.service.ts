@@ -15,6 +15,12 @@ import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { MacAddressService } from './mac-address.service';
 import { WorkerInvalidStatusError } from '../errors/worker-invalid-status.error';
 import { authorize } from '@/shared/domain/policy/authorize';
+import { WorkerFlavorService } from './worker-flavor.service';
+import { WorkerImageService } from './worker-image.service';
+import { HiveCapacityService } from './hive-capacity.service';
+import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
+import { WorkerArchitectureMismatchError } from '../errors/worker-architecture-mismatch.error';
+import { getWorkerBootDiskGB } from '../config/worker-boot-disk.config';
 
 @Injectable()
 export class WorkerService {
@@ -23,6 +29,9 @@ export class WorkerService {
     private readonly workerRepository: WorkerRepository,
 
     private readonly macAddressService: MacAddressService,
+    private readonly workerFlavorService: WorkerFlavorService,
+    private readonly workerImageService: WorkerImageService,
+    private readonly hiveCapacityService: HiveCapacityService,
   ) { }
 
   async findById(id: string): Promise<WorkerEntity> {
@@ -69,6 +78,35 @@ export class WorkerService {
       throw new UnauthorizedError();
     }
 
+    const { flavor, family } = await this.workerFlavorService.findByIdWithFamily(
+      data.flavorId,
+    );
+
+    if (!family.isVisibleTo(user.companyId) || family.isDeprecated) {
+      throw new NotFoundError();
+    }
+
+    if (flavor.isDeprecated) {
+      throw new WorkerFlavorDeprecatedError(flavor.name);
+    }
+
+    const image = await this.workerImageService.findById(data.imageId);
+
+    if (image.architecture !== family.architecture) {
+      throw new WorkerArchitectureMismatchError(
+        image.architecture,
+        family.architecture,
+      );
+    }
+
+    const specs = {
+      cpuCores: flavor.cpuCores,
+      ramMB: flavor.ramMB,
+      diskGB: getWorkerBootDiskGB(),
+    };
+
+    await this.hiveCapacityService.assertFitsOnCreate(specs);
+
     const macAddress = this.macAddressService.generate();
 
     const entity = new WorkerEntity(
@@ -79,6 +117,9 @@ export class WorkerService {
       data.imageId,
       data.flavorId,
       data.ownerId ?? user.companyId,
+      specs.cpuCores,
+      specs.ramMB,
+      specs.diskGB,
     );
 
     return this.save(entity);
@@ -98,6 +139,8 @@ export class WorkerService {
         entity.status,
       );
     }
+
+    await this.hiveCapacityService.assertFitsOnStart(entity.id!, entity);
 
     const updated = entity.clone({
       status: getEventStateTransition(EventTypeKey.WORKER_START).entry,
