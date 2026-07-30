@@ -47,6 +47,13 @@ export class AtomSizePrismaRepository implements AtomSizeRepository {
     return AtomSizePrismaMapper.toEntity(atomSize);
   }
 
+  async restore(id: number): Promise<void> {
+    await this.prisma.atomSize.update({
+      where: { id },
+      data: { deprecatedAt: null },
+    });
+  }
+
   async deprecate(id: number, deprecatedAt: Date): Promise<void> {
     await this.prisma.atomSize.update({
       where: { id },

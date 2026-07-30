@@ -19,6 +19,7 @@ export default {
     ],
     coverageDirectory: "../coverage",
     moduleNameMapper: {
+        "^@/admin/(.*)$": "<rootDir>/modules/admin/$1",
         "^@/auth/(.*)$": "<rootDir>/modules/auth/$1",
         "^@/user/(.*)$": "<rootDir>/modules/user/$1",
         "^@/company/(.*)$": "<rootDir>/modules/company/$1",

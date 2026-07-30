@@ -4,13 +4,17 @@ import { AtomSizeService } from '@/nucleus/domain/services/atom-size.service';
 import { AtomSizeResponseModel } from '../models/atom-size.response-model';
 import { CreateAtomSizeDto } from '@/nucleus/presentation/dtos/create-atom-size.dto';
 import { UpdateAtomSizeDto } from '@/nucleus/presentation/dtos/update-atom-size.dto';
+import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 
 @Injectable()
 export class AtomSizeApiService {
-  constructor(private readonly service: AtomSizeService) { }
+  constructor(
+    private readonly service: AtomSizeService,
+    private readonly eventDispatch: EventDispatchService,
+  ) { }
 
-  async findAll(): Promise<AtomSizeResponseModel[]> {
-    const sizes = await this.service.findAll();
+  async findAll(includeDeprecated = false): Promise<AtomSizeResponseModel[]> {
+    const sizes = await this.service.findAll(includeDeprecated);
     return plainToInstance(AtomSizeResponseModel, sizes, {
       excludeExtraneousValues: true,
     });
@@ -38,6 +42,10 @@ export class AtomSizeApiService {
     return plainToInstance(AtomSizeResponseModel, size, {
       excludeExtraneousValues: true,
     });
+  }
+
+  async restore(id: number): Promise<void> {
+    await this.service.restore(id);
   }
 
   async deprecate(id: number): Promise<void> {

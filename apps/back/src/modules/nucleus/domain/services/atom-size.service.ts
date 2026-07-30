@@ -68,6 +68,15 @@ export class AtomSizeService {
     return created;
   }
 
+  async restore(id: number): Promise<void> {
+    const current = await this.findById(id);
+    if (!current.isDeprecated) {
+      return;
+    }
+
+    await this.atomSizeRepository.restore(current.id!);
+  }
+
   async deprecate(id: number): Promise<void> {
     const current = await this.findById(id);
     if (current.isDeprecated) {

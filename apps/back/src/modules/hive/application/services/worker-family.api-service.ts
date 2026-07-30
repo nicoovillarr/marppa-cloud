@@ -4,16 +4,22 @@ import { WorkerFamilyResponseModel } from '../models/worker-family.response-mode
 import { plainToInstance } from 'class-transformer';
 import { CreateWorkerFamilyDto } from '@/hive/presentation/dtos/create-worker-family.dto';
 import { UpdateWorkerFamilyDto } from '@/hive/presentation/dtos/update-worker-family.dto';
+import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { WorkerFamilyWithFlavorsResponseModel } from '../models/worker-family-with-flavors.response-model';
 import { WorkerFlavorResponseModel } from '../models/worker-flavor.response-model';
 import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
 
 @Injectable()
 export class WorkerFamilyApiService {
-  constructor(private readonly service: WorkerFamilyService) { }
+  constructor(
+    private readonly service: WorkerFamilyService,
+    private readonly eventDispatch: EventDispatchService,
+  ) { }
 
-  async findAll(): Promise<WorkerFamilyWithFlavorsResponseModel[]> {
-    const list = await this.service.findAll();
+  async findAll(
+    includeDeprecated = false,
+  ): Promise<WorkerFamilyWithFlavorsResponseModel[]> {
+    const list = await this.service.findAll(includeDeprecated);
 
     return list.map(data => {
       const family = plainToInstance(WorkerFamilyResponseModel, data.family, { excludeExtraneousValues: true });
@@ -53,6 +59,10 @@ export class WorkerFamilyApiService {
     return plainToInstance(WorkerFamilyResponseModel, entity, {
       excludeExtraneousValues: true,
     });
+  }
+
+  async restore(id: number): Promise<void> {
+    await this.service.restore(id);
   }
 
   async deprecate(id: number): Promise<void> {

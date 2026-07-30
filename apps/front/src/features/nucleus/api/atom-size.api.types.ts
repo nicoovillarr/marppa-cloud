@@ -7,3 +7,16 @@ export type AtomSizeResponseDto = {
     pricePerHourCents: number;
     deprecatedAt: Date | null;
 }
+
+export type CreateAtomSizeDto = {
+    name: string;
+    cpuCores: number;
+    ramMB: number;
+    pricePerHourCents?: number;
+}
+
+export type UpdateAtomSizeDto = {
+    cpuCores: number;
+    ramMB: number;
+    pricePerHourCents?: number;
+}

@@ -8,4 +8,5 @@ export abstract class WorkerImageRepository {
   abstract create(workerImage: WorkerImageEntity): Promise<WorkerImageEntity>;
   abstract update(workerImage: WorkerImageEntity): Promise<WorkerImageEntity>;
   abstract delete(id: number): Promise<void>;
+  abstract countWorkers(id: number): Promise<number>;
 }

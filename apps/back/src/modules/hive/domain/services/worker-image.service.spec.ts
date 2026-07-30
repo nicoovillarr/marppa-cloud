@@ -8,6 +8,7 @@ import { WorkerImageEntity } from '../entities/worker-image.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerImageDto } from '@/hive/presentation/dtos/create-worker-image.dto';
 import { UpdateWorkerImageDto } from '@/hive/presentation/dtos/update-worker-image.dto';
+import { WorkerImageInUseError } from '../errors/worker-image-in-use.error';
 
 describe('WorkerImageService', () => {
   let service: WorkerImageService;
@@ -33,6 +34,7 @@ describe('WorkerImageService', () => {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    countWorkers: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -162,12 +164,28 @@ describe('WorkerImageService', () => {
   });
 
   describe('delete', () => {
-    it('should delete a worker image', async () => {
+    it('should delete a worker image no worker boots from', async () => {
+      mockWorkerImageRepository.findById.mockResolvedValue(mockWorkerImage);
+      mockWorkerImageRepository.countWorkers.mockResolvedValue(0);
       mockWorkerImageRepository.delete.mockResolvedValue(undefined);
 
       await service.delete(1);
 
       expect(repository.delete).toHaveBeenCalledWith(1);
+    });
+
+    it('should refuse to delete an image workers still boot from', async () => {
+      mockWorkerImageRepository.findById.mockResolvedValue(mockWorkerImage);
+      mockWorkerImageRepository.countWorkers.mockResolvedValue(3);
+
+      await expect(service.delete(1)).rejects.toThrow(WorkerImageInUseError);
+      expect(repository.delete).not.toHaveBeenCalled();
+    });
+
+    it('should throw when the image does not exist', async () => {
+      mockWorkerImageRepository.findById.mockResolvedValue(null);
+
+      await expect(service.delete(999)).rejects.toThrow(NotFoundError);
     });
   });
 });

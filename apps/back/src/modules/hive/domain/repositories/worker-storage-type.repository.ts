@@ -6,6 +6,7 @@ export const WORKER_STORAGE_TYPE_REPOSITORY_SYMBOL = Symbol(
 
 export abstract class WorkerStorageTypeRepository {
   abstract findById(id: number): Promise<WorkerStorageTypeEntity | null>;
+  abstract findAll(): Promise<WorkerStorageTypeEntity[]>;
   abstract create(
     workerStorageType: WorkerStorageTypeEntity,
   ): Promise<WorkerStorageTypeEntity>;
@@ -13,4 +14,5 @@ export abstract class WorkerStorageTypeRepository {
     workerStorageType: WorkerStorageTypeEntity,
   ): Promise<WorkerStorageTypeEntity>;
   abstract delete(id: number): Promise<void>;
+  abstract countReferences(id: number): Promise<number>;
 }

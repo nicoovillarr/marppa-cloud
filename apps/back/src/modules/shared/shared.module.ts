@@ -11,6 +11,10 @@ import { HOST_CAPACITY_REPOSITORY_SYMBOL } from '@/shared/domain/repositories/ho
 import { HostCapacityPrismaRepository } from './infrastructure/repositories/host-capacity.prisma-repository';
 import { COMMITTED_RESOURCES_REPOSITORY_SYMBOL } from '@/shared/domain/repositories/committed-resources.repository';
 import { CommittedResourcesPrismaRepository } from './infrastructure/repositories/committed-resources.prisma-repository';
+import { PlatformAdminService } from '@/shared/domain/services/platform-admin.service';
+import { PLATFORM_ADMIN_REPOSITORY_SYMBOL } from '@/shared/domain/repositories/platform-admin.repository';
+import { PlatformAdminPrismaRepository } from './infrastructure/repositories/platform-admin.prisma-repository';
+import { PlatformAdminGuard } from './presentation/guards/platform-admin.guard';
 
 @Module({
   imports: [],
@@ -31,6 +35,13 @@ import { CommittedResourcesPrismaRepository } from './infrastructure/repositorie
       useClass: CommittedResourcesPrismaRepository,
     },
 
+    PlatformAdminService,
+    PlatformAdminGuard,
+    {
+      provide: PLATFORM_ADMIN_REPOSITORY_SYMBOL,
+      useClass: PlatformAdminPrismaRepository,
+    },
+
     {
       provide: CACHE_STORAGE_SYMBOL,
       useClass:
@@ -44,6 +55,8 @@ import { CommittedResourcesPrismaRepository } from './infrastructure/repositorie
     CACHE_STORAGE_SYMBOL,
     EventQueueService,
     HostCapacityService,
+    PlatformAdminService,
+    PlatformAdminGuard,
   ],
 })
 export class SharedModule { }

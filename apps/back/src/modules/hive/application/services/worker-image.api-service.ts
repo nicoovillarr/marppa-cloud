@@ -46,6 +46,7 @@ export class WorkerImageApiService {
     data: UpdateWorkerImageDto,
   ): Promise<WorkerImageResponseModel> {
     const workerImage = await this.service.update(id, data);
+
     return plainToInstance(WorkerImageResponseModel, workerImage, {
       excludeExtraneousValues: true,
     });

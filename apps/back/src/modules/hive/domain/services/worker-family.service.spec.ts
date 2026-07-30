@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerFamilyService } from './worker-family.service';
+import { PlatformAdminService } from '@/shared/domain/services/platform-admin.service';
 import {
   WorkerFamilyRepository,
   WORKER_FAMILY_REPOSITORY_SYMBOL,
@@ -26,10 +27,16 @@ describe('WorkerFamilyService', () => {
 
   const mockWorkerFamilyRepository = {
     findAvailableFor: jest.fn(),
+    findAll: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     deprecate: jest.fn(),
+    restore: jest.fn(),
+  };
+
+  const mockPlatformAdminService = {
+    isPlatformAdmin: jest.fn().mockResolvedValue(false),
   };
 
   beforeEach(async () => {
@@ -39,6 +46,10 @@ describe('WorkerFamilyService', () => {
         {
           provide: WORKER_FAMILY_REPOSITORY_SYMBOL,
           useValue: mockWorkerFamilyRepository,
+        },
+        {
+          provide: PlatformAdminService,
+          useValue: mockPlatformAdminService,
         },
       ],
     }).compile();
@@ -62,11 +73,25 @@ describe('WorkerFamilyService', () => {
 
   describe('findAll', () => {
     it('should only ask for families visible to the caller company', async () => {
+      mockPlatformAdminService.isPlatformAdmin.mockResolvedValue(false);
       mockWorkerFamilyRepository.findAvailableFor.mockResolvedValue([]);
 
       await service.findAll();
 
-      expect(repository.findAvailableFor).toHaveBeenCalledWith('c-000001');
+      expect(repository.findAvailableFor).toHaveBeenCalledWith(
+        'c-000001',
+        false,
+      );
+    });
+
+    it('should let a platform admin see every family, deprecated included', async () => {
+      mockPlatformAdminService.isPlatformAdmin.mockResolvedValue(true);
+      mockWorkerFamilyRepository.findAll.mockResolvedValue([]);
+
+      await service.findAll(true);
+
+      expect(repository.findAll).toHaveBeenCalledWith(true);
+      expect(repository.findAvailableFor).not.toHaveBeenCalled();
     });
   });
 

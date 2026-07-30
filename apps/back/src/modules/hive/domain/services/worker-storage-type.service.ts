@@ -7,6 +7,7 @@ import { WorkerStorageTypeEntity } from '../entities/worker-storage-type.entity'
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerStorageTypeDto } from '@/hive/presentation/dtos/create-worker-storage-type.dto';
 import { UpdateWorkerStorageTypeDto } from '@/hive/presentation/dtos/update-worker-storage-type.dto';
+import { WorkerStorageTypeInUseError } from '../errors/worker-storage-type-in-use.error';
 
 @Injectable()
 export class WorkerStorageTypeService {
@@ -23,6 +24,10 @@ export class WorkerStorageTypeService {
     }
 
     return workerStorageType;
+  }
+
+  findAll(): Promise<WorkerStorageTypeEntity[]> {
+    return this.workerStorageTypeRepository.findAll();
   }
 
   async createWorkerStorageType(
@@ -57,8 +62,16 @@ export class WorkerStorageTypeService {
     return this.save(updated);
   }
 
-  deleteWorkerStorageType(id: number): Promise<void> {
-    return this.workerStorageTypeRepository.delete(id);
+  async deleteWorkerStorageType(id: number): Promise<void> {
+    const entity = await this.findById(id);
+
+    const referenceCount =
+      await this.workerStorageTypeRepository.countReferences(id);
+    if (referenceCount > 0) {
+      throw new WorkerStorageTypeInUseError(entity.name, referenceCount);
+    }
+
+    await this.workerStorageTypeRepository.delete(id);
   }
 
   private save(

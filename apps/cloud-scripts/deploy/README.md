@@ -145,10 +145,14 @@ The Nucleus module runs atoms as Docker containers. Docker's default behaviour i
 incompatible with this host: with `iptables` enabled the daemon writes its own
 chains into `ip nat` and `inet filter` — the two tables `LinuxMeshService` dumps
 and rewrites on every zone or fiber change, and which `SYSTEM_RESET` recreates
-from `NFTABLES_RESET_SOURCE` (a file that starts with `flush ruleset`, so it also
-takes fail2ban's `inet f2b-table` with it). Docker's rules would be dropped
-silently, and `saveNftConfiguration` would persist Docker's rules into
-`/etc/nftables.conf` as if the app owned them.
+from `NFTABLES_RESET_SOURCE`. Docker's rules would be dropped silently, and
+`saveNftConfiguration` would persist Docker's rules into `/etc/nftables.conf` as
+if the app owned them.
+
+(`NFTABLES_RESET_SOURCE` must **not** contain `flush ruleset` — see `README.md`
+§ *nftables base ruleset* for the `add`/`delete` pair that replaces it. A host
+still carrying the old `flush ruleset` version loses every table on reset,
+fail2ban's `inet f2b-table` included.)
 
 The daemon is therefore configured never to touch packet filtering.
 `deploy/docker-daemon.json` must be installed as `/etc/docker/daemon.json`

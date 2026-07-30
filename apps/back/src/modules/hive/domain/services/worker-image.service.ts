@@ -7,6 +7,7 @@ import { WorkerImageEntity } from '../entities/worker-image.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerImageDto } from '@/hive/presentation/dtos/create-worker-image.dto';
 import { UpdateWorkerImageDto } from '@/hive/presentation/dtos/update-worker-image.dto';
+import { WorkerImageInUseError } from '../errors/worker-image-in-use.error';
 
 @Injectable()
 export class WorkerImageService {
@@ -67,8 +68,15 @@ export class WorkerImageService {
     return this.save(workerImage);
   }
 
-  delete(id: number): Promise<void> {
-    return this.workerImageRepository.delete(id);
+  async delete(id: number): Promise<void> {
+    const workerImage = await this.findById(id);
+
+    const workerCount = await this.workerImageRepository.countWorkers(id);
+    if (workerCount > 0) {
+      throw new WorkerImageInUseError(workerImage.name, workerCount);
+    }
+
+    await this.workerImageRepository.delete(id);
   }
 
   private save(data: WorkerImageEntity): Promise<WorkerImageEntity> {

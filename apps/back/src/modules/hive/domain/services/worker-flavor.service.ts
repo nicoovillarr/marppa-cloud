@@ -7,6 +7,7 @@ import { UpdateWorkerFlavorDto } from '@/hive/presentation/dtos/update-worker-fl
 import { WORKER_FLAVOR_REPOSITORY_SYMBOL } from '../repositories/worker-flavor.repository';
 import { WorkerFlavorWithFamilyModel } from '../models/worker-flavor-with-family.model';
 import { WorkerFlavorAlreadyExistsError } from '../errors/worker-flavor-already-exists.error';
+import { WorkerFamilyDeprecatedError } from '../errors/worker-family-deprecated.error';
 import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
 
 @Injectable()
@@ -101,5 +102,18 @@ export class WorkerFlavorService {
     }
 
     await this.workerFlavorRepository.deprecate(current.id!, new Date());
+  }
+
+  async restoreWorkerFlavor(id: number): Promise<void> {
+    const current = await this.findByIdWithFamily(id);
+    if (!current.flavor.isDeprecated) {
+      return;
+    }
+
+    if (current.family.isDeprecated) {
+      throw new WorkerFamilyDeprecatedError(current.family.name);
+    }
+
+    await this.workerFlavorRepository.restore(current.flavor.id!);
   }
 }

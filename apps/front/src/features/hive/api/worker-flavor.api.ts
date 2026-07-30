@@ -1,10 +1,26 @@
 import { fetcher } from "@/core/api/fetcher";
-import { WorkerFlavorResponseDto } from "./worker-flavor.api.types";
+import { CreateWorkerFlavorDto, UpdateWorkerFlavorDto, WorkerFlavorResponseDto } from "./worker-flavor.api.types";
 
 const baseUrl = '/hive/flavors';
 
 export const workerFlavorApi = {
-    findAll(): Promise<WorkerFlavorResponseDto[]> {
-        return fetcher<WorkerFlavorResponseDto[]>(baseUrl);
-    }
+    findAll(includeDeprecated = false): Promise<WorkerFlavorResponseDto[]> {
+        return fetcher<WorkerFlavorResponseDto[]>(baseUrl, 'GET', { includeDeprecated });
+    },
+
+    create(data: CreateWorkerFlavorDto): Promise<WorkerFlavorResponseDto> {
+        return fetcher<WorkerFlavorResponseDto>(baseUrl, 'POST', data);
+    },
+
+    revise(id: number, data: UpdateWorkerFlavorDto): Promise<WorkerFlavorResponseDto> {
+        return fetcher<WorkerFlavorResponseDto>(`${baseUrl}/${id}`, 'PUT', data);
+    },
+
+    deprecate(id: number): Promise<void> {
+        return fetcher<void>(`${baseUrl}/${id}`, 'DELETE');
+    },
+
+    restore(id: number): Promise<void> {
+        return fetcher<void>(`${baseUrl}/${id}/restore`, 'POST');
+    },
 }

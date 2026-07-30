@@ -10,6 +10,8 @@ export class AtomImageResponseModel {
   @Expose() digest: string | null;
   @Expose() architecture: string;
   @Expose() capabilities: string[];
+  @Expose() sysctls: Record<string, string> | null;
+  @Expose() command: string[];
   @Expose() requiredEnvVars: string[];
   @Expose() defaultSizeId: number;
 }

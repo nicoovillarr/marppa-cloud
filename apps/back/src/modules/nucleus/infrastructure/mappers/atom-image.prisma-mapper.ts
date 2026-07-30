@@ -15,6 +15,8 @@ export class AtomImagePrismaMapper {
         description: raw.description ?? undefined,
         digest: raw.digest ?? undefined,
         capabilities: raw.capabilities,
+        sysctls: (raw.sysctls as Record<string, string> | null) ?? undefined,
+        command: raw.command,
         requiredEnvVars: raw.requiredEnvVars,
       },
     );

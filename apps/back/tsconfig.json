@@ -21,6 +21,7 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
+      "@/admin/*": ["./src/modules/admin/*"],
       "@/auth/*": ["./src/modules/auth/*"],
       "@/shared/*": ["./src/modules/shared/*"],
       "@/user/*": ["./src/modules/user/*"],
