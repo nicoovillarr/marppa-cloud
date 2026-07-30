@@ -23,6 +23,9 @@ export class AtomEntity extends PatchableEntity {
     public readonly createdBy: string,
     public readonly imageId: number,
     public readonly ownerId: string,
+    public readonly sizeId: number,
+    public readonly cpuCores: number,
+    public readonly ramMB: number,
     optionals: AtomOptionalProps = {},
   ) {
     super();
@@ -44,6 +47,9 @@ export class AtomEntity extends PatchableEntity {
       updatedBy: this.updatedBy,
       ownerId: this.ownerId,
       imageId: this.imageId,
+      sizeId: this.sizeId,
+      cpuCores: this.cpuCores,
+      ramMB: this.ramMB,
     };
   }
 
@@ -54,6 +60,9 @@ export class AtomEntity extends PatchableEntity {
       data.createdBy,
       data.imageId,
       data.ownerId,
+      data.sizeId,
+      data.cpuCores,
+      data.ramMB,
       {
         id: data.id,
         createdAt: data.createdAt,

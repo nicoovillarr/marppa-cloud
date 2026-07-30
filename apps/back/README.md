@@ -178,9 +178,9 @@ for a tenant that genuinely needs another shape is a **private family**, not a s
   runs outside the platform. The backend check exists to answer `409` immediately instead
   of failing an event five retries later.
 
-  Two gaps worth knowing: **atoms are not counted.** An `Atom` declares no CPU or memory,
-  so containers consume the same host without appearing in the accounting — only the
-  cloud-scripts check notices them. And per-company quotas do not exist: the budget is
+  Workers and atoms both count against it (`CommittedResourcesRepository` sums the two
+  tables), which is why the service lives in the shared module rather than in hive. Atoms
+  contribute CPU and memory only. Per-company quotas do not exist: the budget is
   host-wide, so one company can consume all of it.
 
 ### Nucleus (atoms)
@@ -207,6 +207,16 @@ Three consequences shape the module:
   that every container runs `--cap-drop ALL` plus a minimal baseline that excludes
   Docker's default `NET_RAW`, which is what keeps `NET_ADMIN` tenant-safe: without
   `AF_PACKET` an atom cannot capture packets or forge ARP on its zone bridge.
+- **Resources come from a catalog, like a worker's.** `AtomSize` (nano/small/medium/
+  large) is immutable and versioned the same way `WorkerFlavor` is: a revision inserts a
+  new version and deprecates the old row. Every `AtomImage` names a `defaultSizeId`, so
+  `POST /nucleus/atoms` usually omits `sizeId` and gets a size that suits the image
+  (postgres large, wg-easy nano); passing one picks another size from the catalog.
+  `Atom.cpuCores`/`ramMB` are a snapshot, and they are what `docker run --cpus/--memory`
+  receives — before this, every container got the same `ATOM_CPU_LIMIT`/`ATOM_MEMORY_LIMIT`
+  regardless of what it ran. Atoms now count against the host budget (`HostCapacityService`,
+  shared module) on create and start; they take no disk from it, since a container's
+  writable layer is not sized up front.
 - **Docker never manages the firewall.** The daemon runs with `iptables: false`;
   egress NAT and port publishing come from the mesh's own nftables rules, so
   Docker cannot clobber `inet filter` / `ip nat` (rewritten on every zone and

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
-import { HostCapacityRepository } from '@/hive/domain/repositories/host-capacity.repository';
-import { HostCapacityModel } from '@/hive/domain/models/host-capacity.model';
+import { HostCapacityRepository } from '@/shared/domain/repositories/host-capacity.repository';
+import { HostCapacityModel } from '@/shared/domain/models/host-capacity.model';
 
 @Injectable()
 export class HostCapacityPrismaRepository implements HostCapacityRepository {

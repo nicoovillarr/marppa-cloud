@@ -1,4 +1,4 @@
-import type { AtomImage } from '@marppa-cloud/db';
+import type { Atom, AtomImage } from '@marppa-cloud/db';
 
 export const NUCLEUS_SERVICE_TOKEN = Symbol('NUCLEUS_SERVICE');
 
@@ -29,6 +29,8 @@ export type AtomNetworkConfig = {
 
 export type AtomEnvironment = Record<string, string>;
 
+export type AtomResourceSpecs = Pick<Atom, 'cpuCores' | 'ramMB'>;
+
 export abstract class NucleusService {
   abstract ensureAtomImageExists(image: AtomImageSource): Promise<boolean>;
 
@@ -40,6 +42,7 @@ export abstract class NucleusService {
     image: AtomImageSource,
     net: AtomNetworkConfig,
     env: AtomEnvironment,
+    specs: AtomResourceSpecs,
   ): Promise<void>;
 
   abstract stopAtom(id: string): Promise<void>;

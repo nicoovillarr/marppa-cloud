@@ -6,17 +6,6 @@ import { Injectable } from '@nestjs/common';
 import { WorkerPrismaMapper } from '../mappers/worker.prisma-mapper';
 import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 import { WorkerWithRelationsPrismaMapper } from '../mappers/worker-with-relations.prisma-mapper';
-import { WorkerResourceUsageModel } from '@/hive/domain/models/worker-resource-usage.model';
-import { Prisma, ResourceStatus } from '@prisma/client';
-
-const RUNNING_STATUSES = [
-  ResourceStatus.QUEUED,
-  ResourceStatus.PROVISIONING,
-  ResourceStatus.UPDATING,
-  ResourceStatus.ACTIVE,
-  ResourceStatus.TERMINATING,
-];
-
 @Injectable()
 export class WorkerPrismaRepository implements WorkerRepository {
   constructor(private readonly prisma: PrismaService) { }
@@ -33,34 +22,6 @@ export class WorkerPrismaRepository implements WorkerRepository {
     }
 
     return WorkerPrismaMapper.toEntity(worker);
-  }
-
-  async sumProvisionedResources(): Promise<WorkerResourceUsageModel> {
-    return this.sumResources({ status: { not: ResourceStatus.DELETED } });
-  }
-
-  async sumRunningResources(
-    excludedWorkerId?: string,
-  ): Promise<WorkerResourceUsageModel> {
-    return this.sumResources({
-      status: { in: RUNNING_STATUSES },
-      ...(excludedWorkerId ? { id: { not: excludedWorkerId } } : {}),
-    });
-  }
-
-  private async sumResources(
-    where: Prisma.WorkerWhereInput,
-  ): Promise<WorkerResourceUsageModel> {
-    const { _sum } = await this.prisma.worker.aggregate({
-      where,
-      _sum: { cpuCores: true, ramMB: true, diskGB: true },
-    });
-
-    return new WorkerResourceUsageModel(
-      _sum.cpuCores ?? 0,
-      _sum.ramMB ?? 0,
-      _sum.diskGB ?? 0,
-    );
   }
 
   async findByIdWithRelations(id: string): Promise<WorkerWithRelationsModel | null> {

@@ -37,9 +37,6 @@ import { AuthModule } from '@/auth/auth.module';
 import { EventModule } from '@/event/event.module';
 import { MeshModule } from '@/mesh/mesh.module';
 import { MacAddressService } from './domain/services/mac-address.service';
-import { HiveCapacityService } from './domain/services/hive-capacity.service';
-import { HOST_CAPACITY_REPOSITORY_SYMBOL } from './domain/repositories/host-capacity.repository';
-import { HostCapacityPrismaRepository } from './infrastructure/repositories/host-capacity.prisma-repository';
 
 @Module({
   imports: [SharedModule, AuthModule, EventModule, MeshModule],
@@ -100,11 +97,6 @@ import { HostCapacityPrismaRepository } from './infrastructure/repositories/host
     },
 
     MacAddressService,
-    HiveCapacityService,
-    {
-      provide: HOST_CAPACITY_REPOSITORY_SYMBOL,
-      useClass: HostCapacityPrismaRepository,
-    },
   ],
   exports: [],
 })

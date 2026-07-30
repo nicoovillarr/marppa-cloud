@@ -24,6 +24,7 @@ export class AtomImageEntity extends PatchableEntity {
     public readonly repository: string,
     public readonly tag: string,
     public readonly architecture: string,
+    public readonly defaultSizeId: number,
     optionals: AtomImageOptionalProps = {},
   ) {
     super();
@@ -45,6 +46,7 @@ export class AtomImageEntity extends PatchableEntity {
       tag: this.tag,
       digest: this.digest,
       architecture: this.architecture,
+      defaultSizeId: this.defaultSizeId,
       capabilities: this.capabilities,
       requiredEnvVars: this.requiredEnvVars,
     };
@@ -57,6 +59,7 @@ export class AtomImageEntity extends PatchableEntity {
       data.repository,
       data.tag,
       data.architecture,
+      data.defaultSizeId,
       {
         id: data.id,
         description: data.description,

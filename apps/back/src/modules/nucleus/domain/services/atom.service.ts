@@ -7,6 +7,9 @@ import { AtomEntity } from '../entities/atom.entity';
 import { AtomWithRelationsModel } from '../models/atom-with-relations.model';
 import { AtomInvalidStatusError } from '../errors/atom-invalid-status.error';
 import { AtomImageService } from './atom-image.service';
+import { AtomSizeService } from './atom-size.service';
+import { AtomSizeDeprecatedError } from '../errors/atom-size-deprecated.error';
+import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { CreateAtomDto } from '@/nucleus/presentation/dtos/create-atom.dto';
 import { UpdateAtomDto } from '@/nucleus/presentation/dtos/update-atom.dto';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
@@ -28,6 +31,10 @@ export class AtomService {
     private readonly atomRepository: AtomRepository,
 
     private readonly atomImageService: AtomImageService,
+
+    private readonly atomSizeService: AtomSizeService,
+
+    private readonly hostCapacityService: HostCapacityService,
 
     private readonly companyService: CompanyService,
   ) { }
@@ -83,12 +90,29 @@ export class AtomService {
     await this.assertImageAllowed(image);
     this.assertRequiredEnvVars(image, data.envVars);
 
+    const size = await this.atomSizeService.findById(
+      data.sizeId ?? image.defaultSizeId,
+    );
+
+    if (size.isDeprecated) {
+      throw new AtomSizeDeprecatedError(size.name);
+    }
+
+    await this.hostCapacityService.assertFitsOnCreate({
+      cpuCores: size.cpuCores,
+      ramMB: size.ramMB,
+      diskGB: 0,
+    });
+
     const entity = new AtomEntity(
       data.name,
       getEventStateTransition(EventTypeKey.ATOM_CREATE).entry,
       user.userId,
       image.id!,
       data.ownerId ?? user.companyId,
+      size.id!,
+      size.cpuCores,
+      size.ramMB,
     );
 
     return this.save(entity);
@@ -102,6 +126,12 @@ export class AtomService {
 
     const entity = await this.findById(id);
     this.assertStatus(entity, ResourceStatus.INACTIVE);
+
+    await this.hostCapacityService.assertFitsOnStart(entity.id!, {
+      cpuCores: entity.cpuCores,
+      ramMB: entity.ramMB,
+      diskGB: 0,
+    });
 
     const updated = entity.clone({
       status: getEventStateTransition(EventTypeKey.ATOM_START).entry,

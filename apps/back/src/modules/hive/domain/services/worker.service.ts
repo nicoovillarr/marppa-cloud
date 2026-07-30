@@ -17,7 +17,7 @@ import { WorkerInvalidStatusError } from '../errors/worker-invalid-status.error'
 import { authorize } from '@/shared/domain/policy/authorize';
 import { WorkerFlavorService } from './worker-flavor.service';
 import { WorkerImageService } from './worker-image.service';
-import { HiveCapacityService } from './hive-capacity.service';
+import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
 import { WorkerArchitectureMismatchError } from '../errors/worker-architecture-mismatch.error';
 import { getWorkerBootDiskGB } from '../config/worker-boot-disk.config';
@@ -31,7 +31,7 @@ export class WorkerService {
     private readonly macAddressService: MacAddressService,
     private readonly workerFlavorService: WorkerFlavorService,
     private readonly workerImageService: WorkerImageService,
-    private readonly hiveCapacityService: HiveCapacityService,
+    private readonly hostCapacityService: HostCapacityService,
   ) { }
 
   async findById(id: string): Promise<WorkerEntity> {
@@ -105,7 +105,7 @@ export class WorkerService {
       diskGB: getWorkerBootDiskGB(),
     };
 
-    await this.hiveCapacityService.assertFitsOnCreate(specs);
+    await this.hostCapacityService.assertFitsOnCreate(specs);
 
     const macAddress = this.macAddressService.generate();
 
@@ -140,7 +140,7 @@ export class WorkerService {
       );
     }
 
-    await this.hiveCapacityService.assertFitsOnStart(entity.id!, entity);
+    await this.hostCapacityService.assertFitsOnStart(entity.id!, entity);
 
     const updated = entity.clone({
       status: getEventStateTransition(EventTypeKey.WORKER_START).entry,

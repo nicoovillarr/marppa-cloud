@@ -265,6 +265,71 @@ const createWorkerImages = async () => {
   console.log('Worker images created successfully!');
 }
 
+const createAtomSizes = async () => {
+  console.log('Creating atom sizes...');
+
+  const sizes = [
+    { name: 'nano', cpuCores: 0.25, ramMB: 256 },
+    { name: 'small', cpuCores: 0.5, ramMB: 512 },
+    { name: 'medium', cpuCores: 1, ramMB: 1024 },
+    { name: 'large', cpuCores: 2, ramMB: 4096 },
+  ];
+
+  for (const size of sizes) {
+    await upsertSeededAtomSize(size);
+  }
+
+  console.log('Atom sizes created successfully!');
+};
+
+type SeededAtomSize = {
+  name: string;
+  cpuCores: number;
+  ramMB: number;
+};
+
+const upsertSeededAtomSize = async (size: SeededAtomSize) => {
+  const active = await prisma.atomSize.findFirst({
+    where: { name: size.name, deprecatedAt: null },
+  });
+
+  if (!active) {
+    await prisma.atomSize.create({ data: size });
+    return;
+  }
+
+  if (active.cpuCores === size.cpuCores && active.ramMB === size.ramMB) {
+    return;
+  }
+
+  const { _max } = await prisma.atomSize.aggregate({
+    where: { name: size.name },
+    _max: { version: true },
+  });
+
+  await prisma.$transaction([
+    prisma.atomSize.create({
+      data: { ...size, version: (_max.version ?? 0) + 1 },
+    }),
+    prisma.atomSize.update({
+      where: { id: active.id },
+      data: { deprecatedAt: new Date() },
+    }),
+  ]);
+};
+
+const activeAtomSizeId = async (name: string): Promise<number> => {
+  const size = await prisma.atomSize.findFirst({
+    where: { name, deprecatedAt: null },
+  });
+
+  if (!size) {
+    throw new Error(`Atom size "${name}" is missing; seed the sizes first.`);
+  }
+
+  return size.id;
+};
+
 const createAtomImages = async () => {
   console.log('Creating atom images...');
 
@@ -279,6 +344,7 @@ const createAtomImages = async () => {
       repository: 'library/redis',
       tag: '7-alpine',
       architecture: 'amd64',
+      defaultSize: 'small',
       capabilities: [],
       sysctls: undefined,
     },
@@ -290,6 +356,7 @@ const createAtomImages = async () => {
       repository: 'library/postgres',
       tag: '17-alpine',
       architecture: 'amd64',
+      defaultSize: 'large',
       capabilities: [],
       sysctls: undefined,
       requiredEnvVars: ['POSTGRES_PASSWORD'],
@@ -302,6 +369,7 @@ const createAtomImages = async () => {
       repository: 'ubuntu',
       tag: '24.04',
       architecture: 'amd64',
+      defaultSize: 'small',
       capabilities: [],
       sysctls: undefined,
       command: ['sleep', 'infinity'],
@@ -322,6 +390,7 @@ const createAtomImages = async () => {
       repository: 'wg-easy/wg-easy',
       tag: '14',
       architecture: 'amd64',
+      defaultSize: 'nano',
       capabilities: ['NET_ADMIN'],
       sysctls: {
         'net.ipv4.ip_forward': '1',
@@ -331,11 +400,16 @@ const createAtomImages = async () => {
     },
   ];
 
-  for (const image of images) {
+  for (const { defaultSize, ...image } of images) {
+    const data = {
+      ...image,
+      defaultSizeId: await activeAtomSizeId(defaultSize),
+    };
+
     await prisma.atomImage.upsert({
       where: { name: image.name },
-      create: image,
-      update: image,
+      create: data,
+      update: data,
     });
   }
 
@@ -376,6 +450,7 @@ const main = async () => {
     createUsers,
     createWorkerFamilies,
     createWorkerImages,
+    createAtomSizes,
     createAtomImages,
   ];
   for (const call of calls) {

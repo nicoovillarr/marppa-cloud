@@ -6,6 +6,7 @@ import {
   type AtomEnvironment,
   type AtomImageSource,
   type AtomNetworkConfig,
+  type AtomResourceSpecs,
 } from '../domain/services/NucleusService';
 
 const ATOM_LABEL = 'marppa.atom';
@@ -98,6 +99,7 @@ export class DockerNucleusService extends NucleusService {
     image: AtomImageSource,
     net: AtomNetworkConfig,
     env: AtomEnvironment,
+    specs: AtomResourceSpecs,
   ): Promise<void> {
     const atomId = this.assertAtomId(id);
     const zoneId = this.assertZoneId(net.zoneId);
@@ -116,7 +118,7 @@ export class DockerNucleusService extends NucleusService {
       '--ip', net.ipAddress,
       '--network-alias', alias,
       '--restart', 'unless-stopped',
-      ...this.hardeningArgs(),
+      ...this.hardeningArgs(specs),
       ...this.envArgs(env),
       ...this.capabilityArgs(image),
       ...this.sysctlArgs(image),
@@ -277,13 +279,13 @@ export class DockerNucleusService extends NucleusService {
    * shared: an unbounded container starves the workers and every other zone's
    * atoms long before anyone notices.
    */
-  private hardeningArgs(): string[] {
+  private hardeningArgs(specs: AtomResourceSpecs): string[] {
     return [
       '--security-opt', 'no-new-privileges',
       '--cap-drop', 'ALL',
       '--pids-limit', this.limit('ATOM_PIDS_LIMIT', '512'),
-      '--memory', this.limit('ATOM_MEMORY_LIMIT', '1g'),
-      '--cpus', this.limit('ATOM_CPU_LIMIT', '1'),
+      '--memory', `${specs.ramMB}m`,
+      '--cpus', String(specs.cpuCores),
     ];
   }
 

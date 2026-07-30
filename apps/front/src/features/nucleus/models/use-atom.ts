@@ -51,13 +51,14 @@ export const useAtom = () => {
     const createAtom = useCallback(async (
         name: string,
         imageId: number,
+        sizeId: number,
         envVars?: CreateAtomEnvVarDto[],
     ) => {
         setIsLoading(true);
         setError(null);
 
         try {
-            return await service.createAtom(name, imageId, envVars);
+            return await service.createAtom(name, imageId, sizeId, envVars);
         } catch (error) {
             setError(error);
         } finally {

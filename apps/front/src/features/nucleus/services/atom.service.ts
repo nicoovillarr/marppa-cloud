@@ -19,9 +19,10 @@ export class AtomService {
     async createAtom(
         name: string,
         imageId: number,
+        sizeId: number,
         envVars?: CreateAtomEnvVarDto[],
     ): Promise<AtomResponseDto> {
-        const dto = await atomsApi.createAtom({ name, imageId, envVars });
+        const dto = await atomsApi.createAtom({ name, imageId, sizeId, envVars });
         return dto;
     }
 

@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HiveCapacityService } from './hive-capacity.service';
-import { WORKER_REPOSITORY_SYMBOL } from '../repositories/worker.repository';
+import { HostCapacityService } from './host-capacity.service';
+import { COMMITTED_RESOURCES_REPOSITORY_SYMBOL } from '../repositories/committed-resources.repository';
 import { HOST_CAPACITY_REPOSITORY_SYMBOL } from '../repositories/host-capacity.repository';
-import { WorkerResourceUsageModel } from '../models/worker-resource-usage.model';
+import { ResourceUsageModel } from '../models/resource-usage.model';
 import { HostCapacityModel } from '../models/host-capacity.model';
-import { HiveCapacityExceededError } from '../errors/hive-capacity-exceeded.error';
+import { HostCapacityExceededError } from '../errors/host-capacity-exceeded.error';
 
-describe('HiveCapacityService', () => {
-  let service: HiveCapacityService;
+describe('HostCapacityService', () => {
+  let service: HostCapacityService;
 
-  const mockWorkerRepository = {
-    sumProvisionedResources: jest.fn(),
-    sumRunningResources: jest.fn(),
+  const mockCommittedResourcesRepository = {
+    sumProvisioned: jest.fn(),
+    sumRunning: jest.fn(),
   };
 
   const mockHostCapacityRepository = {
@@ -31,10 +31,10 @@ describe('HiveCapacityService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        HiveCapacityService,
+        HostCapacityService,
         {
-          provide: WORKER_REPOSITORY_SYMBOL,
-          useValue: mockWorkerRepository,
+          provide: COMMITTED_RESOURCES_REPOSITORY_SYMBOL,
+          useValue: mockCommittedResourcesRepository,
         },
         {
           provide: HOST_CAPACITY_REPOSITORY_SYMBOL,
@@ -43,7 +43,7 @@ describe('HiveCapacityService', () => {
       ],
     }).compile();
 
-    service = module.get<HiveCapacityService>(HiveCapacityService);
+    service = module.get<HostCapacityService>(HostCapacityService);
 
     mockHostCapacityRepository.findAll.mockResolvedValue([]);
   });
@@ -55,8 +55,8 @@ describe('HiveCapacityService', () => {
 
   describe('assertFitsOnCreate', () => {
     it('should accept a worker that fits the remaining disk', async () => {
-      mockWorkerRepository.sumProvisionedResources.mockResolvedValue(
-        new WorkerResourceUsageModel(2, 4096, 60),
+      mockCommittedResourcesRepository.sumProvisioned.mockResolvedValue(
+        new ResourceUsageModel(2, 4096, 60),
       );
 
       await expect(
@@ -65,25 +65,25 @@ describe('HiveCapacityService', () => {
     });
 
     it('should reject a worker that does not fit the remaining disk', async () => {
-      mockWorkerRepository.sumProvisionedResources.mockResolvedValue(
-        new WorkerResourceUsageModel(2, 4096, 80),
+      mockCommittedResourcesRepository.sumProvisioned.mockResolvedValue(
+        new ResourceUsageModel(2, 4096, 80),
       );
 
       await expect(
         service.assertFitsOnCreate({ cpuCores: 2, ramMB: 4096, diskGB: 40 }),
-      ).rejects.toThrow(HiveCapacityExceededError);
+      ).rejects.toThrow(HostCapacityExceededError);
     });
 
     it('should reject a flavor larger than the whole host memory', async () => {
       await expect(
         service.assertFitsOnCreate({ cpuCores: 1, ramMB: 16384, diskGB: 10 }),
-      ).rejects.toThrow(HiveCapacityExceededError);
-      expect(mockWorkerRepository.sumProvisionedResources).not.toHaveBeenCalled();
+      ).rejects.toThrow(HostCapacityExceededError);
+      expect(mockCommittedResourcesRepository.sumProvisioned).not.toHaveBeenCalled();
     });
 
     it('should apply the vCPU overcommit factor to the host cores', async () => {
-      mockWorkerRepository.sumProvisionedResources.mockResolvedValue(
-        new WorkerResourceUsageModel(0, 0, 0),
+      mockCommittedResourcesRepository.sumProvisioned.mockResolvedValue(
+        new ResourceUsageModel(0, 0, 0),
       );
 
       await expect(
@@ -92,14 +92,14 @@ describe('HiveCapacityService', () => {
 
       await expect(
         service.assertFitsOnCreate({ cpuCores: 9, ramMB: 1024, diskGB: 10 }),
-      ).rejects.toThrow(HiveCapacityExceededError);
+      ).rejects.toThrow(HostCapacityExceededError);
     });
   });
 
   describe('reported host capacity', () => {
     beforeEach(() => {
-      mockWorkerRepository.sumProvisionedResources.mockResolvedValue(
-        new WorkerResourceUsageModel(0, 0, 0),
+      mockCommittedResourcesRepository.sumProvisioned.mockResolvedValue(
+        new ResourceUsageModel(0, 0, 0),
       );
     });
 
@@ -127,14 +127,14 @@ describe('HiveCapacityService', () => {
     it('should fall back to the configured budget when no host reported yet', async () => {
       await expect(
         service.assertFitsOnCreate({ cpuCores: 1, ramMB: 16384, diskGB: 10 }),
-      ).rejects.toThrow(HiveCapacityExceededError);
+      ).rejects.toThrow(HostCapacityExceededError);
     });
   });
 
   describe('assertFitsOnStart', () => {
     it('should ignore the worker being started when adding up running usage', async () => {
-      mockWorkerRepository.sumRunningResources.mockResolvedValue(
-        new WorkerResourceUsageModel(2, 4096, 40),
+      mockCommittedResourcesRepository.sumRunning.mockResolvedValue(
+        new ResourceUsageModel(2, 4096, 40),
       );
 
       await service.assertFitsOnStart('w-000001', {
@@ -143,14 +143,14 @@ describe('HiveCapacityService', () => {
         diskGB: 40,
       });
 
-      expect(mockWorkerRepository.sumRunningResources).toHaveBeenCalledWith(
+      expect(mockCommittedResourcesRepository.sumRunning).toHaveBeenCalledWith(
         'w-000001',
       );
     });
 
     it('should reject a start that would oversubscribe memory', async () => {
-      mockWorkerRepository.sumRunningResources.mockResolvedValue(
-        new WorkerResourceUsageModel(2, 6144, 40),
+      mockCommittedResourcesRepository.sumRunning.mockResolvedValue(
+        new ResourceUsageModel(2, 6144, 40),
       );
 
       await expect(
@@ -159,7 +159,7 @@ describe('HiveCapacityService', () => {
           ramMB: 4096,
           diskGB: 40,
         }),
-      ).rejects.toThrow(HiveCapacityExceededError);
+      ).rejects.toThrow(HostCapacityExceededError);
     });
   });
 });

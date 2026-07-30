@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 import { LuTrash2 } from "react-icons/lu";
 import { useAtom } from "../models/use-atom";
 import { useAtomImage } from "../models/use-atom-image";
+import { useAtomSize } from "../models/use-atom-size";
 import { CreateAtomEnvVarDto } from "../api/atom.api.types";
 
 const ATOM_NAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
@@ -27,6 +28,7 @@ export function CreateAtomForm() {
 
   const { atoms, fetchAtom, fetchAtoms, createAtom } = useAtom();
   const { images, fetchImages } = useAtomImage();
+  const { sizes, fetchSizes } = useAtomSize();
 
   const buttonRef = useRef<ButtonRef>(null);
 
@@ -34,14 +36,24 @@ export function CreateAtomForm() {
     defaultValues: {
       atomName: "",
       atomImageId: "",
+      atomSizeId: "",
     },
   });
 
-  const { handleSubmit, setError, control, watch } = methods;
+  const { handleSubmit, setError, control, watch, setValue } = methods;
 
   const atomImageId = watch("atomImageId");
   const selectedImage = images.find((img) => String(img.id) === String(atomImageId));
   const requiredKeys = selectedImage?.requiredEnvVars ?? [];
+
+  const atomSizeId = watch("atomSizeId");
+  const selectedSize = sizes.find((size) => String(size.id) === String(atomSizeId));
+
+  useEffect(() => {
+    if (selectedImage) {
+      setValue("atomSizeId", String(selectedImage.defaultSizeId));
+    }
+  }, [selectedImage?.id, setValue]);
 
   useEffect(() => {
     setRequiredValues((prev) =>
@@ -104,6 +116,15 @@ export function CreateAtomForm() {
       return;
     }
 
+    if (!atomSizeId || !sizes.some((size) => size.id === Number(atomSizeId))) {
+      setError("atomSizeId", {
+        type: "manual",
+        message: "Invalid size selected",
+      });
+      await buttonRef.current?.setIsLoading(false);
+      return;
+    }
+
     const missingRequired = requiredKeys.filter((key) => !requiredValues[key]?.trim());
     if (missingRequired.length > 0) {
       toast.error(`Set a value for: ${missingRequired.join(", ")}`);
@@ -116,7 +137,12 @@ export function CreateAtomForm() {
       ...envVars,
     ];
 
-    const newAtom = await createAtom(atomName, Number(atomImageId), allEnvVars);
+    const newAtom = await createAtom(
+      atomName,
+      Number(atomImageId),
+      Number(atomSizeId),
+      allEnvVars,
+    );
 
     await buttonRef.current?.setIsLoading(false);
 
@@ -150,6 +176,7 @@ export function CreateAtomForm() {
   useEffect(() => {
     fetchAtoms();
     fetchImages();
+    fetchSizes();
   }, []);
 
   return (
@@ -180,6 +207,28 @@ export function CreateAtomForm() {
           Only approved images are listed. Adding one is a change to the catalog
           in the repo, not something you can do from here.
         </p>
+
+        {selectedImage && (
+          <>
+            <FormRadioCards
+              controlName="atomSizeId"
+              control={control}
+              label="Size"
+              options={sizes?.map((size) => ({
+                value: String(size.id),
+                title: size.name,
+                subtitle: `${size.cpuCores} vCPU / ${size.ramMB} MB`,
+              }))}
+              required
+            />
+
+            <p className="text-xs text-ink-muted -mt-2">
+              {selectedSize?.id === selectedImage.defaultSizeId
+                ? "This is the size recommended for this image."
+                : "The size recommended for this image is preselected; you picked another one."}
+            </p>
+          </>
+        )}
 
         {requiredKeys.length > 0 && (
           <section className="space-y-2">

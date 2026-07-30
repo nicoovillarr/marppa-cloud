@@ -10,6 +10,7 @@ export type CreateAtomEnvVarDto = {
 export type CreateAtomDto = {
     name: string;
     imageId: number;
+    sizeId?: number;
     ownerId?: string;
     envVars?: CreateAtomEnvVarDto[];
 }
@@ -24,6 +25,9 @@ export type AtomResponseDto = {
     updatedBy: string | null;
     ownerId: string;
     imageId: number;
+    sizeId: number;
+    cpuCores: number;
+    ramMB: number;
 }
 
 export type AtomWithRelationsResponseDto = AtomResponseDto & {

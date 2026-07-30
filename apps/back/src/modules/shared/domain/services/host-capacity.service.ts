@@ -1,53 +1,61 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
-  WORKER_REPOSITORY_SYMBOL,
-  WorkerRepository,
-} from '../repositories/worker.repository';
-import {
   HOST_CAPACITY_REPOSITORY_SYMBOL,
   HostCapacityRepository,
 } from '../repositories/host-capacity.repository';
 import {
-  HiveCapacityBudget,
-  getConfiguredHiveCapacityBudget,
+  COMMITTED_RESOURCES_REPOSITORY_SYMBOL,
+  CommittedResourcesRepository,
+} from '../repositories/committed-resources.repository';
+import {
+  HostCapacityBudget,
+  getConfiguredHostCapacityBudget,
   getVcpuOvercommit,
-} from '../config/hive-capacity.config';
-import { HiveCapacityExceededError } from '../errors/hive-capacity-exceeded.error';
+} from '../config/host-capacity.config';
+import { HostCapacityExceededError } from '../errors/host-capacity-exceeded.error';
 
-export interface WorkerSpecs {
+export interface ResourceSpecs {
   cpuCores: number;
   ramMB: number;
   diskGB: number;
 }
 
 @Injectable()
-export class HiveCapacityService {
+export class HostCapacityService {
   constructor(
-    @Inject(WORKER_REPOSITORY_SYMBOL)
-    private readonly workerRepository: WorkerRepository,
-
     @Inject(HOST_CAPACITY_REPOSITORY_SYMBOL)
     private readonly hostCapacityRepository: HostCapacityRepository,
+
+    @Inject(COMMITTED_RESOURCES_REPOSITORY_SYMBOL)
+    private readonly committedResourcesRepository: CommittedResourcesRepository,
   ) { }
 
-  async assertFitsOnCreate(specs: WorkerSpecs): Promise<void> {
+  async assertFitsOnCreate(specs: ResourceSpecs): Promise<void> {
     const budget = await this.budget();
 
     this.assertWithinBudget('vCPU', specs.cpuCores, budget.vcpu, '');
     this.assertWithinBudget('memory', specs.ramMB, budget.ramMB, 'MB');
 
-    const provisioned = await this.workerRepository.sumProvisionedResources();
-    this.assertWithinBudget(
-      'disk',
-      specs.diskGB,
-      budget.diskGB - provisioned.diskGB,
-      'GB',
-    );
+    if (specs.diskGB > 0) {
+      const provisioned =
+        await this.committedResourcesRepository.sumProvisioned();
+
+      this.assertWithinBudget(
+        'disk',
+        specs.diskGB,
+        budget.diskGB - provisioned.diskGB,
+        'GB',
+      );
+    }
   }
 
-  async assertFitsOnStart(workerId: string, specs: WorkerSpecs): Promise<void> {
+  async assertFitsOnStart(
+    resourceId: string,
+    specs: ResourceSpecs,
+  ): Promise<void> {
     const budget = await this.budget();
-    const running = await this.workerRepository.sumRunningResources(workerId);
+    const running =
+      await this.committedResourcesRepository.sumRunning(resourceId);
 
     this.assertWithinBudget(
       'memory',
@@ -63,15 +71,15 @@ export class HiveCapacityService {
     );
   }
 
-  private async budget(): Promise<HiveCapacityBudget> {
+  private async budget(): Promise<HostCapacityBudget> {
     const hosts = await this.hostCapacityRepository.findAll();
     if (hosts.length === 0) {
-      return getConfiguredHiveCapacityBudget();
+      return getConfiguredHostCapacityBudget();
     }
 
     const overcommit = getVcpuOvercommit();
 
-    return hosts.reduce<HiveCapacityBudget>(
+    return hosts.reduce<HostCapacityBudget>(
       (total, host) => ({
         vcpu: total.vcpu + host.cpuCores * overcommit,
         ramMB: total.ramMB + host.ramMB,
@@ -88,7 +96,7 @@ export class HiveCapacityService {
     unit: string,
   ): void {
     if (requested > available) {
-      throw new HiveCapacityExceededError(
+      throw new HostCapacityExceededError(
         resource,
         requested,
         Math.max(available, 0),

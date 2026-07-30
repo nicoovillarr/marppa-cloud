@@ -10,6 +10,9 @@ export class AtomPrismaMapper {
       raw.createdBy,
       raw.imageId,
       raw.ownerId,
+      raw.sizeId,
+      raw.cpuCores,
+      raw.ramMB,
       {
         id: raw.id,
         createdAt: raw.createdAt,

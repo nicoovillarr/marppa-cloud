@@ -27,6 +27,10 @@ export class CreateAtomDto {
   @IsNumber()
   imageId: number;
 
+  @IsNumber()
+  @IsOptional()
+  sizeId?: number;
+
   @IsString()
   @IsOptional()
   ownerId?: string;

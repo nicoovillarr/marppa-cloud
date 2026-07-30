@@ -9,6 +9,7 @@ export class AtomImagePrismaMapper {
       raw.repository,
       raw.tag,
       raw.architecture,
+      raw.defaultSizeId,
       {
         id: raw.id,
         description: raw.description ?? undefined,

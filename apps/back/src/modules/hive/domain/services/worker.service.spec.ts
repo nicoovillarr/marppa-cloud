@@ -20,10 +20,10 @@ import { WorkerImageEntity } from '../entities/worker-image.entity';
 import { WorkerFlavorWithFamilyModel } from '../models/worker-flavor-with-family.model';
 import { WorkerFlavorService } from './worker-flavor.service';
 import { WorkerImageService } from './worker-image.service';
-import { HiveCapacityService } from './hive-capacity.service';
+import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
 import { WorkerArchitectureMismatchError } from '../errors/worker-architecture-mismatch.error';
-import { HiveCapacityExceededError } from '../errors/hive-capacity-exceeded.error';
+import { HostCapacityExceededError } from '@/shared/domain/errors/host-capacity-exceeded.error';
 
 describe('WorkerService', () => {
   let service: WorkerService;
@@ -101,7 +101,7 @@ describe('WorkerService', () => {
     findById: jest.fn(),
   };
 
-  const mockHiveCapacityService = {
+  const mockHostCapacityService = {
     assertFitsOnCreate: jest.fn(),
     assertFitsOnStart: jest.fn(),
   };
@@ -123,8 +123,8 @@ describe('WorkerService', () => {
           useValue: mockWorkerImageService,
         },
         {
-          provide: HiveCapacityService,
-          useValue: mockHiveCapacityService,
+          provide: HostCapacityService,
+          useValue: mockHostCapacityService,
         },
 
         MacAddressService,
@@ -370,12 +370,12 @@ describe('WorkerService', () => {
   describe('startWorker', () => {
     it('should refuse to start when the host has no room left', async () => {
       mockWorkerRepository.findById.mockResolvedValue(mockWorker);
-      mockHiveCapacityService.assertFitsOnStart.mockRejectedValue(
-        new HiveCapacityExceededError('memory', 4096, 1024, 'MB'),
+      mockHostCapacityService.assertFitsOnStart.mockRejectedValue(
+        new HostCapacityExceededError('memory', 4096, 1024, 'MB'),
       );
 
       await expect(service.startWorker('w-000001')).rejects.toThrow(
-        HiveCapacityExceededError,
+        HostCapacityExceededError,
       );
       expect(repository.update).not.toHaveBeenCalled();
     });

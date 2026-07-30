@@ -135,6 +135,7 @@ export class AtomStartProcessor implements IEventProcessor {
           ipAddress: node.ipAddress,
         },
         Object.fromEntries(atom.envVars.map((envVar) => [envVar.key, envVar.value])),
+        atom,
       );
 
       await updateAtomStatus(STATES.ok);

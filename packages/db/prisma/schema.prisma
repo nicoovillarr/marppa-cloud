@@ -328,6 +328,12 @@ model Atom {
   imageId Int
   image   AtomImage @relation(fields: [imageId], references: [id])
 
+  sizeId Int
+  size   AtomSize @relation(fields: [sizeId], references: [id])
+
+  cpuCores Float
+  ramMB    Int
+
   envVars AtomEnvVar[]
 
   node Node?
@@ -351,7 +357,27 @@ model AtomImage {
   command         String[] @default([])
   requiredEnvVars String[] @default([])
 
+  defaultSizeId Int
+  defaultSize   AtomSize @relation(fields: [defaultSizeId], references: [id])
+
   atoms Atom[]
+}
+
+model AtomSize {
+  id       Int    @id @default(autoincrement())
+  name     String
+  version  Int    @default(1)
+  cpuCores Float
+  ramMB    Int
+
+  pricePerHourCents Int @default(0)
+
+  deprecatedAt DateTime?
+
+  atoms      Atom[]
+  atomImages AtomImage[]
+
+  @@unique([name, version])
 }
 
 model AtomEnvVar {

@@ -9,4 +9,5 @@ export type AtomImageResponseDto = {
     architecture: string;
     capabilities: string[];
     requiredEnvVars: string[];
+    defaultSizeId: number;
 }

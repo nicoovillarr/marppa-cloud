@@ -11,4 +11,5 @@ export class AtomImageResponseModel {
   @Expose() architecture: string;
   @Expose() capabilities: string[];
   @Expose() requiredEnvVars: string[];
+  @Expose() defaultSizeId: number;
 }

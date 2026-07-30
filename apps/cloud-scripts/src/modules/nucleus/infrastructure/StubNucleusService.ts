@@ -4,6 +4,7 @@ import {
   type AtomEnvironment,
   type AtomImageSource,
   type AtomNetworkConfig,
+  type AtomResourceSpecs,
 } from '../domain/services/NucleusService';
 
 @Injectable()
@@ -25,10 +26,12 @@ export class StubNucleusService extends NucleusService {
     image: AtomImageSource,
     net: AtomNetworkConfig,
     env: AtomEnvironment,
+    specs: AtomResourceSpecs,
   ): Promise<void> {
     console.log(
       `[STUB] startAtom: id=${id} name=${name} image=${image.repository}:${image.tag} ` +
-      `ip=${net.ipAddress} env=${Object.keys(env).join(',')}`,
+      `ip=${net.ipAddress} env=${Object.keys(env).join(',')} ` +
+      `cpus=${specs.cpuCores} memory=${specs.ramMB}MB`,
     );
     this.running.add(id);
   }
