@@ -214,8 +214,9 @@ Two caveats worth knowing before adding another nftables user:
 
 - `ip nat` is a **shared name**: the `iptables-nft` shim uses it too. If libvirt brings
   up a NAT network or docker starts, their rules land in that table and a `SYSTEM_RESET`
-  will take them with it. `inet filter` has the same exposure with anything writing to
-  the standard filter table.
+  will take them with it. `inet filter` is safer than it looks — the shim's filter rules
+  go to `ip filter`, a different table this app never touches — so the exposure there is
+  limited to something that writes `inet filter` by name.
 - Rules you add by hand to `inet filter` or `ip nat` are persisted by the app, but a
   `SYSTEM_RESET` recreates both tables from `NFTABLES_RESET_SOURCE`. Anything that must
   survive a reset — rate limiting, extra accepts — belongs in that file, not in the live
