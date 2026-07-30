@@ -265,6 +265,15 @@ model WorkerFlavor {
   @@unique([familyId, name, version])
 }
 
+model HostCapacity {
+  hostname String @id
+  cpuCores Int
+  ramMB    Int
+  diskGB   Int
+
+  reportedAt DateTime @updatedAt
+}
+
 model WorkerStorageType {
   id          Int     @id @default(autoincrement())
   name        String  @unique

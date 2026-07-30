@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HiveCapacityService } from './hive-capacity.service';
 import { WORKER_REPOSITORY_SYMBOL } from '../repositories/worker.repository';
+import { HOST_CAPACITY_REPOSITORY_SYMBOL } from '../repositories/host-capacity.repository';
 import { WorkerResourceUsageModel } from '../models/worker-resource-usage.model';
+import { HostCapacityModel } from '../models/host-capacity.model';
 import { HiveCapacityExceededError } from '../errors/hive-capacity-exceeded.error';
 
 describe('HiveCapacityService', () => {
@@ -10,6 +12,10 @@ describe('HiveCapacityService', () => {
   const mockWorkerRepository = {
     sumProvisionedResources: jest.fn(),
     sumRunningResources: jest.fn(),
+  };
+
+  const mockHostCapacityRepository = {
+    findAll: jest.fn(),
   };
 
   const originalEnv = process.env;
@@ -30,10 +36,16 @@ describe('HiveCapacityService', () => {
           provide: WORKER_REPOSITORY_SYMBOL,
           useValue: mockWorkerRepository,
         },
+        {
+          provide: HOST_CAPACITY_REPOSITORY_SYMBOL,
+          useValue: mockHostCapacityRepository,
+        },
       ],
     }).compile();
 
     service = module.get<HiveCapacityService>(HiveCapacityService);
+
+    mockHostCapacityRepository.findAll.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -80,6 +92,41 @@ describe('HiveCapacityService', () => {
 
       await expect(
         service.assertFitsOnCreate({ cpuCores: 9, ramMB: 1024, diskGB: 10 }),
+      ).rejects.toThrow(HiveCapacityExceededError);
+    });
+  });
+
+  describe('reported host capacity', () => {
+    beforeEach(() => {
+      mockWorkerRepository.sumProvisionedResources.mockResolvedValue(
+        new WorkerResourceUsageModel(0, 0, 0),
+      );
+    });
+
+    it('should prefer what the host reported over the configured budget', async () => {
+      mockHostCapacityRepository.findAll.mockResolvedValue([
+        new HostCapacityModel('home-server', 12, 32026, 439, new Date()),
+      ]);
+
+      await expect(
+        service.assertFitsOnCreate({ cpuCores: 8, ramMB: 16384, diskGB: 200 }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('should add up every reported host', async () => {
+      mockHostCapacityRepository.findAll.mockResolvedValue([
+        new HostCapacityModel('host-a', 4, 8192, 100, new Date()),
+        new HostCapacityModel('host-b', 4, 8192, 100, new Date()),
+      ]);
+
+      await expect(
+        service.assertFitsOnCreate({ cpuCores: 16, ramMB: 16384, diskGB: 200 }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('should fall back to the configured budget when no host reported yet', async () => {
+      await expect(
+        service.assertFitsOnCreate({ cpuCores: 1, ramMB: 16384, diskGB: 10 }),
       ).rejects.toThrow(HiveCapacityExceededError);
     });
   });

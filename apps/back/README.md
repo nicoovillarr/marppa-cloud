@@ -147,24 +147,41 @@ for a tenant that genuinely needs another shape is a **private family**, not a s
   CRUD in the backend, nothing reads it, and its `isBoot` flag is unused. Until it is,
   `WORKER_BOOT_DISK_GB` is a hard ceiling for every worker.
 - **Capacity is checked before an event is queued.** `HiveCapacityService` compares the
-  requested specs against a configured host budget and the sums already committed in the
-  database: on create it checks disk (the image file is allocated at create) and that the
-  flavor could ever fit at all; on start it checks memory and vCPU against everything
-  currently running, since RAM is only consumed while the domain is up. Budget comes from
-  the environment, with defaults matching the current host (12 cores, 32GB, 439GB volume):
+  requested specs against the host budget and the sums already committed in the database:
+  on create it checks disk (the image file is allocated at create) and that the flavor
+  could ever fit at all; on start it checks memory and vCPU against everything currently
+  running, since RAM is only consumed while the domain is up.
+
+  **The budget is measured, not configured.** The backend cannot see the host — it does
+  not run on it — so cloud-scripts' host preflight measures cores, total RAM and the size
+  of the images volume at startup (and on every system reset) and upserts a `HostCapacity`
+  row. `HiveCapacityService` sums those rows. Nothing is held back for the host, atoms or
+  anything else running outside the platform: the budget is the machine's full capacity.
+
+  With more than one row the sum is a **pool bound, not a placement guarantee** — a
+  worker that fits "the total" may not fit any single host. That is the point where a
+  scheduler has to exist; until then there is one row.
+
+  The environment only holds policy and the fallback used while no host has reported yet
+  (a fresh database, or `USE_STUBS=true`, which skips the preflight entirely):
 
   | Variable | Default | Meaning |
   |---|---|---|
-  | `HIVE_HOST_VCPU` | `12` | Physical cores available to guests. |
-  | `HIVE_VCPU_OVERCOMMIT` | `2` | Multiplier applied to `HIVE_HOST_VCPU`. |
-  | `HIVE_HOST_RAM_MB` | `24576` | Memory allocatable to guests, i.e. host RAM minus what the host and atoms need. |
-  | `HIVE_HOST_DISK_GB` | `380` | Space allocatable under `/var/lib/libvirt/images`. |
+  | `HIVE_VCPU_OVERCOMMIT` | `2` | Multiplier applied to reported cores. A policy, not a measurement. |
+  | `HIVE_HOST_VCPU` | `12` | Fallback cores, used only when no `HostCapacity` row exists. |
+  | `HIVE_HOST_RAM_MB` | `32026` | Fallback memory, same condition. |
+  | `HIVE_HOST_DISK_GB` | `439` | Fallback disk, same condition. |
   | `WORKER_BOOT_DISK_GB` | `20` | Boot disk every worker gets. Snapshotted per worker at create. |
 
-  This is accounting, not a measurement: cloud-scripts re-checks the real host with `df`
-  and `free` before it copies a disk or starts a domain, keeping a fixed headroom. The
-  backend check exists to answer `409` immediately instead of failing an event five
-  retries later. Per-company quotas are **not** implemented — the budget is host-wide.
+  cloud-scripts also re-checks the real host with `df` and `free` before it copies a disk
+  or starts a domain; that check is the one that sees current usage, including whatever
+  runs outside the platform. The backend check exists to answer `409` immediately instead
+  of failing an event five retries later.
+
+  Two gaps worth knowing: **atoms are not counted.** An `Atom` declares no CPU or memory,
+  so containers consume the same host without appearing in the accounting — only the
+  cloud-scripts check notices them. And per-company quotas do not exist: the budget is
+  host-wide, so one company can consume all of it.
 
 ### Nucleus (atoms)
 

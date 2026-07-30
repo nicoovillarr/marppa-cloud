@@ -1,6 +1,6 @@
 const DEFAULT_HOST_VCPU = 12;
-const DEFAULT_HOST_RAM_MB = 24576;
-const DEFAULT_HOST_DISK_GB = 380;
+const DEFAULT_HOST_RAM_MB = 32026;
+const DEFAULT_HOST_DISK_GB = 439;
 const DEFAULT_VCPU_OVERCOMMIT = 2;
 
 export interface HiveCapacityBudget {
@@ -9,11 +9,13 @@ export interface HiveCapacityBudget {
   diskGB: number;
 }
 
-export function getHiveCapacityBudget(): HiveCapacityBudget {
+export function getVcpuOvercommit(): number {
+  return readPositiveNumber('HIVE_VCPU_OVERCOMMIT', DEFAULT_VCPU_OVERCOMMIT);
+}
+
+export function getConfiguredHiveCapacityBudget(): HiveCapacityBudget {
   return {
-    vcpu:
-      readPositiveNumber('HIVE_HOST_VCPU', DEFAULT_HOST_VCPU) *
-      readPositiveNumber('HIVE_VCPU_OVERCOMMIT', DEFAULT_VCPU_OVERCOMMIT),
+    vcpu: readPositiveNumber('HIVE_HOST_VCPU', DEFAULT_HOST_VCPU) * getVcpuOvercommit(),
     ramMB: readPositiveNumber('HIVE_HOST_RAM_MB', DEFAULT_HOST_RAM_MB),
     diskGB: readPositiveNumber('HIVE_HOST_DISK_GB', DEFAULT_HOST_DISK_GB),
   };

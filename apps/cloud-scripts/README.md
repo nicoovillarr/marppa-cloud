@@ -377,15 +377,29 @@ process refuses to boot with a list of what is wrong.
 | `USE_STUBS` | no | `true` replaces every host service with a no-op stub **and skips the preflight**. Development only — never set it on the host. |
 | `NODE_ENV` | no | Selects the `.env` cascade. |
 
+### Host capacity: measuring and reporting
+
+The host preflight is what tells the platform how big this machine is. After every check
+passes (at startup, and again before a system reset) it measures cores, total RAM and the
+size of `/var/lib/libvirt/images`, and upserts a `HostCapacity` row keyed by hostname. The
+backend reads those rows as its budget — it cannot measure this host itself. A host that
+fails the preflight never publishes capacity, and `USE_STUBS=true` skips it entirely, in
+which case the backend falls back to its `HIVE_HOST_*` env values.
+
 ### Host capacity preflight
 
 `LinuxHiveService` refuses to provision or boot a VM the host cannot actually hold, and
 fails the event with the real numbers instead of letting libvirt or the guest die halfway:
 
 - `WORKER_CREATE` reads `df` on `/var/lib/libvirt/images` before copying the base image
-  and needs the flavor's disk plus 20 GB of headroom.
+  and needs the boot disk to fit in what is free.
 - `WORKER_START` reads the domain's configured memory (`virsh dominfo`) and `free -m`'s
-  available column, and needs that memory plus 2 GB of headroom.
+  available column, and needs that memory to fit in what is available.
+
+Nothing is held back for the host: both checks pass as long as the resource physically
+fits. `free`'s available column and `df`'s avail already exclude what the host itself is
+using, so this is not a case of guests eating into host memory — but a start that fits by
+a handful of MB leaves no slack, and the OOM killer is what resolves it.
 
 The backend runs its own accounting check (see its README, "Hive catalog") so the API can
 answer immediately; these two are the ones that look at the machine's real state, which

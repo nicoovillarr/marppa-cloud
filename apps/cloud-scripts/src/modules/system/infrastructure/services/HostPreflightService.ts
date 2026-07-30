@@ -5,6 +5,7 @@ import { Command } from '@/libs/Command';
 import { NftablesRuleset } from '@/libs/NftablesRuleset';
 import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
+import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 
 const REQUIRED_BINARIES = [
   'nmap', 'ipcalc', 'nft', 'dnsmasq', 'virsh', 'virt-install',
@@ -32,6 +33,8 @@ const REQUIRED_DIRS = [
   '/var/lib/libvirt/cloud-init',
 ];
 
+const IMAGE_VOLUME = '/var/lib/libvirt/images';
+
 const DNSMASQ_RESET_SCRIPT = '/usr/local/sbin/reset-dnsmasq.sh';
 
 const DOCKER_DAEMON_CONFIG = '/etc/docker/daemon.json';
@@ -55,7 +58,10 @@ net.ipv4.ip_forward=1
  */
 @Injectable()
 export class HostPreflightService {
-  constructor(private readonly logger: LoggerService) {}
+  constructor(
+    private readonly logger: LoggerService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   public async run(): Promise<void> {
     if (process.env.USE_STUBS === 'true') {
@@ -84,7 +90,44 @@ export class HostPreflightService {
       );
     }
 
+    await this.reportCapacity();
+
     this.logger.log('Host preflight checks passed.');
+  }
+
+  private async reportCapacity(): Promise<void> {
+    const hostname = os.hostname();
+
+    const capacity = {
+      cpuCores: os.cpus().length,
+      ramMB: Math.floor(os.totalmem() / 1024 ** 2),
+      diskGB: await this.imageVolumeSizeGB(),
+    };
+
+    await this.prisma.hostCapacity.upsert({
+      where: { hostname },
+      create: { hostname, ...capacity },
+      update: capacity,
+    });
+
+    this.logger.log(
+      `Reported host capacity for ${hostname}: ${capacity.cpuCores} cores, ${capacity.ramMB}MB RAM, ${capacity.diskGB}GB on ${IMAGE_VOLUME}.`,
+    );
+  }
+
+  private async imageVolumeSizeGB(): Promise<number> {
+    const output = await Command.runCommand('df', [
+      '--output=size',
+      '--block-size=1G',
+      IMAGE_VOLUME,
+    ]);
+
+    const sizeGB = Number(output.trim().split('\n').pop()?.trim());
+    if (!Number.isFinite(sizeGB)) {
+      throw new Error(`Could not read the size of ${IMAGE_VOLUME}`);
+    }
+
+    return sizeGB;
   }
 
   /**

@@ -3,7 +3,15 @@ import {
   WORKER_REPOSITORY_SYMBOL,
   WorkerRepository,
 } from '../repositories/worker.repository';
-import { getHiveCapacityBudget } from '../config/hive-capacity.config';
+import {
+  HOST_CAPACITY_REPOSITORY_SYMBOL,
+  HostCapacityRepository,
+} from '../repositories/host-capacity.repository';
+import {
+  HiveCapacityBudget,
+  getConfiguredHiveCapacityBudget,
+  getVcpuOvercommit,
+} from '../config/hive-capacity.config';
 import { HiveCapacityExceededError } from '../errors/hive-capacity-exceeded.error';
 
 export interface WorkerSpecs {
@@ -17,10 +25,13 @@ export class HiveCapacityService {
   constructor(
     @Inject(WORKER_REPOSITORY_SYMBOL)
     private readonly workerRepository: WorkerRepository,
+
+    @Inject(HOST_CAPACITY_REPOSITORY_SYMBOL)
+    private readonly hostCapacityRepository: HostCapacityRepository,
   ) { }
 
   async assertFitsOnCreate(specs: WorkerSpecs): Promise<void> {
-    const budget = getHiveCapacityBudget();
+    const budget = await this.budget();
 
     this.assertWithinBudget('vCPU', specs.cpuCores, budget.vcpu, '');
     this.assertWithinBudget('memory', specs.ramMB, budget.ramMB, 'MB');
@@ -35,7 +46,7 @@ export class HiveCapacityService {
   }
 
   async assertFitsOnStart(workerId: string, specs: WorkerSpecs): Promise<void> {
-    const budget = getHiveCapacityBudget();
+    const budget = await this.budget();
     const running = await this.workerRepository.sumRunningResources(workerId);
 
     this.assertWithinBudget(
@@ -49,6 +60,24 @@ export class HiveCapacityService {
       specs.cpuCores,
       budget.vcpu - running.cpuCores,
       '',
+    );
+  }
+
+  private async budget(): Promise<HiveCapacityBudget> {
+    const hosts = await this.hostCapacityRepository.findAll();
+    if (hosts.length === 0) {
+      return getConfiguredHiveCapacityBudget();
+    }
+
+    const overcommit = getVcpuOvercommit();
+
+    return hosts.reduce<HiveCapacityBudget>(
+      (total, host) => ({
+        vcpu: total.vcpu + host.cpuCores * overcommit,
+        ramMB: total.ramMB + host.ramMB,
+        diskGB: total.diskGB + host.diskGB,
+      }),
+      { vcpu: 0, ramMB: 0, diskGB: 0 },
     );
   }
 

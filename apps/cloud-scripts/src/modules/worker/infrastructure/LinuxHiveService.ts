@@ -30,9 +30,6 @@ const BASE_IMAGE_PACKAGES = [
   'qemu-guest-agent',
 ];
 
-const HOST_DISK_HEADROOM_GB = 20;
-const HOST_MEMORY_HEADROOM_MB = 2048;
-
 /** Budget for a guest to honour the ACPI shutdown before it is powered off. */
 const SHUTDOWN_TIMEOUT_MS = 60_000;
 const SHUTDOWN_POLL_MS = 2_000;
@@ -197,9 +194,9 @@ export class LinuxHiveService extends HiveService {
       throw new Error(`Could not read available disk on ${IMAGE_DIR}`);
     }
 
-    if (diskGB + HOST_DISK_HEADROOM_GB > availableGB) {
+    if (diskGB > availableGB) {
       throw new Error(
-        `Not enough disk on ${IMAGE_DIR}: ${diskGB}GB requested plus ${HOST_DISK_HEADROOM_GB}GB headroom, ${availableGB}GB available`,
+        `Not enough disk on ${IMAGE_DIR}: ${diskGB}GB requested, ${availableGB}GB available`,
       );
     }
   }
@@ -221,9 +218,9 @@ export class LinuxHiveService extends HiveService {
     const requiredMB = Math.ceil(maxMemoryKiB / 1024);
     const availableMB = await this.hostAvailableMemoryMB();
 
-    if (requiredMB + HOST_MEMORY_HEADROOM_MB > availableMB) {
+    if (requiredMB > availableMB) {
       throw new Error(
-        `Not enough free memory to start ${vmName}: ${requiredMB}MB required plus ${HOST_MEMORY_HEADROOM_MB}MB headroom, ${availableMB}MB available`,
+        `Not enough free memory to start ${vmName}: ${requiredMB}MB required, ${availableMB}MB available`,
       );
     }
   }
