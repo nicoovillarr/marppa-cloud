@@ -12,3 +12,9 @@ export type WorkerFamilyResponseDto = {
 export type WorkerFamilyWithRelationsResponseDto = WorkerFamilyResponseDto & {
     flavors: WorkerFlavorResponseDto[];
 }
+
+export type CreateWorkerFamilyDto = {
+    name: string;
+    architecture: string;
+    description?: string;
+}

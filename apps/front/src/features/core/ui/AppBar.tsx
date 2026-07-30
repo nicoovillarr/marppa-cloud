@@ -5,7 +5,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { useAuth } from "@/auth/models/useAuth";
 import { LuGithub, LuLinkedin, LuMenu, LuX } from "react-icons/lu";
-import { MODULE_LINKS } from "./Sidebar";
+import { ADMIN_LINK, MODULE_LINKS } from "./Sidebar";
+import { useUser } from "src/features/users/model/useUser";
 import { EXTERNAL_LINKS } from "@/core/models/external-links";
 
 function BrandMark() {
@@ -42,7 +43,12 @@ function BrandMark() {
 
 export function AppBar() {
   const { isLoading, isLoggedIn, logout } = useAuth();
+  const { user } = useUser();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const links = user?.isPlatformAdmin
+    ? [...MODULE_LINKS, ADMIN_LINK]
+    : MODULE_LINKS;
 
   const onLogout = async () => {
     try {
@@ -111,7 +117,7 @@ export function AppBar() {
       {menuOpen && (
         <nav className="absolute top-12 left-0 right-0 z-40 flex flex-col bg-sidebar shadow-lg md:hidden">
           {isLoggedIn &&
-            MODULE_LINKS.map(({ href, label, icon: Icon }) => (
+            links.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}

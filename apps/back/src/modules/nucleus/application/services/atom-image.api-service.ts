@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { AtomImageService } from '@/nucleus/domain/services/atom-image.service';
 import { AtomImageResponseModel } from '../models/atom-image.response-model';
+import { CreateAtomImageDto } from '@/nucleus/presentation/dtos/create-atom-image.dto';
+import { UpdateAtomImageDto } from '@/nucleus/presentation/dtos/update-atom-image.dto';
 
 @Injectable()
 export class AtomImageApiService {
@@ -19,5 +21,28 @@ export class AtomImageApiService {
     return plainToInstance(AtomImageResponseModel, images, {
       excludeExtraneousValues: true,
     });
+  }
+
+  public async create(
+    data: CreateAtomImageDto,
+  ): Promise<AtomImageResponseModel> {
+    const image = await this.service.create(data);
+    return plainToInstance(AtomImageResponseModel, image, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  public async update(
+    id: number,
+    data: UpdateAtomImageDto,
+  ): Promise<AtomImageResponseModel> {
+    const image = await this.service.update(id, data);
+    return plainToInstance(AtomImageResponseModel, image, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  public async delete(id: number): Promise<void> {
+    await this.service.delete(id);
   }
 }

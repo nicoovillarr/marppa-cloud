@@ -6,6 +6,8 @@ interface AtomImageOptionalProps {
   description?: string;
   digest?: string;
   capabilities?: string[];
+  sysctls?: Record<string, string>;
+  command?: string[];
   requiredEnvVars?: string[];
 }
 
@@ -16,6 +18,8 @@ export class AtomImageEntity extends PatchableEntity {
   public readonly description?: string;
   public readonly digest?: string;
   public readonly capabilities: string[];
+  public readonly sysctls?: Record<string, string>;
+  public readonly command: string[];
   public readonly requiredEnvVars: string[];
 
   constructor(
@@ -33,6 +37,8 @@ export class AtomImageEntity extends PatchableEntity {
     this.description = optionals.description ?? undefined;
     this.digest = optionals.digest ?? undefined;
     this.capabilities = optionals.capabilities ?? [];
+    this.sysctls = optionals.sysctls ?? undefined;
+    this.command = optionals.command ?? [];
     this.requiredEnvVars = optionals.requiredEnvVars ?? [];
   }
 
@@ -48,6 +54,8 @@ export class AtomImageEntity extends PatchableEntity {
       architecture: this.architecture,
       defaultSizeId: this.defaultSizeId,
       capabilities: this.capabilities,
+      sysctls: this.sysctls,
+      command: this.command,
       requiredEnvVars: this.requiredEnvVars,
     };
   }
@@ -65,6 +73,8 @@ export class AtomImageEntity extends PatchableEntity {
         description: data.description,
         digest: data.digest,
         capabilities: data.capabilities,
+        sysctls: data.sysctls,
+        command: data.command,
         requiredEnvVars: data.requiredEnvVars,
       },
     );

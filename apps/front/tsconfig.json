@@ -53,6 +53,12 @@
       "@/system/*": [
         "src/features/system/*"
       ],
+      "@/admin/*": [
+        "src/features/admin/*"
+      ],
+      "@/users/*": [
+        "src/features/users/*"
+      ],
       "@/libs/*": [
         "./src/libs/*"
       ],

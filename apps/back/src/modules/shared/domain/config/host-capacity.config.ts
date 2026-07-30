@@ -3,6 +3,10 @@ const DEFAULT_HOST_RAM_MB = 32026;
 const DEFAULT_HOST_DISK_GB = 439;
 const DEFAULT_VCPU_OVERCOMMIT = 2;
 
+export const MAX_HOST_CPU_CORES = 1024;
+export const MAX_HOST_RAM_MB = 8 * 1024 * 1024;
+export const MAX_HOST_DISK_GB = 1024 * 1024;
+
 export interface HostCapacityBudget {
   vcpu: number;
   ramMB: number;

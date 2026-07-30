@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LuServer, LuWaypoints, LuBox, LuGlobe } from "react-icons/lu";
+import { LuServer, LuWaypoints, LuBox, LuGlobe, LuShieldCheck } from "react-icons/lu";
 import { IconType } from "react-icons";
+import { useUser } from "src/features/users/model/useUser";
 
 export const MODULE_LINKS: { href: string; label: string; icon: IconType }[] = [
   { href: "/dashboard/hive/workers", label: "Hive", icon: LuServer },
@@ -12,17 +13,28 @@ export const MODULE_LINKS: { href: string; label: string; icon: IconType }[] = [
   { href: "/dashboard/orbit/portals", label: "Orbit", icon: LuGlobe },
 ];
 
+export const ADMIN_LINK = {
+  href: "/dashboard/admin",
+  label: "Admin",
+  icon: LuShieldCheck,
+};
+
 export function isModuleActive(pathname: string | null, href: string): boolean {
   return !!pathname?.startsWith(href.split("/").slice(0, 3).join("/"));
 }
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useUser();
+
+  const links = user?.isPlatformAdmin
+    ? [...MODULE_LINKS, ADMIN_LINK]
+    : MODULE_LINKS;
 
   return (
     <aside className="hidden md:flex flex-col w-56 shrink-0 h-full bg-sidebar overflow-y-auto">
       <nav className="flex flex-col py-3">
-        {MODULE_LINKS.map(({ href, label, icon: Icon }) => {
+        {links.map(({ href, label, icon: Icon }) => {
           const active = isModuleActive(pathname, href);
 
           return (

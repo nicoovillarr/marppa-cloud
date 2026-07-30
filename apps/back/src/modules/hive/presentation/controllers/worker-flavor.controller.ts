@@ -8,9 +8,11 @@ import {
   Put,
   Delete,
   Controller,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateWorkerFlavorDto } from '../dtos/create-worker-flavor.dto';
 import { UpdateWorkerFlavorDto } from '../dtos/update-worker-flavor.dto';
+import { PlatformAdminGuard } from '@/shared/presentation/guards/platform-admin.guard';
 
 @Controller('hive/flavors')
 export class WorkerFlavorController {
@@ -27,6 +29,7 @@ export class WorkerFlavorController {
   }
 
   @Post()
+  @UseGuards(PlatformAdminGuard)
   async create(
     @Body() data: CreateWorkerFlavorDto,
   ): Promise<WorkerFlavorResponseModel> {
@@ -34,6 +37,7 @@ export class WorkerFlavorController {
   }
 
   @Put(':id')
+  @UseGuards(PlatformAdminGuard)
   async revise(
     @Param('id') id: string,
     @Body() data: UpdateWorkerFlavorDto,
@@ -42,6 +46,7 @@ export class WorkerFlavorController {
   }
 
   @Delete(':id')
+  @UseGuards(PlatformAdminGuard)
   async deprecate(@Param('id') id: string): Promise<void> {
     await this.service.deprecate(Number(id));
   }

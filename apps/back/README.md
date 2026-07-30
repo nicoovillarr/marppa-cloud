@@ -55,6 +55,69 @@ We use Clean Architecture with DDD principles.
 
 API Controller -> Application Service -> Domain Service -> Domain Repository Interface -> Infrastructure Repository
 
+### Platform administration
+
+Everything CASL knows about is company-scoped: `defineAbilityFor` grants `manage`
+on a subject only when the subject's `companyId` matches the caller's, so it can
+express "an owner runs their own tenant" but never "someone curates the catalog
+every tenant shares". The catalog (worker images, families, flavors, storage
+types, atom images, sizes) and the tenant list itself sit outside that model —
+they have no owning company by definition.
+
+**A platform admin is an `OWNER` of the root company**, the one whose
+`parentCompanyId` is `null` (`c-000001` in the seed). This is a derived property,
+not a column: adding a `UserRole.ADMIN` would have meant a migration plus a
+second, parallel authorization axis for a role the company hierarchy already
+pins down. `PlatformAdminService` resolves it from the session (one indexed
+lookup per guarded request), `PlatformAdminGuard` gates the routes, and
+`GET /users/me` exposes it as `isPlatformAdmin` so the front can hide the
+section — the flag is a UI hint, the guard is the enforcement.
+
+What it gates:
+
+- **`/admin/*`** (the `admin` module): companies, users, host capacity, and a
+  read-only cross-company resource listing. The module owns its own Prisma
+  repositories rather than reusing `CompanyService`/`UserService`, because those
+  run the company-scoped `authorize()` calls that a platform admin needs to step
+  outside of. Reusing them would have meant punching a hole in the tenant policy
+  that every other caller also goes through.
+- **Catalog mutations** — the `POST`/`PUT`/`DELETE` handlers on `hive/images`,
+  `hive/families`, `hive/flavors`, `hive/storage-types`, `nucleus/images` and
+  `nucleus/sizes`. Reads stay open to any logged-in user: a tenant has to browse
+  the catalog to create anything.
+
+Guardrails live in the domain services, not the UI:
+
+- **Only the seeded root company has no parent.** `POST /admin/companies` ignores
+  any parent in the body and hangs the new company off the root; an update that
+  tries to null a parent out is a `409`. Both matter because "no parent" *is* the
+  admin grant — otherwise creating a tenant with the parent field left blank
+  would silently mint a second company whose owners are platform admins. The
+  explicit-`null` case needs its own check rather than a DTO rule: class-validator's
+  `@IsOptional()` skips validation on `null` as well as `undefined`, so
+  `{"parentCompanyId": null}` sails past `@IsString()`.
+- The root company cannot be deleted or reparented, a company with users or
+  resources cannot be deleted, and a company cannot be moved under its own
+  descendant.
+- A company cannot be left without an `OWNER`, and an admin cannot demote or
+  delete their own account.
+- **Changing a password, role, company or email revokes the user's sessions**
+  (`revokeSessions`, mirroring what a delete already did). Without it a password
+  reset is theatre: refresh tokens live 7 days and `tick` keeps rotating them, so
+  whoever held the old session keeps it. Role and company changes also carry a
+  stale-JWT window of up to the 15-minute access-token TTL, since CASL reads
+  `companyId` off the token — dropping the sessions closes it.
+- **Host capacity rows are bounded and hostname-shaped** (`MAX_HOST_*` in
+  `host-capacity.config.ts`). `HostCapacityService.budget()` sums every row, so an
+  unbounded write is a way to overcommit the host into OOM rather than a typo.
+- **Catalog rows in use cannot be deleted.** Worker images check their workers,
+  storage types check images and disks, atom images check their atoms — each a
+  `409` instead of a foreign-key error surfacing as a 500.
+- **Forbidden capabilities are refused at catalog-write time**, not only when an
+  atom tries to use them. `AtomService` and the worker still grade capabilities on
+  create and start (that is the enforcement); rejecting them on the way in stops an
+  image being approved that could never run.
+
 ### Infra resource lifecycle
 
 Any resource whose real state lives on the host (zones, nodes, workers, portals,
@@ -191,11 +254,15 @@ on the zone bridge, and a port is reachable from outside only through a `Fiber`.
 Three consequences shape the module:
 
 - **Only approved images run.** `Atom.imageId` is a foreign key into `AtomImage`,
-  a catalog with no write endpoints — the seed's list *is* the approval, and it
-  prunes any row that has dropped off it. An image's extra kernel privileges
+  and approval is what writing a catalog row means. The seed still ships the
+  baseline list and prunes any row that has dropped off it, but the catalog is no
+  longer read-only over HTTP: `POST/PUT/DELETE /nucleus/images` exist for the
+  admin dashboard and are gated by `PlatformAdminGuard`, so approving an image is
+  a root-company action rather than a deploy. A `DELETE` is refused with `409`
+  while any atom still points at the image, since the relation is what the
+  processors resolve from — never event data. An image's extra kernel privileges
   (`capabilities`, `sysctls`) live on the catalog row too, so approving an image
-  approves what it may ask of the host. The processors resolve the image through
-  the relation, never from event data.
+  approves what it may ask of the host.
 - **Capabilities are graded by blast radius** (`@marppa-cloud/shared`, enforced by
   both the backend and the worker). Forbidden ones are root on the host by
   another name (`SYS_MODULE`, `SYS_ADMIN`, …) and are refused whatever the

@@ -6,11 +6,13 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { AtomSizeApiService } from '@/nucleus/application/services/atom-size.api-service';
 import { AtomSizeResponseModel } from '@/nucleus/application/models/atom-size.response-model';
 import { CreateAtomSizeDto } from '../dtos/create-atom-size.dto';
 import { UpdateAtomSizeDto } from '../dtos/update-atom-size.dto';
+import { PlatformAdminGuard } from '@/shared/presentation/guards/platform-admin.guard';
 
 @Controller('nucleus/sizes')
 export class AtomSizeController {
@@ -27,6 +29,7 @@ export class AtomSizeController {
   }
 
   @Post()
+  @UseGuards(PlatformAdminGuard)
   async create(
     @Body() data: CreateAtomSizeDto,
   ): Promise<AtomSizeResponseModel> {
@@ -34,6 +37,7 @@ export class AtomSizeController {
   }
 
   @Put(':id')
+  @UseGuards(PlatformAdminGuard)
   async revise(
     @Param('id') id: string,
     @Body() data: UpdateAtomSizeDto,
@@ -42,6 +46,7 @@ export class AtomSizeController {
   }
 
   @Delete(':id')
+  @UseGuards(PlatformAdminGuard)
   async deprecate(@Param('id') id: string): Promise<void> {
     await this.service.deprecate(Number(id));
   }

@@ -16,6 +16,13 @@ export class WorkerStorageTypeApiService {
     });
   }
 
+  async findAll(): Promise<WorkerStorageTypeResponseModel[]> {
+    const entities = await this.service.findAll();
+    return plainToInstance(WorkerStorageTypeResponseModel, entities, {
+      excludeExtraneousValues: true,
+    });
+  }
+
   async create(
     data: CreateWorkerStorageTypeDto,
   ): Promise<WorkerStorageTypeResponseModel> {

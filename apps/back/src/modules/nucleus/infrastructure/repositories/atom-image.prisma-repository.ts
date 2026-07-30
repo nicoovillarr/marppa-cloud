@@ -3,6 +3,7 @@ import { AtomImageRepository } from '@/nucleus/domain/repositories/atom-image.re
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { AtomImagePrismaMapper } from '../mappers/atom-image.prisma-mapper';
+import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
 @Injectable()
 export class AtomImagePrismaRepository implements AtomImageRepository {
@@ -28,5 +29,40 @@ export class AtomImagePrismaRepository implements AtomImageRepository {
     });
 
     return images.map(AtomImagePrismaMapper.toEntity);
+  }
+
+  async create(entity: AtomImageEntity): Promise<AtomImageEntity> {
+    const image = await this.prisma.atomImage.create({
+      data: PrismaMapper.toCreate(entity),
+    });
+
+    return AtomImagePrismaMapper.toEntity(image);
+  }
+
+  async update(entity: AtomImageEntity): Promise<AtomImageEntity> {
+    const image = await this.prisma.atomImage.update({
+      where: {
+        id: entity.id!,
+      },
+      data: PrismaMapper.toCreate(entity),
+    });
+
+    return AtomImagePrismaMapper.toEntity(image);
+  }
+
+  async delete(id: number): Promise<void> {
+    await this.prisma.atomImage.delete({
+      where: {
+        id,
+      },
+    });
+  }
+
+  countAtoms(id: number): Promise<number> {
+    return this.prisma.atom.count({
+      where: {
+        imageId: id,
+      },
+    });
   }
 }

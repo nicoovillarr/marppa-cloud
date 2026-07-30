@@ -8,6 +8,7 @@ import { WorkerStorageTypeEntity } from '../entities/worker-storage-type.entity'
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerStorageTypeDto } from '@/hive/presentation/dtos/create-worker-storage-type.dto';
 import { UpdateWorkerStorageTypeDto } from '@/hive/presentation/dtos/update-worker-storage-type.dto';
+import { WorkerStorageTypeInUseError } from '../errors/worker-storage-type-in-use.error';
 
 describe('WorkerStorageTypeService', () => {
   let service: WorkerStorageTypeService;
@@ -24,6 +25,7 @@ describe('WorkerStorageTypeService', () => {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    countReferences: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -149,12 +151,36 @@ describe('WorkerStorageTypeService', () => {
   });
 
   describe('deleteWorkerStorageType', () => {
-    it('should delete a worker storage type', async () => {
+    it('should delete an unreferenced worker storage type', async () => {
+      mockWorkerStorageTypeRepository.findById.mockResolvedValue(
+        mockWorkerStorageType,
+      );
+      mockWorkerStorageTypeRepository.countReferences.mockResolvedValue(0);
       mockWorkerStorageTypeRepository.delete.mockResolvedValue(undefined);
 
       await service.deleteWorkerStorageType(1);
 
       expect(repository.delete).toHaveBeenCalledWith(1);
+    });
+
+    it('should refuse to delete a storage type images or disks still point at', async () => {
+      mockWorkerStorageTypeRepository.findById.mockResolvedValue(
+        mockWorkerStorageType,
+      );
+      mockWorkerStorageTypeRepository.countReferences.mockResolvedValue(2);
+
+      await expect(service.deleteWorkerStorageType(1)).rejects.toThrow(
+        WorkerStorageTypeInUseError,
+      );
+      expect(repository.delete).not.toHaveBeenCalled();
+    });
+
+    it('should throw when the storage type does not exist', async () => {
+      mockWorkerStorageTypeRepository.findById.mockResolvedValue(null);
+
+      await expect(service.deleteWorkerStorageType(999)).rejects.toThrow(
+        NotFoundError,
+      );
     });
   });
 });

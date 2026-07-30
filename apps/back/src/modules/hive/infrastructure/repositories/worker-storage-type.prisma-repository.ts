@@ -23,6 +23,14 @@ export class WorkerStorageTypePrismaRepository implements WorkerStorageTypeRepos
     return WorkerStorageTypePrismaMapper.toEntity(workerStorageType);
   }
 
+  async findAll(): Promise<WorkerStorageTypeEntity[]> {
+    const workerStorageTypes = await this.prisma.workerStorageType.findMany({
+      orderBy: { name: 'asc' },
+    });
+
+    return workerStorageTypes.map(WorkerStorageTypePrismaMapper.toEntity);
+  }
+
   async create(
     entity: WorkerStorageTypeEntity,
   ): Promise<WorkerStorageTypeEntity> {
@@ -56,5 +64,14 @@ export class WorkerStorageTypePrismaRepository implements WorkerStorageTypeRepos
         id,
       },
     });
+  }
+
+  async countReferences(id: number): Promise<number> {
+    const [images, disks] = await Promise.all([
+      this.prisma.workerImage.count({ where: { workerStorageTypeId: id } }),
+      this.prisma.workerDisk.count({ where: { storageTypeId: id } }),
+    ]);
+
+    return images + disks;
   }
 }

@@ -8,9 +8,11 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateWorkerImageDto } from '../dtos/create-worker-image.dto';
 import { UpdateWorkerImageDto } from '../dtos/update-worker-image.dto';
+import { PlatformAdminGuard } from '@/shared/presentation/guards/platform-admin.guard';
 
 @Controller('hive/images')
 export class WorkerImageController {
@@ -27,6 +29,7 @@ export class WorkerImageController {
   }
 
   @Post()
+  @UseGuards(PlatformAdminGuard)
   async create(
     @Body() data: CreateWorkerImageDto,
   ): Promise<WorkerImageResponseModel> {
@@ -34,6 +37,7 @@ export class WorkerImageController {
   }
 
   @Put(':id')
+  @UseGuards(PlatformAdminGuard)
   async update(
     @Param('id') id: string,
     @Body() data: UpdateWorkerImageDto,
@@ -42,6 +46,7 @@ export class WorkerImageController {
   }
 
   @Delete(':id')
+  @UseGuards(PlatformAdminGuard)
   async delete(@Param('id') id: string): Promise<void> {
     await this.service.delete(Number(id));
   }

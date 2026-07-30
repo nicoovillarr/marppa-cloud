@@ -58,4 +58,12 @@ export class WorkerImagePrismaRepository implements WorkerImageRepository {
       },
     });
   }
+
+  countWorkers(id: number): Promise<number> {
+    return this.prisma.worker.count({
+      where: {
+        imageId: id,
+      },
+    });
+  }
 }

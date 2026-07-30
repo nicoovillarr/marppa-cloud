@@ -13,6 +13,7 @@ import { MeshModule } from '@/mesh/mesh.module';
 import { NucleusModule } from '@/nucleus/nucleus.module';
 import { OrbitModule } from '@/orbit/orbit.module';
 import { SystemModule } from '@/system/system.module';
+import { AdminModule } from '@/admin/admin.module';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -52,6 +53,7 @@ const env = process.env.NODE_ENV ?? 'development';
     NucleusModule,
     OrbitModule,
     SystemModule,
+    AdminModule,
   ],
   providers: [
     {

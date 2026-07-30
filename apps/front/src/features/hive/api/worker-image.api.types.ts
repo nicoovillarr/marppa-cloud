@@ -10,3 +10,15 @@ export type WorkerImageResponseDto = {
     virtualizationType: string;
     workerStorageTypeId: string | null;
 }
+
+export type CreateWorkerImageDto = {
+    name: string;
+    osType: string;
+    osFamily: string;
+    imageUrl: string;
+    architecture: string;
+    virtualizationType: string;
+    description?: string;
+    osVersion?: string;
+    workerStorageTypeId?: number;
+}

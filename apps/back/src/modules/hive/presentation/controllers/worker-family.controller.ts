@@ -8,10 +8,12 @@ import {
   Put,
   Delete,
   Controller,
+  UseGuards,
 } from '@nestjs/common';
 import { CreateWorkerFamilyDto } from '../dtos/create-worker-family.dto';
 import { UpdateWorkerFamilyDto } from '../dtos/update-worker-family.dto';
 import { WorkerFamilyWithFlavorsResponseModel } from '@/hive/application/models/worker-family-with-flavors.response-model';
+import { PlatformAdminGuard } from '@/shared/presentation/guards/platform-admin.guard';
 
 @Controller('hive/families')
 export class WorkerFamilyController {
@@ -28,6 +30,7 @@ export class WorkerFamilyController {
   }
 
   @Post()
+  @UseGuards(PlatformAdminGuard)
   async create(
     @Body() data: CreateWorkerFamilyDto,
   ): Promise<WorkerFamilyResponseModel> {
@@ -35,6 +38,7 @@ export class WorkerFamilyController {
   }
 
   @Put(':id')
+  @UseGuards(PlatformAdminGuard)
   async update(
     @Param('id') id: number,
     @Body() data: UpdateWorkerFamilyDto,
@@ -43,6 +47,7 @@ export class WorkerFamilyController {
   }
 
   @Delete(':id')
+  @UseGuards(PlatformAdminGuard)
   async deprecate(@Param('id') id: number): Promise<void> {
     await this.service.deprecate(Number(id));
   }

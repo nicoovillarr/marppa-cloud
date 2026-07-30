@@ -5,12 +5,15 @@ import {
 } from '../repositories/atom-image.repository';
 import { AtomImageEntity } from '../entities/atom-image.entity';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { CreateAtomImageDto } from '@/nucleus/presentation/dtos/create-atom-image.dto';
+import { UpdateAtomImageDto } from '@/nucleus/presentation/dtos/update-atom-image.dto';
+import { AtomImageInUseError } from '../errors/atom-image-in-use.error';
+import { AtomImageForbiddenCapabilityError } from '../errors/atom-image-forbidden-capability.error';
+import { forbiddenCapabilities } from '@marppa-cloud/shared';
 
-/**
- * The catalog is read-only over HTTP on purpose: an Atom may only run an image
- * that already exists here, and rows are added by the seed (or a migration), so
- * approving an image is a deliberate, reviewed change and never an API call.
- */
+const DEFAULT_REGISTRY = 'docker.io';
+const DEFAULT_ARCHITECTURE = 'amd64';
+
 @Injectable()
 export class AtomImageService {
   constructor(
@@ -29,5 +32,72 @@ export class AtomImageService {
 
   findAll(): Promise<AtomImageEntity[]> {
     return this.repository.findAll();
+  }
+
+  create(data: CreateAtomImageDto): Promise<AtomImageEntity> {
+    this.assertCapabilitiesGrantable(data.capabilities);
+
+    const image = new AtomImageEntity(
+      data.name,
+      data.registry ?? DEFAULT_REGISTRY,
+      data.repository,
+      data.tag,
+      data.architecture ?? DEFAULT_ARCHITECTURE,
+      data.defaultSizeId,
+      {
+        description: data.description,
+        digest: data.digest,
+        capabilities: data.capabilities,
+        sysctls: data.sysctls,
+        command: data.command,
+        requiredEnvVars: data.requiredEnvVars,
+      },
+    );
+
+    return this.repository.create(image);
+  }
+
+  async update(
+    id: number,
+    data: UpdateAtomImageDto,
+  ): Promise<AtomImageEntity> {
+    this.assertCapabilitiesGrantable(data.capabilities);
+
+    const image = await this.findById(id);
+
+    return this.repository.update(
+      image.clone({
+        name: data.name,
+        registry: data.registry,
+        repository: data.repository,
+        tag: data.tag,
+        architecture: data.architecture,
+        defaultSizeId: data.defaultSizeId,
+        description: data.description,
+        digest: data.digest,
+        capabilities: data.capabilities,
+        sysctls: data.sysctls,
+        command: data.command,
+        requiredEnvVars: data.requiredEnvVars,
+      }),
+    );
+  }
+
+  async delete(id: number): Promise<void> {
+    const image = await this.findById(id);
+
+    const atomCount = await this.repository.countAtoms(id);
+    if (atomCount > 0) {
+      throw new AtomImageInUseError(image.name, atomCount);
+    }
+
+    await this.repository.delete(id);
+  }
+
+  private assertCapabilitiesGrantable(capabilities?: string[]): void {
+    const forbidden = forbiddenCapabilities(capabilities ?? []);
+    if (forbidden.length) {
+      throw new AtomImageForbiddenCapabilityError(forbidden);
+    }
   }
 }
