@@ -105,10 +105,10 @@ const createWorkerFamilies = async () => {
         'General purpose.',
       architecture: 'amd64',
       flavors: [
-        { name: 'nano', cpuCores: 0.5, ramMB: 1024, diskGB: 10 },
-        { name: 'small', cpuCores: 1, ramMB: 2048, diskGB: 20 },
-        { name: 'medium', cpuCores: 2, ramMB: 4096, diskGB: 40 },
-        { name: 'large', cpuCores: 4, ramMB: 8192, diskGB: 80 },
+        { name: 'nano', cpuCores: 0.5, ramMB: 1024 },
+        { name: 'small', cpuCores: 1, ramMB: 2048 },
+        { name: 'medium', cpuCores: 2, ramMB: 4096 },
+        { name: 'large', cpuCores: 4, ramMB: 8192 },
       ],
     },
 
@@ -118,9 +118,9 @@ const createWorkerFamilies = async () => {
         'CPU optimized: twice the cores per GB of RAM.',
       architecture: 'amd64',
       flavors: [
-        { name: 'small', cpuCores: 2, ramMB: 2048, diskGB: 20 },
-        { name: 'medium', cpuCores: 4, ramMB: 4096, diskGB: 40 },
-        { name: 'large', cpuCores: 8, ramMB: 8192, diskGB: 80 },
+        { name: 'small', cpuCores: 2, ramMB: 2048 },
+        { name: 'medium', cpuCores: 4, ramMB: 4096 },
+        { name: 'large', cpuCores: 8, ramMB: 8192 },
       ],
     },
 
@@ -130,9 +130,9 @@ const createWorkerFamilies = async () => {
         'Memory optimized: four times the RAM per core.',
       architecture: 'amd64',
       flavors: [
-        { name: 'small', cpuCores: 1, ramMB: 4096, diskGB: 20 },
-        { name: 'medium', cpuCores: 2, ramMB: 8192, diskGB: 40 },
-        { name: 'large', cpuCores: 4, ramMB: 16384, diskGB: 80 },
+        { name: 'small', cpuCores: 1, ramMB: 4096 },
+        { name: 'medium', cpuCores: 2, ramMB: 8192 },
+        { name: 'large', cpuCores: 4, ramMB: 16384 },
       ],
     },
   ];
@@ -166,7 +166,6 @@ type SeededFlavor = {
   name: string;
   cpuCores: number;
   ramMB: number;
-  diskGB: number;
 };
 
 const upsertSeededFlavor = async (familyId: number, flavor: SeededFlavor) => {
@@ -183,8 +182,7 @@ const upsertSeededFlavor = async (familyId: number, flavor: SeededFlavor) => {
 
   const matchesSeed =
     active.cpuCores === flavor.cpuCores &&
-    active.ramMB === flavor.ramMB &&
-    active.diskGB === flavor.diskGB;
+    active.ramMB === flavor.ramMB;
 
   if (matchesSeed) {
     return;

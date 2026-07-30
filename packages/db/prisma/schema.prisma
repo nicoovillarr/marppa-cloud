@@ -252,7 +252,6 @@ model WorkerFlavor {
   version  Int    @default(1)
   cpuCores Float
   ramMB    Int
-  diskGB   Int
 
   pricePerHourCents Int @default(0)
 

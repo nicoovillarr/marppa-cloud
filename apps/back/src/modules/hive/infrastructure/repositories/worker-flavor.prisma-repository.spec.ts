@@ -53,7 +53,6 @@ describe('WorkerFlavorPrismaRepository (Integration)', () => {
         `${testNamePrefix}-create`,
         4,
         8192,
-        100,
         testFamilyId,
       );
 
@@ -64,7 +63,6 @@ describe('WorkerFlavorPrismaRepository (Integration)', () => {
       expect(result.name).toBe(`${testNamePrefix}-create`);
       expect(result.cpuCores).toBe(4);
       expect(result.ramMB).toBe(8192);
-      expect(result.diskGB).toBe(100);
 
       createdFlavorId = result.id!;
     });
@@ -106,7 +104,6 @@ describe('WorkerFlavorPrismaRepository (Integration)', () => {
         `${testNamePrefix}-create`,
         8,
         16384,
-        100,
         testFamilyId,
         { version: 2 },
       );

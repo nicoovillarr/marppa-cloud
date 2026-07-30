@@ -108,10 +108,6 @@ export function CreateWorkerForm() {
       label: "RAM (MB)",
       minWidth: "150px",
     },
-    diskGB: {
-      label: "Disk (GB)",
-      minWidth: "150px",
-    },
   }), [families]);
 
   const buttonRef = useRef<ButtonRef>(null);
@@ -270,15 +266,22 @@ export function CreateWorkerForm() {
         />
 
         {selectedImage ? (
-          <FormTable
-            controlName="workerMmiId"
-            control={control}
-            label="Instance Type"
-            data={flavors}
-            columns={columns}
-            getKey={(flavor) => flavor.id}
-            required
-          />
+          <>
+            <FormTable
+              controlName="workerMmiId"
+              control={control}
+              label="Instance Type"
+              data={flavors}
+              columns={columns}
+              getKey={(flavor) => flavor.id}
+              required
+            />
+
+            <p className="text-xs text-ink-muted -mt-2">
+              Every instance type gets the same boot disk. Extra space comes from
+              attaching a volume, not from picking a bigger instance.
+            </p>
+          </>
         ) : (
           <p className="text-sm text-ink-muted">
             Pick a worker image first: instance types are filtered by the

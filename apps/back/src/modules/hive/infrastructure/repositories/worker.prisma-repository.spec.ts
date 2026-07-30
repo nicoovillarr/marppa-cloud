@@ -30,7 +30,6 @@ describe('WorkerPrismaRepository (Integration)', () => {
     const { id: workerFlavorId } = await prisma.workerFlavor.create({
       data: {
         name: `${testNamePrefix}-flavor`,
-        diskGB: 10,
         ramMB: 1024,
         cpuCores: 1,
         family: {
@@ -212,7 +211,6 @@ describe('WorkerPrismaRepository (Integration)', () => {
       expect(result?.flavor?.name).toBeDefined();
       expect(result?.flavor?.cpuCores).toBeDefined();
       expect(result?.flavor?.ramMB).toBeDefined();
-      expect(result?.flavor?.diskGB).toBeDefined();
 
       // Verify node is null (no node assigned)
       expect(result?.node).toBeNull();

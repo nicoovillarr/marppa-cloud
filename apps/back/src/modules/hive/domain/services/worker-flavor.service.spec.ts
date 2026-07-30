@@ -19,7 +19,6 @@ describe('WorkerFlavorService', () => {
     'Test Flavor',
     4,
     8192,
-    100,
     1,
     {
       id: 1,
@@ -88,7 +87,6 @@ describe('WorkerFlavorService', () => {
       name: 'New Flavor',
       cpuCores: 8,
       ramMB: 16384,
-      diskGB: 200,
       familyId: 1,
     };
 
@@ -118,7 +116,6 @@ describe('WorkerFlavorService', () => {
     const dto: UpdateWorkerFlavorDto = {
       cpuCores: 16,
       ramMB: 32768,
-      diskGB: 200,
     };
 
     it('should add a new version and deprecate the current one', async () => {
@@ -138,7 +135,7 @@ describe('WorkerFlavorService', () => {
 
     it('should keep the current price when the revision omits it', async () => {
       mockWorkerFlavorRepository.findById.mockResolvedValue(
-        new WorkerFlavorEntity('Priced', 2, 4096, 40, 1, {
+        new WorkerFlavorEntity('Priced', 2, 4096, 1, {
           id: 5,
           pricePerHourCents: 120,
         }),
@@ -155,7 +152,7 @@ describe('WorkerFlavorService', () => {
 
     it('should refuse to revise a deprecated flavor', async () => {
       mockWorkerFlavorRepository.findById.mockResolvedValue(
-        new WorkerFlavorEntity('Old', 2, 4096, 40, 1, {
+        new WorkerFlavorEntity('Old', 2, 4096, 1, {
           id: 6,
           deprecatedAt: new Date(),
         }),
@@ -187,7 +184,7 @@ describe('WorkerFlavorService', () => {
 
     it('should leave an already deprecated flavor untouched', async () => {
       mockWorkerFlavorRepository.findById.mockResolvedValue(
-        new WorkerFlavorEntity('Old', 2, 4096, 40, 1, {
+        new WorkerFlavorEntity('Old', 2, 4096, 1, {
           id: 7,
           deprecatedAt: new Date(),
         }),

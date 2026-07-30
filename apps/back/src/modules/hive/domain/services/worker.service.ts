@@ -20,6 +20,7 @@ import { WorkerImageService } from './worker-image.service';
 import { HiveCapacityService } from './hive-capacity.service';
 import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
 import { WorkerArchitectureMismatchError } from '../errors/worker-architecture-mismatch.error';
+import { getWorkerBootDiskGB } from '../config/worker-boot-disk.config';
 
 @Injectable()
 export class WorkerService {
@@ -98,7 +99,13 @@ export class WorkerService {
       );
     }
 
-    await this.hiveCapacityService.assertFitsOnCreate(flavor);
+    const specs = {
+      cpuCores: flavor.cpuCores,
+      ramMB: flavor.ramMB,
+      diskGB: getWorkerBootDiskGB(),
+    };
+
+    await this.hiveCapacityService.assertFitsOnCreate(specs);
 
     const macAddress = this.macAddressService.generate();
 
@@ -110,9 +117,9 @@ export class WorkerService {
       data.imageId,
       data.flavorId,
       data.ownerId ?? user.companyId,
-      flavor.cpuCores,
-      flavor.ramMB,
-      flavor.diskGB,
+      specs.cpuCores,
+      specs.ramMB,
+      specs.diskGB,
     );
 
     return this.save(entity);

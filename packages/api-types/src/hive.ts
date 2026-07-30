@@ -52,7 +52,6 @@ export interface CreateWorkerFlavorRequest {
   name: string;
   cpuCores: number;
   ramMB: number;
-  diskGB: number;
   pricePerHourCents?: number;
   familyId: number;
 }
@@ -60,7 +59,6 @@ export interface CreateWorkerFlavorRequest {
 export interface UpdateWorkerFlavorRequest {
   cpuCores: number;
   ramMB: number;
-  diskGB: number;
   pricePerHourCents?: number;
 }
 
@@ -113,7 +111,6 @@ export interface WorkerFlavorResponse {
   version: number;
   cpuCores: number;
   ramMB: number;
-  diskGB: number;
   pricePerHourCents: number;
   deprecatedAt: Date | null;
   familyId: number;

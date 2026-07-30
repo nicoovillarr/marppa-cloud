@@ -6,7 +6,6 @@ export class WorkerFlavorResponseModel {
   @Expose() version: number;
   @Expose() cpuCores: number;
   @Expose() ramMB: number;
-  @Expose() diskGB: number;
   @Expose() pricePerHourCents: number;
   @Expose() deprecatedAt: Date | null;
   @Expose() familyId: number;

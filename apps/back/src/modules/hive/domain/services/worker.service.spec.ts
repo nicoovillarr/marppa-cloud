@@ -49,7 +49,6 @@ describe('WorkerService', () => {
     'Test Flavor',
     2,
     4096,
-    50,
     1,
     { id: 1 },
   );
@@ -292,7 +291,7 @@ describe('WorkerService', () => {
       const createdEntity = (repository.create as jest.Mock).mock.calls[0][0];
       expect(createdEntity.cpuCores).toBe(mockFlavor.cpuCores);
       expect(createdEntity.ramMB).toBe(mockFlavor.ramMB);
-      expect(createdEntity.diskGB).toBe(mockFlavor.diskGB);
+      expect(createdEntity.diskGB).toBe(20);
     });
 
     it('should reject a deprecated flavor', async () => {
@@ -305,7 +304,7 @@ describe('WorkerService', () => {
 
       mockWorkerFlavorService.findByIdWithFamily.mockResolvedValue(
         new WorkerFlavorWithFamilyModel(
-          new WorkerFlavorEntity('Old Flavor', 2, 4096, 50, 1, {
+          new WorkerFlavorEntity('Old Flavor', 2, 4096, 1, {
             id: 1,
             deprecatedAt: new Date(),
           }),

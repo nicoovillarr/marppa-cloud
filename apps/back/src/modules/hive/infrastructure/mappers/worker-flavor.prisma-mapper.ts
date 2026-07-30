@@ -7,7 +7,6 @@ export class WorkerFlavorPrismaMapper {
       raw.name,
       raw.cpuCores,
       raw.ramMB,
-      raw.diskGB,
       raw.familyId,
       {
         id: raw.id,

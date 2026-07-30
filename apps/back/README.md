@@ -131,11 +131,21 @@ for a tenant that genuinely needs another shape is a **private family**, not a s
   (`@marppa-cloud/api-types`), alongside the `MIN_WORKER_*` floors the flavor DTOs
   validate. The disk floor exists because a copied cloud image cannot be shrunk with
   qcow2 — a flavor smaller than the base image fails at provisioning time.
-- **`WorkerFlavor.diskGB` is the boot disk.** It is the size cloud-scripts grows the
-  copied base image to. `WorkerDisk` is a separate, currently CRUD-only model intended
-  for extra attached volumes; nothing in provisioning reads it yet, and its `isBoot`
-  flag is unused. Sizing an *extra* disk by hand is fine — it does not fragment the
-  scheduler — but the boot disk always comes from the flavor.
+- **Disk is not part of a flavor.** A flavor is a CPU × RAM shape; there is no `diskGB`
+  column on it. The boot disk is one platform-wide value, `WORKER_BOOT_DISK_GB`
+  (`getWorkerBootDiskGB()`, default 20, floored at `MIN_WORKER_DISK_GB` because a copied
+  cloud image cannot be shrunk with qcow2). A workload that needs space gets an extra
+  volume rather than being pushed into cores it does not need.
+
+  `Worker.diskGB` still exists and is still a snapshot: raising the default does not
+  resize existing workers, and cloud-scripts grows the copied base image to the worker's
+  own value. The UI does not print the number before create — it says the boot disk is
+  fixed and shows the real size on the worker itself. If it should be visible up front,
+  that wants a small `GET /hive/config`, not a duplicated constant in the frontend.
+
+  The growth path is `WorkerDisk`, which is **not wired to provisioning yet** — it has
+  CRUD in the backend, nothing reads it, and its `isBoot` flag is unused. Until it is,
+  `WORKER_BOOT_DISK_GB` is a hard ceiling for every worker.
 - **Capacity is checked before an event is queued.** `HiveCapacityService` compares the
   requested specs against a configured host budget and the sums already committed in the
   database: on create it checks disk (the image file is allocated at create) and that the
@@ -149,6 +159,7 @@ for a tenant that genuinely needs another shape is a **private family**, not a s
   | `HIVE_VCPU_OVERCOMMIT` | `2` | Multiplier applied to `HIVE_HOST_VCPU`. |
   | `HIVE_HOST_RAM_MB` | `24576` | Memory allocatable to guests, i.e. host RAM minus what the host and atoms need. |
   | `HIVE_HOST_DISK_GB` | `380` | Space allocatable under `/var/lib/libvirt/images`. |
+  | `WORKER_BOOT_DISK_GB` | `20` | Boot disk every worker gets. Snapshotted per worker at create. |
 
   This is accounting, not a measurement: cloud-scripts re-checks the real host with `df`
   and `free` before it copies a disk or starts a domain, keeping a fixed headroom. The

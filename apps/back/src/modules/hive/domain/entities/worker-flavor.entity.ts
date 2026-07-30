@@ -20,7 +20,6 @@ export class WorkerFlavorEntity extends PatchableEntity {
     public readonly name: string,
     public readonly cpuCores: number,
     public readonly ramMB: number,
-    public readonly diskGB: number,
     public readonly familyId: number,
     optionals: WorkerFlavorOptionalProps = {},
   ) {
@@ -43,7 +42,6 @@ export class WorkerFlavorEntity extends PatchableEntity {
       version: this.version,
       cpuCores: this.cpuCores,
       ramMB: this.ramMB,
-      diskGB: this.diskGB,
       pricePerHourCents: this.pricePerHourCents,
       deprecatedAt: this.deprecatedAt,
       familyId: this.familyId,
@@ -55,7 +53,6 @@ export class WorkerFlavorEntity extends PatchableEntity {
       data.name,
       data.cpuCores,
       data.ramMB,
-      data.diskGB,
       data.familyId,
       {
         id: data.id,

@@ -55,7 +55,6 @@ export class WorkerFlavorService {
         data.name,
         data.cpuCores,
         data.ramMB,
-        data.diskGB,
         data.familyId,
         {
           pricePerHourCents: data.pricePerHourCents,
@@ -82,7 +81,6 @@ export class WorkerFlavorService {
       current.name,
       data.cpuCores,
       data.ramMB,
-      data.diskGB,
       current.familyId,
       {
         version: latestVersion + 1,
