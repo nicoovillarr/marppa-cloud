@@ -15,11 +15,6 @@ import { UpdateAdminUserDto } from '@/admin/presentation/dtos/update-admin-user.
 import { LastOwnerProtectedError } from '../errors/last-owner-protected.error';
 import { SelfDemotionError } from '../errors/self-demotion.error';
 
-export interface AdminUserUpdateResult {
-  user: AdminUserModel;
-  sessionsRevoked: boolean;
-}
-
 @Injectable()
 export class AdminUserService {
   constructor(
@@ -56,10 +51,7 @@ export class AdminUserService {
     return this.findById(created.id!);
   }
 
-  async update(
-    id: string,
-    data: UpdateAdminUserDto,
-  ): Promise<AdminUserUpdateResult> {
+  async update(id: string, data: UpdateAdminUserDto): Promise<AdminUserModel> {
     const user = await this.findById(id);
 
     if (user.id === getCurrentUser()?.userId && this.demotesSelf(user, data)) {
@@ -81,12 +73,11 @@ export class AdminUserService {
       await this.userService.updateUserPassword(id, data.password);
     }
 
-    const sessionsRevoked = this.invalidatesCredentials(user, data);
-    if (sessionsRevoked) {
+    if (this.invalidatesCredentials(user, data)) {
       await this.repository.revokeSessions(id);
     }
 
-    return { user: updated, sessionsRevoked };
+    return updated;
   }
 
   async delete(id: string): Promise<void> {

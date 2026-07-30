@@ -5,7 +5,6 @@ import { AtomImageResponseModel } from '../models/atom-image.response-model';
 import { CreateAtomImageDto } from '@/nucleus/presentation/dtos/create-atom-image.dto';
 import { UpdateAtomImageDto } from '@/nucleus/presentation/dtos/update-atom-image.dto';
 import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
-import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 
 @Injectable()
 export class AtomImageApiService {
@@ -32,7 +31,6 @@ export class AtomImageApiService {
     data: CreateAtomImageDto,
   ): Promise<AtomImageResponseModel> {
     const image = await this.service.create(data);
-    await this.audit(EventTypeKey.ADMIN_CATALOG_CREATED, image.id!, image.name);
 
     return plainToInstance(AtomImageResponseModel, image, {
       excludeExtraneousValues: true,
@@ -44,7 +42,6 @@ export class AtomImageApiService {
     data: UpdateAtomImageDto,
   ): Promise<AtomImageResponseModel> {
     const image = await this.service.update(id, data);
-    await this.audit(EventTypeKey.ADMIN_CATALOG_UPDATED, image.id!, image.name);
 
     return plainToInstance(AtomImageResponseModel, image, {
       excludeExtraneousValues: true,
@@ -52,20 +49,6 @@ export class AtomImageApiService {
   }
 
   public async delete(id: number): Promise<void> {
-    const image = await this.service.findById(id);
     await this.service.delete(id);
-    await this.audit(EventTypeKey.ADMIN_CATALOG_DELETED, id, image.name);
-  }
-
-  private audit(
-    type: EventTypeKey,
-    id: number,
-    name: string,
-  ): Promise<number> {
-    return this.eventDispatch.record({
-      type,
-      primary: { type: 'AtomImage', id: String(id) },
-      properties: { name },
-    });
   }
 }

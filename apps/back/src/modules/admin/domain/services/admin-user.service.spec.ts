@@ -73,7 +73,7 @@ describe('AdminUserService', () => {
       mockRepository.update.mockResolvedValue(user('victim'));
       mockRepository.countOwners.mockResolvedValue(2);
 
-      const result = await asUser('admin', () =>
+      await asUser('admin', () =>
         service.update('victim', { password: 'a-new-password' }),
       );
 
@@ -82,7 +82,6 @@ describe('AdminUserService', () => {
         'a-new-password',
       );
       expect(repository.revokeSessions).toHaveBeenCalledWith('victim');
-      expect(result.sessionsRevoked).toBe(true);
     });
 
     it('revokes sessions when the role changes', async () => {
@@ -90,24 +89,22 @@ describe('AdminUserService', () => {
       mockRepository.update.mockResolvedValue(user('victim', UserRole.MEMBER));
       mockRepository.countOwners.mockResolvedValue(2);
 
-      const result = await asUser('admin', () =>
+      await asUser('admin', () =>
         service.update('victim', { role: UserRole.MEMBER }),
       );
 
       expect(repository.revokeSessions).toHaveBeenCalledWith('victim');
-      expect(result.sessionsRevoked).toBe(true);
     });
 
     it('leaves sessions alone for a plain rename', async () => {
       mockRepository.findById.mockResolvedValue(user('victim'));
       mockRepository.update.mockResolvedValue(user('victim'));
 
-      const result = await asUser('admin', () =>
+      await asUser('admin', () =>
         service.update('victim', { name: 'New Name' }),
       );
 
       expect(repository.revokeSessions).not.toHaveBeenCalled();
-      expect(result.sessionsRevoked).toBe(false);
     });
 
     it('refuses to demote the last owner of a company', async () => {

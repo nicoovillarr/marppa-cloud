@@ -649,3 +649,17 @@ model EventProperty {
 
   @@unique([eventId, key], name: "unique_event_property")
 }
+
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  tableName String
+  operation String
+  rowId     String?
+  actor     String?
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  @@index([tableName, rowId])
+  @@index([createdAt])
+}

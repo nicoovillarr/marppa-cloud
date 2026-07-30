@@ -27,17 +27,6 @@ export class EventDispatchService {
   ) {}
 
   public async dispatch(input: DispatchInput): Promise<number> {
-    const eventId = await this.persist(input);
-    await this.eventQueueService.enqueue(eventId, input.primary);
-
-    return eventId;
-  }
-
-  public record(input: DispatchInput): Promise<number> {
-    return this.persist(input);
-  }
-
-  private async persist(input: DispatchInput): Promise<number> {
     const { id: eventId } = await this.eventService.create({
       type: input.type,
       notes: input.notes,
@@ -80,6 +69,8 @@ export class EventDispatchService {
         await this.eventService.addEventProperty(eventId, key, value);
       }
     }
+
+    await this.eventQueueService.enqueue(eventId, input.primary);
 
     return eventId;
   }

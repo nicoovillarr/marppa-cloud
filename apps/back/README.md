@@ -117,11 +117,7 @@ Guardrails live in the domain services, not the UI:
   atom tries to use them. `AtomService` and the worker still grade capabilities on
   create and start (that is the enforcement); rejecting them on the way in stops an
   image being approved that could never run.
-- **Every admin mutation is recorded** through `EventDispatchService.record()`, a
-  persist-without-enqueue sibling of `dispatch()`. Admin actions have no host work
-  to do, so putting them on the BullMQ queue would hand cloud-scripts events no
-  processor claims; they are audit rows, not jobs. They land on the acting admin's
-  company — the root one — because `Event.companyId` is required.
+- **The audit trail is a database trigger, not application code.** See below.
 
 ### Catalog visibility
 
@@ -133,6 +129,35 @@ into deprecated rows, which the tenant-facing listings still hide. The admin UI
 passes it, so "deprecate" reads as a state change there rather than a row
 vanishing, and a deprecated row can be restored (`POST .../:id/restore`) instead of
 needing SQL. Restoring a flavor whose family is still deprecated is a `409`.
+
+### Audit trail
+
+`AuditLog` is written by an `AFTER INSERT OR UPDATE OR DELETE` trigger
+(`audit_row_change`, migration `20260730210000_audit_log_triggers`) attached to 19
+tables. It is deliberately **not** application code: three separate Prisma clients
+write to this database — `apps/back`, `apps/cloud-scripts` and `prisma/seed.ts` —
+plus two `$queryRaw` sites in `DeleteProcessor`, so anything living in one service
+covers a fraction of the writes and silently misses the rest. An earlier version of
+this was a set of hand-placed `audit()` calls; it shipped with five call sites
+already missing, which is the argument against it.
+
+- **What it stores.** `tableName`, `operation`, the row's `id` when it has one, and
+  `before`/`after` as `jsonb`. Deletes carry `before` only, inserts `after` only.
+- **Secrets never reach it.** `password`, `apiKey`, `consolePassword` and
+  `refreshToken` are stripped from every row, and `AtomEnvVar.value` on top of that.
+  Copying a secret into a second table to record that it changed defeats storing it
+  once.
+- **`Session` and `Token` are not audited** (they churn on every login and tick),
+  nor are `Event`/`EventResource`/`EventProperty`, which are already append-only.
+- **`actor` is `NULL` for now.** The trigger reads `current_setting('app.actor')`,
+  which nothing sets yet, so a `NULL` means "not attributed" and never "nobody".
+  Populating it requires `set_config('app.actor', …, true)` as the first statement
+  of an explicit transaction — verified working, but every write would have to run
+  inside one, and today the codebase has four transactions in total. Two things
+  block it: a request-wide transaction in `back` would enqueue BullMQ jobs before
+  the commit that makes their event row visible, and in `cloud-scripts` the
+  intermediate status writes exist precisely to be readable *during* the host work,
+  so a job-wide transaction would hide them. That is a separate piece of work.
 
 ### Infra resource lifecycle
 
