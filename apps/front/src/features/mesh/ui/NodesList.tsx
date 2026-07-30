@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { FormLabel } from "@/core/ui/inputs/form/FormLabel";
 import { ColumnMapping, Table } from "@/core/ui/Table";
 import { redirect } from "next/navigation";
-import { LuListPlus, LuRefreshCcw } from "react-icons/lu";
+import { LuRefreshCcw } from "react-icons/lu";
 import { Button } from "@/core/ui/Button";
 import { NodeWithFibers } from "../api/node.api.types";
 import { useZone } from "../models/use-zone";
@@ -15,8 +15,6 @@ import { ZoneWithNodesAndFibers } from "../api/zone.api.types";
 import { TableSkeleton } from "@/core/ui/AsyncTable";
 import { closeCurrentDialog, useDialog } from "@/core/ui/DialogProvider";
 import { useWebSocket } from "@/core/ui/WebsocketProvider";
-import { AssignAtomDialog } from "./AssignAtomDialog";
-import { AssignWorkerDialog } from "./AssignWorkerDialog";
 import { FiberCreateDialog } from "./FiberCreateDialog";
 import { FibersDialog } from "./FibersDialog";
 import { StatusBadge } from "@/core/ui/StatusBadge";
@@ -51,22 +49,6 @@ export function NodesList({ zoneId }: { zoneId: string }) {
       }
     });
   }, [zoneId, fetchZone]);
-
-  const openAssignWorkerDialog = () => {
-    showDialog({
-      title: "Assign Worker",
-      description: "Reserve an IP in this zone and attach the worker to it.",
-      content: <AssignWorkerDialog zoneId={zoneId} onAssigned={refresh} />,
-    });
-  };
-
-  const openAssignAtomDialog = () => {
-    showDialog({
-      title: "Assign Atom",
-      description: "Reserve an IP in this zone for a container.",
-      content: <AssignAtomDialog zoneId={zoneId} onAssigned={refresh} />,
-    });
-  };
 
   const openCreateFiberDialog = (node: NodeWithFibers) => {
     showDialog({
@@ -249,23 +231,6 @@ export function NodesList({ zoneId }: { zoneId: string }) {
           style="secondary"
           onClick={refresh}
         />
-
-        <Button
-          type="button"
-          className="ml-2"
-          text="Assign Worker"
-          icon={<LuListPlus />}
-          onClick={openAssignWorkerDialog}
-        />
-
-        <Button
-          type="button"
-          className="ml-2"
-          text="Assign Atom"
-          icon={<LuListPlus />}
-          style="secondary"
-          onClick={openAssignAtomDialog}
-        />
       </header>
 
       {zone.nodes.length > 0 ? (
@@ -278,7 +243,8 @@ export function NodesList({ zoneId }: { zoneId: string }) {
         />
       ) : (
         <p className="text-sm text-ink-muted">
-          No nodes yet. Assign a worker or an atom to reserve its IP in this zone.
+          No nodes yet. Assign a worker or an atom to this zone from its own
+          dialog in Hive or Nucleus.
         </p>
       )}
     </section>

@@ -7,6 +7,7 @@ import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { Button } from "@/core/ui/Button";
 import { InlineCode } from "@/core/ui/InlineCode";
 import { closeCurrentDialog } from "@/core/ui/DialogProvider";
+import { NodeSection } from "@/mesh/ui/NodeSection";
 import { AtomWithRelationsResponseDto } from "../api/atom.api.types";
 import { useAtom } from "../models/use-atom";
 import { AtomEnvVarsSection } from "./AtomEnvVarsSection";
@@ -92,7 +93,7 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
           <Button
             text="Delete"
             style="danger"
-            disabled={busy || !isOff || hasNode}
+            disabled={busy || !isOff}
             onClick={() =>
               run(
                 () => deleteAtom(atom.id),
@@ -121,14 +122,14 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
 
         {isOff && !hasNode && (
           <p className="text-xs text-ink-muted">
-            Assign this atom to a zone from Mesh → the zone's Nodes list. Without
-            a node it has no address on any bridge and cannot start.
+            Assign this atom to a zone below. Without a node it has no address on
+            any bridge and cannot start.
           </p>
         )}
 
         {isOff && hasNode && (
           <p className="text-xs text-ink-muted">
-            Unassign its node in Mesh before deleting it.
+            Deleting it also releases its node and every fiber on it.
           </p>
         )}
 
@@ -136,6 +137,16 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
           <p className="text-xs text-ink-muted">Stop it first to delete it.</p>
         )}
       </section>
+
+      <NodeSection
+        node={atom.node}
+        target={{ atomId: atom.id }}
+        editable={isOff}
+        onChanged={() => {
+          closeCurrentDialog();
+          onChanged?.();
+        }}
+      />
 
       <AtomEnvVarsSection atomId={atom.id} editable={isOff} />
     </div>
