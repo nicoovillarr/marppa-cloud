@@ -55,7 +55,7 @@ export class WorkerFamilyApiService {
     });
   }
 
-  async delete(id: number): Promise<void> {
-    await this.service.delete(id);
+  async deprecate(id: number): Promise<void> {
+    await this.service.deprecate(id);
   }
 }

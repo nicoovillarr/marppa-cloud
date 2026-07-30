@@ -24,6 +24,7 @@ describe('WorkerFlavorPrismaRepository (Integration)', () => {
       data: {
         name: `${testNamePrefix}-family`,
         description: 'Test family for flavors',
+        architecture: 'amd64',
       },
     });
 
@@ -82,37 +83,57 @@ describe('WorkerFlavorPrismaRepository (Integration)', () => {
       expect(result).toBeNull();
     });
 
-    it('should update a worker flavor', async () => {
-      const existingFlavor = await repository.findById(createdFlavorId);
-      const updatedFlavor = existingFlavor!.clone({
-        name: `${testNamePrefix}-updated`,
-        cpuCores: 8,
-        ramMB: 16384,
-      });
+    it('should find a worker flavor with its family', async () => {
+      const result = await repository.findByIdWithFamily(createdFlavorId);
 
-      const result = await repository.update(updatedFlavor);
+      expect(result?.family.id).toBe(testFamilyId);
+      expect(result?.qualifiedName).toBe(
+        `${testNamePrefix}-family.${testNamePrefix}-create`,
+      );
+    });
 
-      expect(result).toBeDefined();
-      expect(result.id).toBe(createdFlavorId);
-      expect(result.name).toBe(`${testNamePrefix}-updated`);
+    it('should report the highest version of a flavor name', async () => {
+      const result = await repository.findMaxVersion(
+        testFamilyId,
+        `${testNamePrefix}-create`,
+      );
+
+      expect(result).toBe(1);
+    });
+
+    it('should store a second version alongside the first', async () => {
+      const revision = new WorkerFlavorEntity(
+        `${testNamePrefix}-create`,
+        8,
+        16384,
+        100,
+        testFamilyId,
+        { version: 2 },
+      );
+
+      const result = await repository.create(revision);
+
+      expect(result.version).toBe(2);
       expect(result.cpuCores).toBe(8);
-      expect(result.ramMB).toBe(16384);
+      expect(
+        await repository.findMaxVersion(
+          testFamilyId,
+          `${testNamePrefix}-create`,
+        ),
+      ).toBe(2);
     });
 
-    it('should verify the update persisted', async () => {
-      const result = await repository.findById(createdFlavorId);
-
-      expect(result).toBeDefined();
-      expect(result?.name).toBe(`${testNamePrefix}-updated`);
-      expect(result?.cpuCores).toBe(8);
-      expect(result?.ramMB).toBe(16384);
-    });
-
-    it('should delete a worker flavor', async () => {
-      await repository.delete(createdFlavorId);
+    it('should deprecate a worker flavor and drop it from the active list', async () => {
+      await repository.deprecate(createdFlavorId, new Date());
 
       const result = await repository.findById(createdFlavorId);
-      expect(result).toBeNull();
+      expect(result?.isDeprecated).toBe(true);
+
+      const active = await repository.findAll(false);
+      expect(active.map((flavor) => flavor.id)).not.toContain(createdFlavorId);
+
+      const all = await repository.findAll(true);
+      expect(all.map((flavor) => flavor.id)).toContain(createdFlavorId);
     });
   });
 });

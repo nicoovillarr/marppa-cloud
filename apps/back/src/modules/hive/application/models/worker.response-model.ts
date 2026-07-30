@@ -12,4 +12,7 @@ export class WorkerResponseModel {
   @Expose() ownerId: string;
   @Expose() imageId: number;
   @Expose() flavorId: number;
+  @Expose() cpuCores: number;
+  @Expose() ramMB: number;
+  @Expose() diskGB: number;
 }

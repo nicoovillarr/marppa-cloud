@@ -377,6 +377,20 @@ process refuses to boot with a list of what is wrong.
 | `USE_STUBS` | no | `true` replaces every host service with a no-op stub **and skips the preflight**. Development only — never set it on the host. |
 | `NODE_ENV` | no | Selects the `.env` cascade. |
 
+### Host capacity preflight
+
+`LinuxHiveService` refuses to provision or boot a VM the host cannot actually hold, and
+fails the event with the real numbers instead of letting libvirt or the guest die halfway:
+
+- `WORKER_CREATE` reads `df` on `/var/lib/libvirt/images` before copying the base image
+  and needs the flavor's disk plus 20 GB of headroom.
+- `WORKER_START` reads the domain's configured memory (`virsh dominfo`) and `free -m`'s
+  available column, and needs that memory plus 2 GB of headroom.
+
+The backend runs its own accounting check (see its README, "Hive catalog") so the API can
+answer immediately; these two are the ones that look at the machine's real state, which
+also covers whatever is running outside the platform.
+
 ---
 
 ## 3. Install and run

@@ -33,9 +33,13 @@ describe('WorkerFamilyPrismaRepository (Integration)', () => {
     let createdFamilyId: number;
 
     it('should create a worker family', async () => {
-      const family = new WorkerFamilyEntity(`${testNamePrefix}-create`, {
-        description: 'Test family description',
-      });
+      const family = new WorkerFamilyEntity(
+        `${testNamePrefix}-create`,
+        'amd64',
+        {
+          description: 'Test family description',
+        },
+      );
 
       const result = await repository.create(family);
 
@@ -83,11 +87,16 @@ describe('WorkerFamilyPrismaRepository (Integration)', () => {
       expect(result?.description).toBe('Updated description');
     });
 
-    it('should delete a worker family', async () => {
-      await repository.delete(createdFamilyId);
+    it('should deprecate a worker family and hide it from the catalog', async () => {
+      await repository.deprecate(createdFamilyId, new Date());
 
       const result = await repository.findById(createdFamilyId);
-      expect(result).toBeNull();
+      expect(result?.isDeprecated).toBe(true);
+
+      const available = await repository.findAvailableFor('c-000001');
+      expect(available.map((entry) => entry.family.id)).not.toContain(
+        createdFamilyId,
+      );
     });
   });
 });

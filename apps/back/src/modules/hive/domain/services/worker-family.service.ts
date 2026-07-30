@@ -6,6 +6,8 @@ import { CreateWorkerFamilyDto } from '@/hive/presentation/dtos/create-worker-fa
 import { UpdateWorkerFamilyDto } from '@/hive/presentation/dtos/update-worker-family.dto';
 import { WORKER_FAMILY_REPOSITORY_SYMBOL } from '../repositories/worker-family.repository';
 import { WorkerFamilyWithFlavorsModel } from '../models/worker-family-with-flavors.model';
+import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 
 @Injectable()
 export class WorkerFamilyService {
@@ -15,12 +17,12 @@ export class WorkerFamilyService {
   ) { }
 
   async findAll(): Promise<WorkerFamilyWithFlavorsModel[]> {
-    return await this.workerFamilyRepository.findAll();
+    return this.workerFamilyRepository.findAvailableFor(this.currentCompanyId());
   }
 
   async findById(id: number): Promise<WorkerFamilyEntity> {
     const workerFamily = await this.workerFamilyRepository.findById(id);
-    if (!workerFamily) {
+    if (!workerFamily || !workerFamily.isVisibleTo(this.currentCompanyId())) {
       throw new NotFoundError();
     }
 
@@ -28,8 +30,15 @@ export class WorkerFamilyService {
   }
 
   async create(data: CreateWorkerFamilyDto): Promise<WorkerFamilyEntity> {
-    const entity = new WorkerFamilyEntity(data.name, {
+    const companyId = this.currentCompanyId();
+
+    if (data.ownerId != null && data.ownerId !== companyId) {
+      throw new UnauthorizedError();
+    }
+
+    const entity = new WorkerFamilyEntity(data.name, data.architecture, {
       description: data.description,
+      ownerId: data.ownerId,
     });
 
     return this.save(entity);
@@ -41,15 +50,28 @@ export class WorkerFamilyService {
   ): Promise<WorkerFamilyEntity> {
     const entity = await this.findById(id);
     const updated = entity.clone({
-      name: data.name,
       description: data.description,
     });
 
     return this.save(updated);
   }
 
-  delete(id: number): Promise<void> {
-    return this.workerFamilyRepository.delete(id);
+  async deprecate(id: number): Promise<void> {
+    const entity = await this.findById(id);
+    if (entity.isDeprecated) {
+      return;
+    }
+
+    await this.workerFamilyRepository.deprecate(entity.id!, new Date());
+  }
+
+  private currentCompanyId(): string {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    return user.companyId;
   }
 
   private save(entity: WorkerFamilyEntity): Promise<WorkerFamilyEntity> {

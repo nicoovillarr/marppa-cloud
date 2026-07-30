@@ -11,6 +11,9 @@ export class WorkerFlavorPrismaMapper {
       raw.familyId,
       {
         id: raw.id,
+        version: raw.version,
+        pricePerHourCents: raw.pricePerHourCents,
+        deprecatedAt: raw.deprecatedAt,
       },
     );
   }

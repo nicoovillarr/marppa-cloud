@@ -4,6 +4,9 @@ export type WorkerFamilyResponseDto = {
     id: number;
     name: string;
     description: string | null;
+    architecture: string;
+    ownerId: string | null;
+    deprecatedAt: Date | null;
 }
 
 export type WorkerFamilyWithRelationsResponseDto = WorkerFamilyResponseDto & {

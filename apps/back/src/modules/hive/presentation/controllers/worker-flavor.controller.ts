@@ -34,15 +34,15 @@ export class WorkerFlavorController {
   }
 
   @Put(':id')
-  async update(
+  async revise(
     @Param('id') id: string,
     @Body() data: UpdateWorkerFlavorDto,
   ): Promise<WorkerFlavorResponseModel> {
-    return await this.service.update(Number(id), data);
+    return await this.service.revise(Number(id), data);
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string): Promise<void> {
-    await this.service.delete(Number(id));
+  async deprecate(@Param('id') id: string): Promise<void> {
+    await this.service.deprecate(Number(id));
   }
 }

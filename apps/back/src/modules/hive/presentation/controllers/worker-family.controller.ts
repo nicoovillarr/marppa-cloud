@@ -43,7 +43,7 @@ export class WorkerFamilyController {
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: number): Promise<void> {
-    await this.service.delete(Number(id));
+  async deprecate(@Param('id') id: number): Promise<void> {
+    await this.service.deprecate(Number(id));
   }
 }

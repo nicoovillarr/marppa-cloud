@@ -23,6 +23,7 @@ describe('WorkerPrismaRepository (Integration)', () => {
     const { id: workerFamilyId } = await prisma.workerFamily.create({
       data: {
         name: `${testNamePrefix}-family`,
+        architecture: 'amd64',
       },
     });
 
@@ -98,6 +99,9 @@ describe('WorkerPrismaRepository (Integration)', () => {
         testWorkerImageId,
         testWorkerFlavorId,
         'c-000001',
+        1,
+        1024,
+        10,
       );
 
       const result = await repository.create(worker);
@@ -182,6 +186,9 @@ describe('WorkerPrismaRepository (Integration)', () => {
         testWorkerImageId,
         testWorkerFlavorId,
         'c-000001',
+        1,
+        1024,
+        10,
       );
 
       const result = await repository.create(worker);

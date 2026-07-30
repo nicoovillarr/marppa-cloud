@@ -1,3 +1,7 @@
-import { CreateWorkerFamilyDto } from './create-worker-family.dto';
+import { IsOptional, IsString } from 'class-validator';
 
-export class UpdateWorkerFamilyDto extends CreateWorkerFamilyDto {}
+export class UpdateWorkerFamilyDto {
+  @IsString()
+  @IsOptional()
+  description?: string;
+}

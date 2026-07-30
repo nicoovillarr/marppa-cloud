@@ -1,9 +1,9 @@
-import type { WorkerFlavor, WorkerImage } from '@marppa-cloud/db';
+import type { Worker, WorkerImage } from '@marppa-cloud/db';
 
 export const HIVE_SERVICE_TOKEN = Symbol('HIVE_SERVICE');
 
 export type WorkerImageSource = Pick<WorkerImage, 'osType' | 'osFamily' | 'osVersion' | 'imageUrl'>;
-export type WorkerInstanceSource = Pick<WorkerFlavor, 'ramMB' | 'cpuCores' | 'diskGB'>;
+export type WorkerInstanceSource = Pick<Worker, 'ramMB' | 'cpuCores' | 'diskGB'>;
 
 /** Static network config baked into cloud-init when the worker's IP is known (at assign). */
 export type WorkerNetworkConfig = {

@@ -37,6 +37,7 @@ import { AuthModule } from '@/auth/auth.module';
 import { EventModule } from '@/event/event.module';
 import { MeshModule } from '@/mesh/mesh.module';
 import { MacAddressService } from './domain/services/mac-address.service';
+import { HiveCapacityService } from './domain/services/hive-capacity.service';
 
 @Module({
   imports: [SharedModule, AuthModule, EventModule, MeshModule],
@@ -97,6 +98,7 @@ import { MacAddressService } from './domain/services/mac-address.service';
     },
 
     MacAddressService,
+    HiveCapacityService,
   ],
   exports: [],
 })

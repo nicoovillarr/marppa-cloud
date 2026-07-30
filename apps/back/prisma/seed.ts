@@ -101,52 +101,38 @@ const createWorkerFamilies = async () => {
   const families = [
     {
       name: 'zen',
-      description: 'Balanced compute for general workloads',
+      description:
+        'General purpose.',
+      architecture: 'amd64',
       flavors: [
-        { name: 'nano', cpuCores: 0.5, ramMB: 512, diskGB: 10 },
-        { name: 'micro', cpuCores: 1, ramMB: 1024, diskGB: 20 },
-        { name: 'small', cpuCores: 2, ramMB: 2048, diskGB: 40 },
-        { name: 'medium', cpuCores: 4, ramMB: 4096, diskGB: 80 },
+        { name: 'nano', cpuCores: 0.5, ramMB: 1024, diskGB: 10 },
+        { name: 'small', cpuCores: 1, ramMB: 2048, diskGB: 20 },
+        { name: 'medium', cpuCores: 2, ramMB: 4096, diskGB: 40 },
+        { name: 'large', cpuCores: 4, ramMB: 8192, diskGB: 80 },
       ],
     },
 
     {
       name: 'spark',
-      description: 'CPU optimized workers for compute-heavy tasks',
+      description:
+        'CPU optimized: twice the cores per GB of RAM.',
+      architecture: 'amd64',
       flavors: [
-        { name: 'small', cpuCores: 2, ramMB: 1024, diskGB: 20 },
-        { name: 'medium', cpuCores: 4, ramMB: 2048, diskGB: 40 },
-        { name: 'large', cpuCores: 8, ramMB: 4096, diskGB: 80 },
+        { name: 'small', cpuCores: 2, ramMB: 2048, diskGB: 20 },
+        { name: 'medium', cpuCores: 4, ramMB: 4096, diskGB: 40 },
+        { name: 'large', cpuCores: 8, ramMB: 8192, diskGB: 80 },
       ],
     },
 
     {
       name: 'vault',
-      description: 'Memory optimized workers for caches and in-memory workloads',
+      description:
+        'Memory optimized: four times the RAM per core.',
+      architecture: 'amd64',
       flavors: [
         { name: 'small', cpuCores: 1, ramMB: 4096, diskGB: 20 },
         { name: 'medium', cpuCores: 2, ramMB: 8192, diskGB: 40 },
         { name: 'large', cpuCores: 4, ramMB: 16384, diskGB: 80 },
-      ],
-    },
-
-    {
-      name: 'forge',
-      description: 'Disk intensive workers for storage-heavy workloads',
-      flavors: [
-        { name: 'small', cpuCores: 1, ramMB: 2048, diskGB: 100 },
-        { name: 'medium', cpuCores: 2, ramMB: 4096, diskGB: 250 },
-        { name: 'large', cpuCores: 4, ramMB: 8192, diskGB: 500 },
-      ],
-    },
-
-    {
-      name: 'pulse',
-      description: 'Lightweight workers for short-lived or background tasks',
-      flavors: [
-        { name: 'tiny', cpuCores: 0.25, ramMB: 256, diskGB: 5 },
-        { name: 'nano', cpuCores: 0.5, ramMB: 512, diskGB: 10 },
-        { name: 'micro', cpuCores: 1, ramMB: 1024, diskGB: 20 },
       ],
     },
   ];
@@ -157,37 +143,97 @@ const createWorkerFamilies = async () => {
       create: {
         name: family.name,
         description: family.description,
+        architecture: family.architecture,
       },
       update: {
         description: family.description,
+        architecture: family.architecture,
+        deprecatedAt: null,
       },
     });
 
     for (const flavor of family.flavors) {
-      await prisma.workerFlavor.upsert({
-        where: {
-          familyId_name: {
-            familyId: upsertedFamily.id,
-            name: flavor.name,
-          },
-        },
-        create: {
-          name: flavor.name,
-          cpuCores: flavor.cpuCores,
-          ramMB: flavor.ramMB,
-          diskGB: flavor.diskGB,
-          familyId: upsertedFamily.id,
-        },
-        update: {
-          cpuCores: flavor.cpuCores,
-          ramMB: flavor.ramMB,
-          diskGB: flavor.diskGB,
-        },
-      });
+      await upsertSeededFlavor(upsertedFamily.id, flavor);
     }
   }
 
+  await deprecateFamiliesNotIn(families.map((family) => family.name));
+
   console.log('Worker families created successfully!');
+};
+
+type SeededFlavor = {
+  name: string;
+  cpuCores: number;
+  ramMB: number;
+  diskGB: number;
+};
+
+const upsertSeededFlavor = async (familyId: number, flavor: SeededFlavor) => {
+  const active = await prisma.workerFlavor.findFirst({
+    where: { familyId, name: flavor.name, deprecatedAt: null },
+  });
+
+  if (!active) {
+    await prisma.workerFlavor.create({
+      data: { ...flavor, familyId },
+    });
+    return;
+  }
+
+  const matchesSeed =
+    active.cpuCores === flavor.cpuCores &&
+    active.ramMB === flavor.ramMB &&
+    active.diskGB === flavor.diskGB;
+
+  if (matchesSeed) {
+    return;
+  }
+
+  const { _max } = await prisma.workerFlavor.aggregate({
+    where: { familyId, name: flavor.name },
+    _max: { version: true },
+  });
+
+  await prisma.$transaction([
+    prisma.workerFlavor.create({
+      data: { ...flavor, familyId, version: (_max.version ?? 0) + 1 },
+    }),
+    prisma.workerFlavor.update({
+      where: { id: active.id },
+      data: { deprecatedAt: new Date() },
+    }),
+  ]);
+};
+
+const deprecateFamiliesNotIn = async (names: string[]) => {
+  const deprecatedAt = new Date();
+
+  const dropped = await prisma.workerFamily.findMany({
+    where: { name: { notIn: names }, ownerId: null, deprecatedAt: null },
+    select: { id: true, name: true },
+  });
+
+  if (dropped.length === 0) {
+    return;
+  }
+
+  const ids = dropped.map((family) => family.id);
+
+  await prisma.$transaction([
+    prisma.workerFamily.updateMany({
+      where: { id: { in: ids } },
+      data: { deprecatedAt },
+    }),
+    prisma.workerFlavor.updateMany({
+      where: { familyId: { in: ids }, deprecatedAt: null },
+      data: { deprecatedAt },
+    }),
+  ]);
+
+  console.log(
+    `Deprecated families no longer seeded: ${dropped.map((f) => f.name).join(', ')}`,
+  );
 };
 
 const createWorkerImages = async () => {

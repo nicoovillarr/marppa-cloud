@@ -22,6 +22,9 @@ export type WorkerResponseDto = {
     ownerId: string;
     imageId: number;
     flavorId: number;
+    cpuCores: number;
+    ramMB: number;
+    diskGB: number;
 }
 
 export type WorkerWithRelationsResponseDto = WorkerResponseDto & {

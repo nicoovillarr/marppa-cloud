@@ -6,7 +6,9 @@ export const WORKER_FAMILY_REPOSITORY_SYMBOL = Symbol(
 );
 
 export abstract class WorkerFamilyRepository {
-  abstract findAll(): Promise<WorkerFamilyWithFlavorsModel[]>;
+  abstract findAvailableFor(
+    companyId: string,
+  ): Promise<WorkerFamilyWithFlavorsModel[]>;
   abstract findById(id: number): Promise<WorkerFamilyEntity | null>;
   abstract create(
     workerFamily: WorkerFamilyEntity,
@@ -14,5 +16,5 @@ export abstract class WorkerFamilyRepository {
   abstract update(
     workerFamily: WorkerFamilyEntity,
   ): Promise<WorkerFamilyEntity>;
-  abstract delete(id: number): Promise<void>;
+  abstract deprecate(id: number, deprecatedAt: Date): Promise<void>;
 }

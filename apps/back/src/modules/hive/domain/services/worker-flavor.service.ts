@@ -5,6 +5,9 @@ import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerFlavorDto } from '@/hive/presentation/dtos/create-worker-flavor.dto';
 import { UpdateWorkerFlavorDto } from '@/hive/presentation/dtos/update-worker-flavor.dto';
 import { WORKER_FLAVOR_REPOSITORY_SYMBOL } from '../repositories/worker-flavor.repository';
+import { WorkerFlavorWithFamilyModel } from '../models/worker-flavor-with-family.model';
+import { WorkerFlavorAlreadyExistsError } from '../errors/worker-flavor-already-exists.error';
+import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
 
 @Injectable()
 export class WorkerFlavorService {
@@ -22,49 +25,83 @@ export class WorkerFlavorService {
     return workerFlavor;
   }
 
-  async findAll(): Promise<WorkerFlavorEntity[]> {
-    return this.workerFlavorRepository.findAll();
+  async findByIdWithFamily(id: number): Promise<WorkerFlavorWithFamilyModel> {
+    const model = await this.workerFlavorRepository.findByIdWithFamily(id);
+    if (!model) {
+      throw new NotFoundError();
+    }
+
+    return model;
+  }
+
+  async findAll(includeDeprecated = false): Promise<WorkerFlavorEntity[]> {
+    return this.workerFlavorRepository.findAll(includeDeprecated);
   }
 
   async createWorkerFlavor(
     data: CreateWorkerFlavorDto,
   ): Promise<WorkerFlavorEntity> {
-    const entity = new WorkerFlavorEntity(
-      data.name,
-      data.cpuCores,
-      data.ramMB,
-      data.diskGB,
+    const previousVersion = await this.workerFlavorRepository.findMaxVersion(
       data.familyId,
+      data.name,
     );
 
-    return this.save(entity);
+    if (previousVersion > 0) {
+      throw new WorkerFlavorAlreadyExistsError(data.name);
+    }
+
+    return this.workerFlavorRepository.create(
+      new WorkerFlavorEntity(
+        data.name,
+        data.cpuCores,
+        data.ramMB,
+        data.diskGB,
+        data.familyId,
+        {
+          pricePerHourCents: data.pricePerHourCents,
+        },
+      ),
+    );
   }
 
-  async updateWorkerFlavor(
+  async reviseWorkerFlavor(
     id: number,
     data: UpdateWorkerFlavorDto,
   ): Promise<WorkerFlavorEntity> {
-    const entity = await this.findById(id);
-    const updated = entity.clone({
-      name: data.name,
-      cpuCores: data.cpuCores,
-      ramMB: data.ramMB,
-      diskGB: data.diskGB,
-      familyId: data.familyId,
-    });
-
-    return this.save(updated);
-  }
-
-  deleteWorkerFlavor(id: number): Promise<void> {
-    return this.workerFlavorRepository.delete(id);
-  }
-
-  private save(data: WorkerFlavorEntity): Promise<WorkerFlavorEntity> {
-    if (data.id == null) {
-      return this.workerFlavorRepository.create(data);
+    const current = await this.findById(id);
+    if (current.isDeprecated) {
+      throw new WorkerFlavorDeprecatedError(current.name);
     }
 
-    return this.workerFlavorRepository.update(data);
+    const latestVersion = await this.workerFlavorRepository.findMaxVersion(
+      current.familyId,
+      current.name,
+    );
+
+    const revision = new WorkerFlavorEntity(
+      current.name,
+      data.cpuCores,
+      data.ramMB,
+      data.diskGB,
+      current.familyId,
+      {
+        version: latestVersion + 1,
+        pricePerHourCents: data.pricePerHourCents ?? current.pricePerHourCents,
+      },
+    );
+
+    const created = await this.workerFlavorRepository.create(revision);
+    await this.workerFlavorRepository.deprecate(current.id!, new Date());
+
+    return created;
+  }
+
+  async deprecateWorkerFlavor(id: number): Promise<void> {
+    const current = await this.findById(id);
+    if (current.isDeprecated) {
+      return;
+    }
+
+    await this.workerFlavorRepository.deprecate(current.id!, new Date());
   }
 }
