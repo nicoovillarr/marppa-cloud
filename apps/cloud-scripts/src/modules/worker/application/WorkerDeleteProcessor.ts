@@ -11,6 +11,11 @@ import { HIVE_SERVICE_TOKEN, HiveService } from '../domain/services/HiveService'
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
 import { getEventStates } from '@/shared/domain/EventStateMachine';
+import {
+  NodeTeardownService,
+  nodeTeardownInclude,
+  type NodeTeardownPayload,
+} from '@/mesh/application/NodeTeardownService';
 
 const STATES = getEventStates(EventType.WORKER_DELETE);
 
@@ -27,10 +32,20 @@ export class WorkerDeleteProcessor implements IEventProcessor {
 
     @Inject(HIVE_SERVICE_TOKEN)
     private readonly hiveService: HiveService,
+
+    private readonly nodeTeardown: NodeTeardownService,
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {
-    let worker: { id: string; status: string; ownerId: string; node: unknown; updatedBy?: string; [k: string]: unknown } | null = null;
+    let worker: {
+      id: string;
+      status: string;
+      ownerId: string;
+      macAddress: string;
+      node: NodeTeardownPayload | null;
+      updatedBy?: string;
+      [k: string]: unknown;
+    } | null = null;
 
     const updateWorkerStatus = async (status: ResourceStatus) => {
       await this.prisma.worker.update({
@@ -51,7 +66,7 @@ export class WorkerDeleteProcessor implements IEventProcessor {
 
       worker = await this.prisma.worker.findUnique({
         where: { id: resourceWorker.resourceId, status: { not: ResourceStatus.DELETED } },
-        include: { node: true },
+        include: { node: { include: nodeTeardownInclude } },
       });
 
       if (!worker) {
@@ -75,14 +90,18 @@ export class WorkerDeleteProcessor implements IEventProcessor {
         );
       }
 
-      if (worker.node) {
+      if (worker.node && this.nodeTeardown.transpondersBlocking(worker.node)) {
         throw new AbortError(
-          `Worker ${worker.id} is assigned to a node`,
+          `Worker ${worker.id} has a node still routed by transponders`,
           EventType.WORKER_DELETE_FAILED,
         );
       }
 
       await updateWorkerStatus(STATES.work);
+
+      if (worker.node) {
+        await this.nodeTeardown.teardown(worker.node, worker.macAddress);
+      }
 
       await this.hiveService.deleteWorker(worker.id);
 

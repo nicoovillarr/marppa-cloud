@@ -17,6 +17,7 @@ import { NodeStopFiberProcessor } from './application/NodeStopFiberProcessor';
 import { LinuxMeshService } from './infrastructure/services/LinuxMeshService';
 import { StubMeshService } from './infrastructure/services/StubMeshService';
 import { MESH_SERVICE_TOKEN } from './domain/services/MeshService';
+import { NodeTeardownService } from './application/NodeTeardownService';
 import { WorkerModule } from '@/worker/WorkerModule';
 
 const useStubs = process.env.USE_STUBS === 'true';
@@ -28,6 +29,7 @@ const useStubs = process.env.USE_STUBS === 'true';
       provide: MESH_SERVICE_TOKEN,
       useClass: useStubs ? StubMeshService : LinuxMeshService,
     },
+    NodeTeardownService,
   ],
   processors: [
     ZoneCreateProcessor,
@@ -44,6 +46,6 @@ const useStubs = process.env.USE_STUBS === 'true';
     NodeStartFiberProcessor,
     NodeStopFiberProcessor,
   ],
-  exports: [MESH_SERVICE_TOKEN],
+  exports: [MESH_SERVICE_TOKEN, NodeTeardownService],
 })
 export class MeshModule {}

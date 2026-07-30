@@ -15,8 +15,14 @@ import { NUCLEUS_SERVICE_TOKEN, NucleusService } from '../domain/services/Nucleu
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
 import { getEventStates } from '@/shared/domain/EventStateMachine';
+import {
+  NodeTeardownService,
+  nodeTeardownInclude,
+} from '@/mesh/application/NodeTeardownService';
 
-type AtomWithNode = Prisma.AtomGetPayload<{ include: { node: true } }>;
+type AtomWithNode = Prisma.AtomGetPayload<{
+  include: { node: { include: typeof nodeTeardownInclude } };
+}>;
 
 const STATES = getEventStates(EventType.ATOM_DELETE);
 
@@ -32,6 +38,8 @@ export class AtomDeleteProcessor implements IEventProcessor {
 
     @Inject(NUCLEUS_SERVICE_TOKEN)
     private readonly nucleusService: NucleusService,
+
+    private readonly nodeTeardown: NodeTeardownService,
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {
@@ -59,7 +67,7 @@ export class AtomDeleteProcessor implements IEventProcessor {
           id: resourceAtom.resourceId,
           status: { not: ResourceStatus.DELETED },
         },
-        include: { node: true },
+        include: { node: { include: nodeTeardownInclude } },
       });
 
       if (!atom) {
@@ -83,14 +91,18 @@ export class AtomDeleteProcessor implements IEventProcessor {
         );
       }
 
-      if (atom.node) {
+      if (atom.node && this.nodeTeardown.transpondersBlocking(atom.node)) {
         throw new AbortError(
-          `Atom ${atom.id} is assigned to a node`,
+          `Atom ${atom.id} has a node still routed by transponders`,
           EventType.ATOM_DELETE_FAILED,
         );
       }
 
       await updateAtomStatus(STATES.work);
+
+      if (atom.node) {
+        await this.nodeTeardown.teardown(atom.node, null);
+      }
 
       await this.nucleusService.deleteAtom(atom.id);
 

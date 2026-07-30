@@ -228,6 +228,10 @@ Nodes are the IP addresses within a Zone that are used to identify and communica
 
 Each Node is meant to be secure and isolated, ensuring that communication between Workers is efficient and reliable. The Mesh provides the necessary infrastructure to manage these Nodes, allowing for easy scaling and management of the cloud environment.
 
+A Node belongs to the Worker or Atom it points at, so deleting a stopped Worker/Atom deletes it in cascade: `WORKER_DELETE`/`ATOM_DELETE` tear the Node down inside their own processor instead of relying on a chain of queued events, which is what guarantees the host side (nftables DNAT rules of every Fiber, the dnsmasq reservation of the Node) is undone before the VM or container disappears. Assigning and unassigning a Node is still available on its own from the Worker/Atom dialog, and the Zone module keeps managing the Nodes already in it.
+
+Transponders are the exception: they belong to a Portal, not to the Worker/Atom, so a Node still routed by one blocks the delete instead of being cascaded — remove the transponder from its Portal first.
+
 ### Fibers
 
 Fibers are the relationships between Nodes, Workers and Bits within the Mesh. They enable communication and data transfer between different components of the system, ensuring that all parts of the Marppa Cloud Solution can work together seamlessly.

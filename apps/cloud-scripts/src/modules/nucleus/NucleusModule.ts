@@ -8,11 +8,12 @@ import { AtomDeleteProcessor } from './application/AtomDeleteProcessor';
 import { NUCLEUS_SERVICE_TOKEN } from './domain/services/NucleusService';
 import { DockerNucleusService } from './infrastructure/DockerNucleusService';
 import { StubNucleusService } from './infrastructure/StubNucleusService';
+import { MeshModule } from '@/mesh/MeshModule';
 
 const useStubs = process.env.USE_STUBS === 'true';
 
 @Module({
-  imports: [SharedModule, EventModule],
+  imports: [SharedModule, EventModule, MeshModule],
   providers: [
     {
       provide: NUCLEUS_SERVICE_TOKEN,

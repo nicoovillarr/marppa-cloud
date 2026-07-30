@@ -7,6 +7,7 @@ import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { Button } from "@/core/ui/Button";
 import { InlineCode } from "@/core/ui/InlineCode";
 import { closeCurrentDialog } from "@/core/ui/DialogProvider";
+import { NodeSection } from "@/mesh/ui/NodeSection";
 import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
 import { useWorker } from "../models/use-worker";
 import { WorkerSshKeysSection } from "./WorkerSshKeysSection";
@@ -122,7 +123,23 @@ export function WorkerManageDialog({
             Stop it first to delete it.
           </p>
         )}
+
+        {isOff && worker.node && (
+          <p className="text-xs text-ink-muted">
+            Deleting it also releases its node and every fiber on it.
+          </p>
+        )}
       </section>
+
+      <NodeSection
+        node={worker.node}
+        target={{ workerId: worker.id }}
+        editable={isOff}
+        onChanged={() => {
+          closeCurrentDialog();
+          onChanged?.();
+        }}
+      />
 
       <WorkerSshKeysSection workerId={worker.id} live={isRunning} />
     </div>
