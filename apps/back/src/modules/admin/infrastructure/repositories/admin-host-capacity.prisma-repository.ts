@@ -5,7 +5,7 @@ import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { HostCapacityModel } from '@/shared/domain/models/host-capacity.model';
 import {
   AdminHostCapacityRepository,
-  HostCapacityWrite,
+  HostCapacityOverrideWrite,
 } from '@/admin/domain/repositories/admin-host-capacity.repository';
 
 @Injectable()
@@ -21,14 +21,21 @@ export class AdminHostCapacityPrismaRepository
     return hosts.map(toModel);
   }
 
-  async upsert(
-    hostname: string,
-    data: HostCapacityWrite,
-  ): Promise<HostCapacityModel> {
-    const host = await this.prisma.hostCapacity.upsert({
+  async findByHostname(hostname: string): Promise<HostCapacityModel | null> {
+    const host = await this.prisma.hostCapacity.findUnique({
       where: { hostname },
-      create: { hostname, ...data },
-      update: data,
+    });
+
+    return host ? toModel(host) : null;
+  }
+
+  async updateOverride(
+    hostname: string,
+    data: HostCapacityOverrideWrite,
+  ): Promise<HostCapacityModel> {
+    const host = await this.prisma.hostCapacity.update({
+      where: { hostname },
+      data,
     });
 
     return toModel(host);
@@ -48,5 +55,10 @@ function toModel(host: HostCapacity): HostCapacityModel {
     host.ramMB,
     host.diskGB,
     host.reportedAt,
+    {
+      cpuCoresOverride: host.cpuCoresOverride,
+      ramMBOverride: host.ramMBOverride,
+      diskGBOverride: host.diskGBOverride,
+    },
   );
 }

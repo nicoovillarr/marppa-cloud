@@ -11,7 +11,7 @@ import {
 import { PlatformAdminGuard } from '@/shared/presentation/guards/platform-admin.guard';
 import { AdminApiService } from '@/admin/application/services/admin.api-service';
 import { AdminHostCapacityResponse } from '@/admin/application/models/admin.response';
-import { UpsertHostCapacityDto } from '../dtos/upsert-host-capacity.dto';
+import { UpdateHostCapacityDto } from '../dtos/update-host-capacity.dto';
 
 @Controller('admin/hosts')
 @UseGuards(PlatformAdminGuard)
@@ -24,11 +24,11 @@ export class AdminHostCapacityController {
   }
 
   @Put(':hostname')
-  upsert(
+  updateOverride(
     @Param('hostname') hostname: string,
-    @Body() data: UpsertHostCapacityDto,
+    @Body() data: UpdateHostCapacityDto,
   ): Promise<AdminHostCapacityResponse> {
-    return this.service.upsertHost(hostname, data);
+    return this.service.updateHostOverride(hostname, data);
   }
 
   @Delete(':hostname')

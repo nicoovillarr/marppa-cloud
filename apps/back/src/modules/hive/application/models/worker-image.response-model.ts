@@ -10,5 +10,6 @@ export class WorkerImageResponseModel {
   @Expose() imageUrl: string;
   @Expose() architecture: string;
   @Expose() virtualizationType: string;
+  @Expose() ownerId: string | null;
   @Expose() workerStorageTypeId: string | null;
 }

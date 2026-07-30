@@ -18,6 +18,11 @@ export class HostCapacityPrismaRepository implements HostCapacityRepository {
           host.ramMB,
           host.diskGB,
           host.reportedAt,
+          {
+            cpuCoresOverride: host.cpuCoresOverride,
+            ramMBOverride: host.ramMBOverride,
+            diskGBOverride: host.diskGBOverride,
+          },
         ),
     );
   }

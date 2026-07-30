@@ -106,8 +106,8 @@ export class HostPreflightService {
 
     await this.prisma.hostCapacity.upsert({
       where: { hostname },
-      create: { hostname, ...capacity },
-      update: capacity,
+      create: { hostname, ...capacity, reportedAt: new Date() },
+      update: { ...capacity, reportedAt: new Date() },
     });
 
     this.logger.log(

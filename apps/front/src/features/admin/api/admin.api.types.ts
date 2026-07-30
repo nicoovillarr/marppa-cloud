@@ -77,13 +77,19 @@ export type AdminHostCapacityResponseDto = {
     cpuCores: number;
     ramMB: number;
     diskGB: number;
+    cpuCoresOverride: number | null;
+    ramMBOverride: number | null;
+    diskGBOverride: number | null;
+    effectiveCpuCores: number;
+    effectiveRamMB: number;
+    effectiveDiskGB: number;
     reportedAt: string;
 }
 
-export type UpsertHostCapacityDto = {
-    cpuCores: number;
-    ramMB: number;
-    diskGB: number;
+export type UpdateHostCapacityDto = {
+    cpuCoresOverride?: number | null;
+    ramMBOverride?: number | null;
+    diskGBOverride?: number | null;
 }
 
 export type AdminResourceType = "Worker" | "Atom" | "Zone" | "Portal";

@@ -9,6 +9,8 @@ import { WorkerImageResponseDto } from "@/hive/api/worker-image.api.types";
 import { workerStorageTypeApi } from "@/hive/api/worker-storage-type.api";
 import { WorkerStorageTypeResponseDto } from "@/hive/api/worker-storage-type.api.types";
 import { ColumnMapping } from "@/core/ui/Table";
+import { adminApi } from "../api/admin.api";
+import { AdminCompanyResponseDto } from "../api/admin.api.types";
 import { useCallback, useEffect, useState } from "react";
 import { AdminCrudSection } from "./AdminCrudSection";
 import { AdminField } from "./AdminCrudForm";
@@ -21,6 +23,12 @@ const IMAGE_COLUMNS: ColumnMapping<WorkerImageResponseDto> = {
   osVersion: { label: "Version", minWidth: "100px" },
   architecture: { label: "Arch", minWidth: "90px" },
   virtualizationType: { label: "Virtualization", minWidth: "130px" },
+  ownerId: {
+    label: "Owner",
+    minWidth: "160px",
+    renderFn: (row: WorkerImageResponseDto) =>
+      row.ownerId ? row.ownerId : "public",
+  },
 };
 
 const FAMILY_COLUMNS: ColumnMapping<WorkerFamilyWithRelationsResponseDto> = {
@@ -93,15 +101,18 @@ export function HiveCatalogAdmin() {
   const [families, setFamilies] = useState<
     WorkerFamilyWithRelationsResponseDto[]
   >([]);
+  const [companies, setCompanies] = useState<AdminCompanyResponseDto[]>([]);
 
   const loadReferences = useCallback(async () => {
-    const [types, loadedFamilies] = await Promise.all([
+    const [types, loadedFamilies, loadedCompanies] = await Promise.all([
       workerStorageTypeApi.findAll(),
       workerFamilyApi.findAll(true),
+      adminApi.findCompanies(),
     ]);
 
     setStorageTypes(types);
     setFamilies(loadedFamilies);
+    setCompanies(loadedCompanies);
   }, []);
 
   useEffect(() => {
@@ -136,6 +147,16 @@ export function HiveCatalogAdmin() {
       label: "Virtualization",
       required: true,
       placeholder: "hvm",
+    },
+    {
+      name: "ownerId",
+      label: "Owner",
+      type: "select",
+      tooltip: "Leave empty to publish it to every company",
+      options: companies.map((company) => ({
+        value: company.id,
+        displayText: company.name,
+      })),
     },
     {
       name: "workerStorageTypeId",

@@ -4,17 +4,18 @@ export const ADMIN_HOST_CAPACITY_REPOSITORY_SYMBOL = Symbol(
   'ADMIN_HOST_CAPACITY_REPOSITORY',
 );
 
-export interface HostCapacityWrite {
-  cpuCores: number;
-  ramMB: number;
-  diskGB: number;
+export interface HostCapacityOverrideWrite {
+  cpuCoresOverride?: number | null;
+  ramMBOverride?: number | null;
+  diskGBOverride?: number | null;
 }
 
 export abstract class AdminHostCapacityRepository {
   abstract findAll(): Promise<HostCapacityModel[]>;
-  abstract upsert(
+  abstract findByHostname(hostname: string): Promise<HostCapacityModel | null>;
+  abstract updateOverride(
     hostname: string,
-    data: HostCapacityWrite,
+    data: HostCapacityOverrideWrite,
   ): Promise<HostCapacityModel>;
   abstract delete(hostname: string): Promise<void>;
 }

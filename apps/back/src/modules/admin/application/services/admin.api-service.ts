@@ -14,7 +14,7 @@ import { CreateAdminCompanyDto } from '@/admin/presentation/dtos/create-admin-co
 import { UpdateAdminCompanyDto } from '@/admin/presentation/dtos/update-admin-company.dto';
 import { CreateAdminUserDto } from '@/admin/presentation/dtos/create-admin-user.dto';
 import { UpdateAdminUserDto } from '@/admin/presentation/dtos/update-admin-user.dto';
-import { UpsertHostCapacityDto } from '@/admin/presentation/dtos/upsert-host-capacity.dto';
+import { UpdateHostCapacityDto } from '@/admin/presentation/dtos/update-host-capacity.dto';
 import {
   AdminCompanyResponse,
   AdminHostCapacityResponse,
@@ -105,11 +105,11 @@ export class AdminApiService {
     return hosts.map(toAdminHostCapacityResponse);
   }
 
-  async upsertHost(
+  async updateHostOverride(
     hostname: string,
-    data: UpsertHostCapacityDto,
+    data: UpdateHostCapacityDto,
   ): Promise<AdminHostCapacityResponse> {
-    const host = await this.hostCapacityService.upsert(hostname, data);
+    const host = await this.hostCapacityService.updateOverride(hostname, data);
 
     return toAdminHostCapacityResponse(host);
   }

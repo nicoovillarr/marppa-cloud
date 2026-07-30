@@ -31,6 +31,15 @@ export class AtomImagePrismaRepository implements AtomImageRepository {
     return images.map(AtomImagePrismaMapper.toEntity);
   }
 
+  async findAvailableFor(companyId: string): Promise<AtomImageEntity[]> {
+    const images = await this.prisma.atomImage.findMany({
+      where: { OR: [{ ownerId: null }, { ownerId: companyId }] },
+      orderBy: { name: 'asc' },
+    });
+
+    return images.map(AtomImagePrismaMapper.toEntity);
+  }
+
   async create(entity: AtomImageEntity): Promise<AtomImageEntity> {
     const image = await this.prisma.atomImage.create({
       data: PrismaMapper.toCreate(entity),

@@ -159,6 +159,46 @@ already missing, which is the argument against it.
   intermediate status writes exist precisely to be readable *during* the host work,
   so a job-wide transaction would hide them. That is a separate piece of work.
 
+### Host capacity: reported vs budgeted
+
+`HostPreflightService.reportCapacity()` upserts `cpuCores`/`ramMB`/`diskGB` from
+what the machine actually has (`os.cpus()`, `os.totalmem()`, `df` on the image
+volume). It runs on every cloud-scripts start and inside `SYSTEM_RESET` /
+`SYSTEM_RESET_HARD` — not on a timer. Those three columns are therefore a
+measurement, and editing them by hand only survives until the next boot.
+
+Reserved headroom lives in `cpuCoresOverride`/`ramMBOverride`/`diskGBOverride`,
+which the preflight never writes. `HostCapacityService.budget()` sums
+`effective*` (`override ?? reported`), so an override lowers what the scheduler is
+willing to commit without lying about the hardware. An override above the reported
+value is a `400`: it reserves headroom, it cannot invent RAM. vCPU is the exception
+worth remembering — `HIVE_VCPU_OVERCOMMIT` still multiplies on top, because
+overcommitting cores is a deliberate, separate decision.
+
+`reportedAt` stopped being `@updatedAt` when the overrides landed: an admin editing
+a budget is not a host reporting in, and the column is read as "when did this host
+last check in".
+
+### Tenant-scoped images
+
+`WorkerImage.ownerId` and `AtomImage.ownerId` mirror `WorkerFamily`: `NULL` is a
+public image, a company id restricts it to that tenant. Names stay globally unique,
+so a tenant-specific image needs its own name (`acme-debian-12`, not a second
+`debian-12`) — the same constraint `WorkerFamily` already lives with.
+
+The part that matters is **where** the check runs. Listing is scoped
+(`findAvailableFor`, with platform admins seeing everything), but `Atom` and
+`Worker` creation resolve the image through `imageService.findById(imageId)`, so
+that is where a private image has to disappear — otherwise a tenant reaches another
+tenant's image by guessing an id, and the scoped listing is decoration. `findById`
+answers `404`, never `403`, so it does not confirm the row exists. A public image
+resolves without consulting the session at all, which keeps unauthenticated paths
+and tests from needing a company.
+
+Writing `ownerId` is separately restricted: a tenant may only scope an image to its
+own company, while a platform admin may scope one to any tenant — which is the
+whole point of the admin dashboard's Owner field.
+
 ### Infra resource lifecycle
 
 Any resource whose real state lives on the host (zones, nodes, workers, portals,

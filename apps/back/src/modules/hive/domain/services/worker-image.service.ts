@@ -8,12 +8,17 @@ import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { CreateWorkerImageDto } from '@/hive/presentation/dtos/create-worker-image.dto';
 import { UpdateWorkerImageDto } from '@/hive/presentation/dtos/update-worker-image.dto';
 import { WorkerImageInUseError } from '../errors/worker-image-in-use.error';
+import { PlatformAdminService } from '@/shared/domain/services/platform-admin.service';
+import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
 
 @Injectable()
 export class WorkerImageService {
   constructor(
     @Inject(WORKER_IMAGE_REPOSITORY_SYMBOL)
     private readonly workerImageRepository: WorkerImageRepository,
+    private readonly platformAdminService: PlatformAdminService,
   ) { }
 
   async findById(id: number): Promise<WorkerImageEntity> {
@@ -22,14 +27,24 @@ export class WorkerImageService {
       throw new NotFoundError();
     }
 
+    if (!(await this.canSee(workerImage))) {
+      throw new NotFoundError();
+    }
+
     return workerImage;
   }
 
   async findAll(): Promise<WorkerImageEntity[]> {
-    return this.workerImageRepository.findAll();
+    if (await this.platformAdminService.isPlatformAdmin()) {
+      return this.workerImageRepository.findAll();
+    }
+
+    return this.workerImageRepository.findAvailableFor(this.currentCompanyId());
   }
 
   async create(data: CreateWorkerImageDto): Promise<WorkerImageEntity> {
+    await this.assertOwnerWritable(data.ownerId);
+
     const workerImage = new WorkerImageEntity(
       data.name,
       data.osType,
@@ -41,6 +56,7 @@ export class WorkerImageService {
         description: data.description,
         osVersion: data.osVersion,
         workerStorageTypeId: data.workerStorageTypeId,
+        ownerId: data.ownerId,
       },
     );
 
@@ -51,6 +67,8 @@ export class WorkerImageService {
     id: number,
     data: UpdateWorkerImageDto,
   ): Promise<WorkerImageEntity> {
+    await this.assertOwnerWritable(data.ownerId);
+
     const workerImage = await this.findById(id);
 
     workerImage.clone({
@@ -63,6 +81,7 @@ export class WorkerImageService {
       description: data.description,
       osVersion: data.osVersion,
       workerStorageTypeId: data.workerStorageTypeId,
+      ownerId: data.ownerId,
     });
 
     return this.save(workerImage);
@@ -77,6 +96,42 @@ export class WorkerImageService {
     }
 
     await this.workerImageRepository.delete(id);
+  }
+
+  private async canSee(image: {
+    isPublic: boolean;
+    ownerId?: string;
+  }): Promise<boolean> {
+    if (image.isPublic) return true;
+    if (await this.platformAdminService.isPlatformAdmin()) return true;
+
+    return image.ownerId === getCurrentUser()?.companyId;
+  }
+
+  private async assertOwnerWritable(ownerId?: string): Promise<void> {
+    if (ownerId == null) return;
+    if (await this.platformAdminService.isPlatformAdmin()) return;
+
+    this.assertOwnerAllowed(ownerId);
+  }
+
+  private currentCompanyId(): string {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    return user.companyId;
+  }
+
+  private assertOwnerAllowed(ownerId: string | undefined): void {
+    if (ownerId == null) return;
+
+    if (ownerId !== this.currentCompanyId()) {
+      throw new ForbiddenError(
+        'An image can only be scoped to your own company.',
+      );
+    }
   }
 
   private save(data: WorkerImageEntity): Promise<WorkerImageEntity> {

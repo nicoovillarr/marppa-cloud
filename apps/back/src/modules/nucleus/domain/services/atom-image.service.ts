@@ -10,6 +10,10 @@ import { UpdateAtomImageDto } from '@/nucleus/presentation/dtos/update-atom-imag
 import { AtomImageInUseError } from '../errors/atom-image-in-use.error';
 import { AtomImageForbiddenCapabilityError } from '../errors/atom-image-forbidden-capability.error';
 import { forbiddenCapabilities } from '@marppa-cloud/shared';
+import { PlatformAdminService } from '@/shared/domain/services/platform-admin.service';
+import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
+import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
 
 const DEFAULT_REGISTRY = 'docker.io';
 const DEFAULT_ARCHITECTURE = 'amd64';
@@ -19,6 +23,7 @@ export class AtomImageService {
   constructor(
     @Inject(ATOM_IMAGE_REPOSITORY_SYMBOL)
     private readonly repository: AtomImageRepository,
+    private readonly platformAdminService: PlatformAdminService,
   ) { }
 
   async findById(id: number): Promise<AtomImageEntity> {
@@ -27,15 +32,24 @@ export class AtomImageService {
       throw new NotFoundError();
     }
 
+    if (!(await this.canSee(image))) {
+      throw new NotFoundError();
+    }
+
     return image;
   }
 
-  findAll(): Promise<AtomImageEntity[]> {
-    return this.repository.findAll();
+  async findAll(): Promise<AtomImageEntity[]> {
+    if (await this.platformAdminService.isPlatformAdmin()) {
+      return this.repository.findAll();
+    }
+
+    return this.repository.findAvailableFor(this.currentCompanyId());
   }
 
-  create(data: CreateAtomImageDto): Promise<AtomImageEntity> {
+  async create(data: CreateAtomImageDto): Promise<AtomImageEntity> {
     this.assertCapabilitiesGrantable(data.capabilities);
+    await this.assertOwnerWritable(data.ownerId);
 
     const image = new AtomImageEntity(
       data.name,
@@ -51,6 +65,7 @@ export class AtomImageService {
         sysctls: data.sysctls,
         command: data.command,
         requiredEnvVars: data.requiredEnvVars,
+        ownerId: data.ownerId,
       },
     );
 
@@ -62,6 +77,7 @@ export class AtomImageService {
     data: UpdateAtomImageDto,
   ): Promise<AtomImageEntity> {
     this.assertCapabilitiesGrantable(data.capabilities);
+    await this.assertOwnerWritable(data.ownerId);
 
     const image = await this.findById(id);
 
@@ -79,6 +95,7 @@ export class AtomImageService {
         sysctls: data.sysctls,
         command: data.command,
         requiredEnvVars: data.requiredEnvVars,
+        ownerId: data.ownerId,
       }),
     );
   }
@@ -92,6 +109,36 @@ export class AtomImageService {
     }
 
     await this.repository.delete(id);
+  }
+
+  private async canSee(image: {
+    isPublic: boolean;
+    ownerId?: string;
+  }): Promise<boolean> {
+    if (image.isPublic) return true;
+    if (await this.platformAdminService.isPlatformAdmin()) return true;
+
+    return image.ownerId === getCurrentUser()?.companyId;
+  }
+
+  private async assertOwnerWritable(ownerId?: string): Promise<void> {
+    if (ownerId == null) return;
+    if (await this.platformAdminService.isPlatformAdmin()) return;
+
+    if (ownerId !== this.currentCompanyId()) {
+      throw new ForbiddenError(
+        'An image can only be scoped to your own company.',
+      );
+    }
+  }
+
+  private currentCompanyId(): string {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    return user.companyId;
   }
 
   private assertCapabilitiesGrantable(capabilities?: string[]): void {

@@ -18,6 +18,7 @@ export class AtomImagePrismaMapper {
         sysctls: (raw.sysctls as Record<string, string> | null) ?? undefined,
         command: raw.command,
         requiredEnvVars: raw.requiredEnvVars,
+        ownerId: raw.ownerId ?? undefined,
       },
     );
   }
