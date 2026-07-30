@@ -45,6 +45,8 @@ right ownership.
 | PostgreSQL | Same database as the backend. |
 | Redis / Valkey | Same instance as the backend (`REDIS_URL`). |
 | Internet access | Only to download the base cloud image and bake packages into it. VMs do not need it at first boot. |
+| Inbound 80/443 | Portals only. Caddy's automatic ACME needs the host reachable on both from the internet, or no certificate is ever issued. |
+| Docker | Atoms only, and it must be configured before its first start — § *Docker (atoms)*. |
 
 WSL2 works for application logic and VM lifecycle, but **not** for reaching VMs from
 the LAN: its network lives inside a Hyper-V NAT. Use a real host for the end-to-end
@@ -57,11 +59,21 @@ sudo apt update && sudo apt install -y \
   qemu-kvm libvirt-daemon-system libvirt-clients virtinst \
   libguestfs-tools genisoimage qemu-utils \
   dnsmasq nftables iproute2 \
-  nmap ipcalc net-tools wget curl
+  nmap ipcalc net-tools wget curl \
+  build-essential python3
 ```
 
 `virt-customize` comes from `libguestfs-tools`, `arp` from `net-tools`, `networkctl`
 from systemd. The startup preflight lists anything missing.
+
+`build-essential` and `python3` are for `node-pty`, which has a native addon and is
+compiled by `npm ci`. It backs the atom and worker consoles; without a toolchain the
+install fails on whatever host runs `npm ci` — this one for a manual install, the
+self-hosted runner under `deploy/README.md`.
+
+Caddy (§ *Caddy (portals)*), ddclient (§ *ddclient (portal DNS)*) and Docker
+(§ *Docker (atoms)*) are installed separately: the first is not in the Debian repos and
+the other two need their configuration in place before anything starts them.
 
 ### System users, directories and permissions
 
@@ -106,6 +118,7 @@ host-wide — including the one you would use to fix it. Write a copy, validate 
 ```bash
 tee /tmp/cloud-scripts.sudoers > /dev/null <<EOF
 $USER ALL=(ALL) NOPASSWD: \
+  /usr/bin/true, \
   /usr/bin/virsh, \
   /usr/bin/virt-install, \
   /usr/bin/virt-customize, \
@@ -118,6 +131,7 @@ $USER ALL=(ALL) NOPASSWD: \
   /usr/sbin/sysctl, \
   /usr/bin/systemctl, \
   /usr/bin/caddy, \
+  /usr/bin/docker, \
   /usr/bin/ddclient, \
   /usr/bin/pkill, \
   /usr/bin/cat, \
@@ -138,9 +152,12 @@ rm /tmp/cloud-scripts.sudoers
 sudo -n true && echo "passwordless sudo OK"      # preflight checks this
 ```
 
-Adjust the paths to whatever `which <binary>` reports on your host (on non-usr-merged
-systems some live in `/bin`). A single missing entry makes the app hang on a password
-prompt.
+Paths are host-specific, and `which` is the wrong way to resolve them: sudo walks its
+own `secure_path` (`/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`) and
+runs the **first** match in that order, which is why `ip`, `nft` and `sysctl` land under
+`/usr/sbin`. A wrong path surfaces at runtime as `command not allowed` in the sudo log,
+naming the path that was actually resolved; a missing entry makes the app hang on a
+password prompt.
 
 ### nftables base ruleset
 
@@ -207,6 +224,36 @@ Two caveats worth knowing before adding another nftables user:
 fail2ban with `banaction = nftables-multiport` needs no special handling: it creates its
 own `inet f2b-table` at a lower hook priority, so its bans are evaluated before this
 app's rules and neither side touches the other's tables.
+
+### Docker (atoms)
+
+Atoms are Docker containers, so a host that runs them needs Docker — and needs it
+configured **before the daemon starts for the first time**. With its defaults it writes
+its own chains into `ip nat` and `inet filter`, the two tables this app rewrites on
+every zone or fiber change: Docker's rules get dropped silently, and the app persists
+whatever is left into `/etc/nftables.conf` as if it owned it.
+
+```bash
+# From the repo clone — /opt/cloud-script/marppa-cloud for a service install
+sudo mkdir -p /etc/docker
+sudo install -m 644 apps/cloud-scripts/deploy/docker-daemon.json /etc/docker/daemon.json
+
+sudo apt install -y docker.io
+```
+
+The preflight refuses to start when Docker is installed and `/etc/docker/daemon.json`
+does not set `iptables: false`, `ip6tables: false` and `bridge: "none"`, or when a
+`DOCKER*` chain shows up in the live ruleset. If the daemon already ran with its
+defaults, those chains are still there and have to be removed by hand before the app
+will boot.
+
+Connectivity comes from the mesh, never from Docker: an atom needs a node in an ACTIVE
+zone, the container is addressed by that node's IP, and a port reachable from outside
+the zone is a fiber (DNAT), not `docker run -p`. `deploy/README.md` § *Docker (Nucleus)*
+has the full rationale and the network mapping.
+
+Skip this whole section if the host only runs workers — the preflight ignores Docker
+when the binary is absent.
 
 ### Caddy (portals)
 
@@ -364,14 +411,20 @@ process refuses to boot with a list of what is wrong.
 | `DB_CA` | no | CA certificate **contents** (inline PEM) for TLS. Note the backend uses `DB_CA_ROUTE`, a file path. |
 | `REDIS_URL` | yes | BullMQ queue. **Must be the same instance the backend points to**, or events are published into the void. |
 | `WS_PORT` | yes | Port for the WebSocket server that pushes resource updates to the UI. |
+| `WS_HOST` | no | Interface the WS server binds to. Default `127.0.0.1` — expose it through Caddy, which terminates TLS so browsers get `wss://`. `0.0.0.0` only if a browser must reach it directly. |
+| `WS_ALLOWED_ORIGINS` | yes | Comma-separated browser origins allowed in the WS handshake (e.g. `https://cloud.marppa.com`). The server refuses to boot without it and rejects a handshake carrying no `Origin` at all. |
 | `JWT_SECRET` | yes | Must be **identical** to the backend's: WS clients authenticate with the backend's access token. |
+| `EVENT_QUEUE_HMAC_SECRET` | yes | Verifies that a BullMQ job was enqueued by the backend. Independent of `JWT_SECRET`, and must match the backend's value. |
+| `WORKER_CONSOLE_SECRET_KEY` | yes | 64-char hex (32 bytes), `openssl rand -hex 32`. Encrypts `Worker.consolePassword` at rest (AES-256-GCM). Rotating it makes every stored password undecryptable — those workers lose console access until recreated. |
 | `BRIDGE_NAME` | yes | Host **uplink** interface (e.g. `enp3s0`, `br0`) — the one facing your LAN. NAT, fibers (DNAT) and the RFC1918 exceptions hang off it. Not a zone bridge. |
 | `USERNAME` | yes | Unix user running the app; used when editing images with guestfish. |
 | `MIN_PORT` / `MAX_PORT` | yes | Host port range fibers allocate from (e.g. `30000` / `40000`). |
 | `NFTABLES_RESET_SOURCE` | yes | Path to the pristine base ruleset (`/etc/nftables.base.conf` above). Restored by `SYSTEM_RESET`. |
 | `ALLOWED_IMAGE_DOMAINS` | yes | Comma-separated allowlist of hosts images may be downloaded from, e.g. `cloud-images.ubuntu.com`. |
+| `REQUIRE_EGRESS_HARDENING` | no | `true` fails the preflight unless `NFTABLES_RESET_SOURCE` declares an `output` chain with `policy drop`. See `docs/host-network-hardening.md`. Default `false`. |
 | `WORKER_BOOT_TIMEOUT_MS` | no | How long to wait for a VM's first boot before declaring it unreachable. Default `180000`. |
 | `IP_CHECK_INTERVAL_MS` | no | How often to re-check the host's public IP and re-sync portal DNS. Default `600000`. |
+| `DRIFT_CHECK_INTERVAL_MS` | no | How often the drift reconciler compares the DB against the host's real state. Default `30000`. |
 | `LOG_DIR` | no | Log directory. Omit to log only to stdout. |
 | `MAX_LOG_SIZE`, `LOG_BACKUP_COUNT` | no | Log rotation. Defaults: 10 MB, 5 files. |
 | `USE_STUBS` | no | `true` replaces every host service with a no-op stub **and skips the preflight**. Development only — never set it on the host. |
@@ -464,11 +517,28 @@ sudo -u cloud-script -H mkdir -p apps/cloud-scripts/.logs
 # 4. Config — secrets, so 600 and owned by the service user only
 sudo -u cloud-script cp apps/cloud-scripts/.env.template apps/cloud-scripts/.env.local
 sudo -u cloud-script chmod 600 apps/cloud-scripts/.env.local
+openssl rand -hex 32                                       # WORKER_CONSOLE_SECRET_KEY
 sudo -u cloud-script nano apps/cloud-scripts/.env.local    # fill it per §2
 ```
 
 Set `USERNAME=cloud-script` in that file: it is the account `guestfish` edits images as,
 and it has to match the user the process runs under.
+
+Three values are not free choices — the backend already fixed them, and a mismatch is
+silent rather than loud:
+
+- `JWT_SECRET` — copy the backend's, or every WS handshake is rejected;
+- `EVENT_QUEUE_HMAC_SECRET` — copy the backend's, or every job is discarded as
+  unauthentic and resources sit in `QUEUED` forever;
+- `DATABASE_URL` / `REDIS_URL` — the same database and the same Redis instance.
+
+`WORKER_CONSOLE_SECRET_KEY` is this host's own: generate it once with the `openssl` line
+above and keep it. Rotating it makes every `Worker.consolePassword` already in the DB
+undecryptable — those workers keep running but lose console access until recreated.
+
+`WS_ALLOWED_ORIGINS` must list the frontend's origin (scheme included, no trailing
+slash). It has no default: the WS server refuses to boot without it rather than accept a
+handshake from any site.
 
 Then the two privileged pieces. The sudo grant replaces the `$USER` one from §1 (same
 destination path), and the unit is the one the service boots from:
@@ -516,7 +586,7 @@ them all and start again.
 ### Backend side (must match)
 
 - `REDIS_URL` pointing at the same Redis, `DATABASE_URL` at the same database, and the
-  same `JWT_SECRET`.
+  same `JWT_SECRET` and `EVENT_QUEUE_HMAC_SECRET`.
 - Over plain HTTP (no TLS on a homelab), set `COOKIE_SECURE=false`, otherwise the auth
   cookies are dropped by the client and every call after login returns 401.
 - The frontend calls the API under `/api`; if you hit the backend port directly, the
@@ -612,6 +682,11 @@ daemon through its socket. Enable `libvirtd.socket`, not `libvirtd.service`.
 **Everything stays `QUEUED` and nothing happens.** The backend and cloud-scripts are on
 different Redis instances, or cloud-scripts is not running. Check
 `redis-cli -u $REDIS_URL llen bull:infrastructure-events:wait`.
+
+If the queue drains but the resources never move, the two sides have different
+`EVENT_QUEUE_HMAC_SECRET` values: the worker drops every job as unauthentic and logs
+`has an invalid or missing signature. Dropping.` Nothing else reports it — the event row
+stays untouched, so the resource waits forever.
 
 **A resource ends in `FAILED`.** Look for `Error processing event ID <n>` in the log; the
 event row also keeps `retries` and `failedAt`. Events retry 5 times with exponential
