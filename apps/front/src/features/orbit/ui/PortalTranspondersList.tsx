@@ -11,6 +11,14 @@ import { TransponderWithNodeResponseModel } from "../api/transponder.api.type";
 import { usePortal } from "../models/use-portal";
 import { StatusBadge } from "@/core/ui/StatusBadge";
 import { usePortalRealtime } from "../models/use-orbit-realtime";
+import { useTransponder } from "../models/use-transponder";
+import { toast } from "sonner";
+import { ResourceStatus } from "@/core/models/resource-status.enum";
+
+const DELETABLE_STATUSES: ResourceStatus[] = [
+  ResourceStatus.ACTIVE,
+  ResourceStatus.FAILED,
+];
 
 export function PortalTranspondersList({
   portalId,
@@ -22,6 +30,8 @@ export function PortalTranspondersList({
   const {
     fetchPortalById,
   } = usePortal();
+
+  const { deleteTransponder } = useTransponder();
 
   const [portal, setPortal] = useState<PortalWithTranspondersWithNodesResponseDto | null>(null);
 
@@ -43,6 +53,39 @@ export function PortalTranspondersList({
       onClose: () => setSelectedTransponders(new Set()),
     });
   };
+
+  const onDeleteTransponder = (rowData: TransponderWithNodeResponseModel) => {
+    showDialog({
+      type: "confirm",
+      title: "Delete Transponder",
+      description:
+        "Queue this transponder for removal and regenerate the portal config without it. It must be ACTIVE or FAILED.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      confirmButtonStyle: "danger",
+      onConfirm: async () => {
+        const ok = await deleteTransponder(portalId, rowData.id);
+        if (ok) {
+          toast.success("Transponder deletion queued");
+          refresh();
+        } else {
+          toast.error("Failed to delete transponder");
+        }
+      },
+    });
+  };
+
+  const contextMenu = useCallback(
+    (rowData: TransponderWithNodeResponseModel) => [
+      {
+        label: "Delete",
+        color: "red",
+        disabled: !DELETABLE_STATUSES.includes(rowData.status),
+        action: () => onDeleteTransponder(rowData),
+      },
+    ],
+    [portalId, deleteTransponder, refresh]
+  );
 
   const onAddTransponder = () => {
     showDialog({
@@ -107,6 +150,7 @@ export function PortalTranspondersList({
         columns={COLUMNS}
         select="single"
         data={portal?.transponders ?? []}
+        contextMenuGroups={contextMenu}
         onRowClick={onRowClick}
         getKey={(portal: TransponderWithNodeResponseModel) => portal.id}
       />

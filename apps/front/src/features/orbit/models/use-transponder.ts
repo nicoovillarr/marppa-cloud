@@ -104,18 +104,20 @@ export const useTransponder = () => {
         }
     }, [setIsLoading, setError, addTransponder]);
 
-    const deleteTransponder = useCallback(async (portalId: string, id: string) => {
+    const deleteTransponder = useCallback(async (portalId: string, id: string): Promise<boolean> => {
         setIsLoading(true);
         setError(null);
         try {
             await service.delete(portalId, id);
             setTransponders(transponders.filter((transponder) => transponder.id !== id));
+            return true;
         } catch (error: any) {
             setError(error.message);
+            return false;
         } finally {
             setIsLoading(false);
         }
-    }, [setIsLoading, setError, setTransponders]);
+    }, [setIsLoading, setError, setTransponders, transponders]);
 
     return {
         isLoading,
