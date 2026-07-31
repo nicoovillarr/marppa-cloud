@@ -15,6 +15,9 @@ import { PlatformAdminService } from '@/shared/domain/services/platform-admin.se
 import { PLATFORM_ADMIN_REPOSITORY_SYMBOL } from '@/shared/domain/repositories/platform-admin.repository';
 import { PlatformAdminPrismaRepository } from './infrastructure/repositories/platform-admin.prisma-repository';
 import { PlatformAdminGuard } from './presentation/guards/platform-admin.guard';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
+import { COMPANY_HIERARCHY_REPOSITORY_SYMBOL } from '@/shared/domain/repositories/company-hierarchy.repository';
+import { CompanyHierarchyPrismaRepository } from './infrastructure/repositories/company-hierarchy.prisma-repository';
 
 @Module({
   imports: [],
@@ -42,6 +45,12 @@ import { PlatformAdminGuard } from './presentation/guards/platform-admin.guard';
       useClass: PlatformAdminPrismaRepository,
     },
 
+    CompanyHierarchyService,
+    {
+      provide: COMPANY_HIERARCHY_REPOSITORY_SYMBOL,
+      useClass: CompanyHierarchyPrismaRepository,
+    },
+
     {
       provide: CACHE_STORAGE_SYMBOL,
       useClass:
@@ -57,6 +66,7 @@ import { PlatformAdminGuard } from './presentation/guards/platform-admin.guard';
     HostCapacityService,
     PlatformAdminService,
     PlatformAdminGuard,
+    CompanyHierarchyService,
   ],
 })
 export class SharedModule { }

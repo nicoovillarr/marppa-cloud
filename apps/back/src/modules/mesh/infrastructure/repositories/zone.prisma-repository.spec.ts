@@ -74,7 +74,7 @@ describe('ZonePrismaRepository (Integration)', () => {
     });
 
     it('should find zones by owner id', async () => {
-      const result = await repository.findByOwnerId(testCompanyId);
+      const result = await repository.findByOwnerIds([testCompanyId]);
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);

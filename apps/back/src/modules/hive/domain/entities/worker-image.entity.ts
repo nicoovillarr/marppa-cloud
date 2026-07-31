@@ -6,6 +6,7 @@ interface WorkerImageOptionalProps {
   description?: string;
   osVersion?: string;
   workerStorageTypeId?: number;
+  ownerId?: string;
 }
 
 export class WorkerImageEntity extends PatchableEntity {
@@ -15,6 +16,7 @@ export class WorkerImageEntity extends PatchableEntity {
   public readonly description?: string;
   public readonly osVersion?: string;
   public readonly workerStorageTypeId?: number;
+  public readonly ownerId?: string;
 
   constructor(
     public readonly name: string,
@@ -31,6 +33,15 @@ export class WorkerImageEntity extends PatchableEntity {
     this.description = optionals.description ?? undefined;
     this.osVersion = optionals.osVersion ?? undefined;
     this.workerStorageTypeId = optionals.workerStorageTypeId ?? undefined;
+    this.ownerId = optionals.ownerId ?? undefined;
+  }
+
+  get isPublic(): boolean {
+    return this.ownerId == null;
+  }
+
+  isVisibleTo(companyIds: string[]): boolean {
+    return this.isPublic || companyIds.includes(this.ownerId!);
   }
 
   toObject(): Record<string, any> {
@@ -45,6 +56,7 @@ export class WorkerImageEntity extends PatchableEntity {
       architecture: this.architecture,
       virtualizationType: this.virtualizationType,
       workerStorageTypeId: this.workerStorageTypeId,
+      ownerId: this.ownerId,
     };
   }
 
@@ -61,6 +73,7 @@ export class WorkerImageEntity extends PatchableEntity {
         description: data.description,
         osVersion: data.osVersion,
         workerStorageTypeId: data.workerStorageTypeId,
+        ownerId: data.ownerId,
       },
     );
   }

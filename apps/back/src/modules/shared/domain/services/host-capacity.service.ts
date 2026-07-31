@@ -81,9 +81,9 @@ export class HostCapacityService {
 
     return hosts.reduce<HostCapacityBudget>(
       (total, host) => ({
-        vcpu: total.vcpu + host.cpuCores * overcommit,
-        ramMB: total.ramMB + host.ramMB,
-        diskGB: total.diskGB + host.diskGB,
+        vcpu: total.vcpu + host.effectiveCpuCores * overcommit,
+        ramMB: total.ramMB + host.effectiveRamMB,
+        diskGB: total.diskGB + host.effectiveDiskGB,
       }),
       { vcpu: 0, ramMB: 0, diskGB: 0 },
     );

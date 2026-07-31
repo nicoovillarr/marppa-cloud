@@ -54,10 +54,10 @@ export class PortalPrismaRepository implements PortalRepository {
     );
   }
 
-  async findByOwnerId(ownerId: string): Promise<PortalEntity[]> {
+  async findByOwnerIds(ownerIds: string[]): Promise<PortalEntity[]> {
     const list = await this.prisma.portal.findMany({
       where: {
-        ownerId,
+        ownerId: { in: ownerIds },
         status: { not: ResourceStatus.DELETED },
       },
     });

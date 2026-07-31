@@ -30,4 +30,8 @@ export class CreateWorkerImageDto {
   @IsNumber()
   @IsOptional()
   workerStorageTypeId?: number;
+
+  @IsString()
+  @IsOptional()
+  ownerId?: string;
 }

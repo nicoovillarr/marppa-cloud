@@ -73,7 +73,7 @@ describe('PortalPrismaRepository (Integration)', () => {
     });
 
     it('should find portals by owner id', async () => {
-      const result = await repository.findByOwnerId(testCompanyId);
+      const result = await repository.findByOwnerIds([testCompanyId]);
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
@@ -106,7 +106,7 @@ describe('PortalPrismaRepository (Integration)', () => {
 
       expect(await repository.findById(createdPortalId)).toBeNull();
       expect(
-        (await repository.findByOwnerId(testCompanyId)).some(
+        (await repository.findByOwnerIds([testCompanyId])).some(
           (p) => p.id === createdPortalId,
         ),
       ).toBe(false);

@@ -40,6 +40,12 @@ export interface AdminHostCapacityResponse {
   cpuCores: number;
   ramMB: number;
   diskGB: number;
+  cpuCoresOverride: number | null;
+  ramMBOverride: number | null;
+  diskGBOverride: number | null;
+  effectiveCpuCores: number;
+  effectiveRamMB: number;
+  effectiveDiskGB: number;
   reportedAt: Date;
 }
 
@@ -90,6 +96,12 @@ export function toAdminHostCapacityResponse(
     cpuCores: host.cpuCores,
     ramMB: host.ramMB,
     diskGB: host.diskGB,
+    cpuCoresOverride: host.cpuCoresOverride,
+    ramMBOverride: host.ramMBOverride,
+    diskGBOverride: host.diskGBOverride,
+    effectiveCpuCores: host.effectiveCpuCores,
+    effectiveRamMB: host.effectiveRamMB,
+    effectiveDiskGB: host.effectiveDiskGB,
     reportedAt: host.reportedAt,
   };
 }

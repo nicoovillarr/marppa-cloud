@@ -15,6 +15,7 @@ export type ZoneResponseDto = {
     cidr: string;
     gateway: string;
     usedIPs: number;
+    ownerId: string;
     createdAt: string;
     updatedAt: string;
 }

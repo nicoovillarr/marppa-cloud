@@ -25,7 +25,7 @@ export class AtomApiService {
   ) { }
 
   public async findById(id: string): Promise<AtomWithRelationsResponseModel> {
-    const data = await this.service.findByIdWithRelations(id);
+    const data = await this.service.findByIdWithRelationsForRead(id);
     return this.toResponse(data);
   }
 

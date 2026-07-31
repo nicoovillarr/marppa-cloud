@@ -43,10 +43,10 @@ export class AtomPrismaRepository implements AtomRepository {
     return AtomWithRelationsPrismaMapper.toDomain(atom);
   }
 
-  async findByOwnerId(ownerId: string): Promise<AtomWithRelationsModel[]> {
+  async findByOwnerIds(ownerIds: string[]): Promise<AtomWithRelationsModel[]> {
     const atoms = await this.prisma.atom.findMany({
       where: {
-        ownerId,
+        ownerId: { in: ownerIds },
       },
       include: {
         image: true,

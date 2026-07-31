@@ -58,4 +58,8 @@ export class CreateAtomImageDto {
   @IsString({ each: true })
   @IsOptional()
   requiredEnvVars?: string[];
+
+  @IsString()
+  @IsOptional()
+  ownerId?: string;
 }

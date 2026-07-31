@@ -69,9 +69,11 @@ export class ZonePrismaRepository implements ZoneRepository {
     );
   }
 
-  async findByOwnerId(ownerId: string): Promise<ZoneWithNodesAndFibersModel[]> {
+  async findByOwnerIds(
+    ownerIds: string[],
+  ): Promise<ZoneWithNodesAndFibersModel[]> {
     const models = await this.prisma.zone.findMany({
-      where: { ownerId, status: { not: 'DELETED' } },
+      where: { ownerId: { in: ownerIds }, status: { not: 'DELETED' } },
       include: {
         nodes: {
           include: {

@@ -9,6 +9,7 @@ export type WorkerImageResponseDto = {
     architecture: string;
     virtualizationType: string;
     workerStorageTypeId: string | null;
+    ownerId: string | null;
 }
 
 export type CreateWorkerImageDto = {
@@ -21,4 +22,5 @@ export type CreateWorkerImageDto = {
     description?: string;
     osVersion?: string;
     workerStorageTypeId?: number;
+    ownerId?: string;
 }

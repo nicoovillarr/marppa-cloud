@@ -7,6 +7,7 @@ import { AtomEntity } from '../entities/atom.entity';
 import { AtomWithRelationsModel } from '../models/atom-with-relations.model';
 import { AtomInvalidStatusError } from '../errors/atom-invalid-status.error';
 import { AtomImageService } from './atom-image.service';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { AtomSizeService } from './atom-size.service';
 import { AtomSizeDeprecatedError } from '../errors/atom-size-deprecated.error';
 import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
@@ -37,6 +38,8 @@ export class AtomService {
     private readonly hostCapacityService: HostCapacityService,
 
     private readonly companyService: CompanyService,
+
+    private readonly companyHierarchyService: CompanyHierarchyService,
   ) { }
 
   async findById(id: string): Promise<AtomEntity> {
@@ -60,17 +63,41 @@ export class AtomService {
   }
 
   async findByOwnerId(ownerId?: string): Promise<AtomWithRelationsModel[]> {
+    const readable = await this.readableOwnerIds();
+
+    if (ownerId != null && !readable.includes(ownerId)) {
+      throw new UnauthorizedError();
+    }
+
+    return this.atomRepository.findByOwnerIds(
+      ownerId != null ? [ownerId] : readable,
+    );
+  }
+
+  async findByIdWithRelationsForRead(
+    id: string,
+  ): Promise<AtomWithRelationsModel> {
+    const atom = await this.atomRepository.findByIdWithRelations(id);
+    if (!atom) {
+      throw new NotFoundError();
+    }
+
+    if (!(await this.readableOwnerIds()).includes(atom.atom.ownerId)) {
+      throw new NotFoundError();
+    }
+
+    return atom;
+  }
+
+  private async readableOwnerIds(): Promise<string[]> {
     const user = getCurrentUser();
     if (!user) {
       throw new UnauthorizedError();
     }
 
-    if (ownerId != null && ownerId !== user.companyId) {
-      throw new UnauthorizedError();
-    }
-
-    return this.atomRepository.findByOwnerId(user.companyId);
+    return this.companyHierarchyService.selfAndDescendants(user.companyId);
   }
+
 
   /**
    * The image is resolved through the catalog before anything is written: an id

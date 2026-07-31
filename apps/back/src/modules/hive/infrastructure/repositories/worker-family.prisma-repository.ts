@@ -13,11 +13,11 @@ export class WorkerFamilyPrismaRepository implements WorkerFamilyRepository {
   constructor(private readonly prisma: PrismaService) { }
 
   findAvailableFor(
-    companyId: string,
+    companyIds: string[],
     includeDeprecated = false,
   ): Promise<WorkerFamilyWithFlavorsModel[]> {
     return this.query(includeDeprecated, {
-      OR: [{ ownerId: null }, { ownerId: companyId }],
+      OR: [{ ownerId: null }, { ownerId: { in: companyIds } }],
     });
   }
 

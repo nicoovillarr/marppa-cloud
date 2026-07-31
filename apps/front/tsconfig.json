@@ -59,6 +59,9 @@
       "@/users/*": [
         "src/features/users/*"
       ],
+      "@/company/*": [
+        "src/features/company/*"
+      ],
       "@/libs/*": [
         "./src/libs/*"
       ],

@@ -1,3 +1,4 @@
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerService } from './worker.service';
 import { WorkerWithRelationsModel } from '../models/worker-with-relations.model';
@@ -83,7 +84,7 @@ describe('WorkerService', () => {
 
   const mockWorkerRepository = {
     findById: jest.fn(),
-    findByOwnerId: jest.fn(),
+    findByOwnerIds: jest.fn(),
     findByIdWithRelations: jest.fn(),
     findByOwnerIdWithRelations: jest.fn(),
     sumProvisionedResources: jest.fn(),
@@ -106,9 +107,19 @@ describe('WorkerService', () => {
     assertFitsOnStart: jest.fn(),
   };
 
+
+  const mockCompanyHierarchyService = {
+    selfAndAncestors: jest.fn(async (companyId: string) => [companyId]),
+    selfAndDescendants: jest.fn(async (companyId: string) => [companyId]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: CompanyHierarchyService,
+          useValue: mockCompanyHierarchyService,
+        },
         WorkerService,
         {
           provide: WORKER_REPOSITORY_SYMBOL,
@@ -187,20 +198,20 @@ describe('WorkerService', () => {
 
   describe('findByOwnerId', () => {
     it('should return workers by owner id', async () => {
-      mockWorkerRepository.findByOwnerId.mockResolvedValue([mockWorkerWithRelations]);
+      mockWorkerRepository.findByOwnerIds.mockResolvedValue([mockWorkerWithRelations]);
 
       const result = await service.findByOwnerId('c-000001');
 
-      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000001');
+      expect(repository.findByOwnerIds).toHaveBeenCalledWith(['c-000001']);
       expect(result).toEqual([mockWorkerWithRelations]);
     });
 
     it('should return empty array if no workers found', async () => {
-      mockWorkerRepository.findByOwnerId.mockResolvedValue([]);
+      mockWorkerRepository.findByOwnerIds.mockResolvedValue([]);
 
       const result = await service.findByOwnerId('c-000001');
 
-      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000001');
+      expect(repository.findByOwnerIds).toHaveBeenCalledWith(['c-000001']);
       expect(result).toEqual([]);
     });
 

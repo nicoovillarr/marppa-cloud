@@ -229,6 +229,9 @@ model WorkerImage {
   workerStorageTypeId Int?
   workerStorageType   WorkerStorageType? @relation(fields: [workerStorageTypeId], references: [id])
 
+  ownerId String?
+  owner   Company? @relation(fields: [ownerId], references: [id])
+
   workers Worker[]
 }
 
@@ -271,7 +274,11 @@ model HostCapacity {
   ramMB    Int
   diskGB   Int
 
-  reportedAt DateTime @updatedAt
+  cpuCoresOverride Int?
+  ramMBOverride    Int?
+  diskGBOverride   Int?
+
+  reportedAt DateTime @default(now())
 }
 
 model WorkerStorageType {
@@ -359,6 +366,9 @@ model AtomImage {
 
   defaultSizeId Int
   defaultSize   AtomSize @relation(fields: [defaultSizeId], references: [id])
+
+  ownerId String?
+  owner   Company? @relation(fields: [ownerId], references: [id])
 
   atoms Atom[]
 }
@@ -536,6 +546,8 @@ model Company {
   users          User[]
   workers        Worker[]
   workerFamilies WorkerFamily[]
+  workerImages   WorkerImage[]
+  atomImages     AtomImage[]
   zones          Zone[]
   atoms          Atom[]
   storages       WorkerDisk[]

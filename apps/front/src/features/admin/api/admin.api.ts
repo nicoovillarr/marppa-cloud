@@ -10,7 +10,7 @@ import {
     PageQuery,
     Paginated,
     UpdateAdminUserDto,
-    UpsertHostCapacityDto,
+    UpdateHostCapacityDto,
 } from "./admin.api.types";
 
 const baseUrl = '/admin';
@@ -52,7 +52,7 @@ export const adminApi = {
         return fetcher<AdminHostCapacityResponseDto[]>(`${baseUrl}/hosts`);
     },
 
-    upsertHost(hostname: string, data: UpsertHostCapacityDto): Promise<AdminHostCapacityResponseDto> {
+    updateHostOverride(hostname: string, data: UpdateHostCapacityDto): Promise<AdminHostCapacityResponseDto> {
         return fetcher<AdminHostCapacityResponseDto>(`${baseUrl}/hosts/${hostname}`, 'PUT', data);
     },
 

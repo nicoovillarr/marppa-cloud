@@ -15,6 +15,7 @@ export class WorkerImagePrismaMapper {
         description: raw.description ?? undefined,
         osVersion: raw.osVersion ?? undefined,
         workerStorageTypeId: raw.workerStorageTypeId ?? undefined,
+        ownerId: raw.ownerId ?? undefined,
       },
     );
   }

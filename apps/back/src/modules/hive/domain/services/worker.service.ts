@@ -17,6 +17,7 @@ import { WorkerInvalidStatusError } from '../errors/worker-invalid-status.error'
 import { authorize } from '@/shared/domain/policy/authorize';
 import { WorkerFlavorService } from './worker-flavor.service';
 import { WorkerImageService } from './worker-image.service';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
 import { WorkerArchitectureMismatchError } from '../errors/worker-architecture-mismatch.error';
@@ -31,6 +32,7 @@ export class WorkerService {
     private readonly macAddressService: MacAddressService,
     private readonly workerFlavorService: WorkerFlavorService,
     private readonly workerImageService: WorkerImageService,
+    private readonly companyHierarchyService: CompanyHierarchyService,
     private readonly hostCapacityService: HostCapacityService,
   ) { }
 
@@ -55,17 +57,39 @@ export class WorkerService {
   }
 
   async findByOwnerId(ownerId?: string): Promise<WorkerWithRelationsModel[]> {
+    const readable = await this.readableOwnerIds();
+
+    if (ownerId != null && !readable.includes(ownerId)) {
+      throw new UnauthorizedError();
+    }
+
+    return this.workerRepository.findByOwnerIds(
+      ownerId != null ? [ownerId] : readable,
+    );
+  }
+
+  async findByIdWithRelationsForRead(
+    id: string,
+  ): Promise<WorkerWithRelationsModel> {
+    const worker = await this.workerRepository.findByIdWithRelations(id);
+    if (!worker) {
+      throw new NotFoundError();
+    }
+
+    if (!(await this.readableOwnerIds()).includes(worker.worker.ownerId)) {
+      throw new NotFoundError();
+    }
+
+    return worker;
+  }
+
+  private async readableOwnerIds(): Promise<string[]> {
     const user = getCurrentUser();
     if (!user) {
       throw new UnauthorizedError();
     }
 
-    // No cross-company reads: an explicit ownerId must match the caller's company.
-    if (ownerId != null && ownerId !== user.companyId) {
-      throw new UnauthorizedError();
-    }
-
-    return this.workerRepository.findByOwnerId(user.companyId);
+    return this.companyHierarchyService.selfAndDescendants(user.companyId);
   }
 
   async createWorker(data: CreateWorkerDto): Promise<WorkerEntity> {
@@ -82,7 +106,10 @@ export class WorkerService {
       data.flavorId,
     );
 
-    if (!family.isVisibleTo(user.companyId) || family.isDeprecated) {
+    const visibleOwnerIds =
+      await this.companyHierarchyService.selfAndAncestors(user.companyId);
+
+    if (!family.isVisibleTo(visibleOwnerIds) || family.isDeprecated) {
       throw new NotFoundError();
     }
 

@@ -9,6 +9,7 @@ import { WorkerFamilyWithFlavorsModel } from '../models/worker-family-with-flavo
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { PlatformAdminService } from '@/shared/domain/services/platform-admin.service';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 
 @Injectable()
 export class WorkerFamilyService {
@@ -16,6 +17,7 @@ export class WorkerFamilyService {
     @Inject(WORKER_FAMILY_REPOSITORY_SYMBOL)
     private readonly workerFamilyRepository: WorkerFamilyRepository,
     private readonly platformAdminService: PlatformAdminService,
+    private readonly companyHierarchyService: CompanyHierarchyService,
   ) { }
 
   async findAll(
@@ -26,18 +28,32 @@ export class WorkerFamilyService {
     }
 
     return this.workerFamilyRepository.findAvailableFor(
-      this.currentCompanyId(),
+      await this.visibleOwnerIds(),
       includeDeprecated,
     );
   }
 
   async findById(id: number): Promise<WorkerFamilyEntity> {
     const workerFamily = await this.workerFamilyRepository.findById(id);
-    if (!workerFamily || !workerFamily.isVisibleTo(this.currentCompanyId())) {
+    if (!workerFamily) {
+      throw new NotFoundError();
+    }
+
+    if (
+      !workerFamily.isPublic &&
+      !(await this.platformAdminService.isPlatformAdmin()) &&
+      !workerFamily.isVisibleTo(await this.visibleOwnerIds())
+    ) {
       throw new NotFoundError();
     }
 
     return workerFamily;
+  }
+
+  private visibleOwnerIds(): Promise<string[]> {
+    return this.companyHierarchyService.selfAndAncestors(
+      this.currentCompanyId(),
+    );
   }
 
   async create(data: CreateWorkerFamilyDto): Promise<WorkerFamilyEntity> {

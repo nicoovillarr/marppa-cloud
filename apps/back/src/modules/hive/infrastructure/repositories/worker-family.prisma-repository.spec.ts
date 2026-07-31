@@ -93,7 +93,7 @@ describe('WorkerFamilyPrismaRepository (Integration)', () => {
       const result = await repository.findById(createdFamilyId);
       expect(result?.isDeprecated).toBe(true);
 
-      const available = await repository.findAvailableFor('c-000001');
+      const available = await repository.findAvailableFor(['c-000001']);
       expect(available.map((entry) => entry.family.id)).not.toContain(
         createdFamilyId,
       );

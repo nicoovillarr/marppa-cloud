@@ -5,6 +5,8 @@ import { AtomImageResponseDto } from "@/nucleus/api/atom-image.api.types";
 import { atomSizeApi } from "@/nucleus/api/atom-size.api";
 import { AtomSizeResponseDto } from "@/nucleus/api/atom-size.api.types";
 import { ColumnMapping } from "@/core/ui/Table";
+import { adminApi } from "../api/admin.api";
+import { AdminCompanyResponseDto } from "../api/admin.api.types";
 import { useCallback, useEffect, useState } from "react";
 import { AdminCrudSection } from "./AdminCrudSection";
 import { AdminField } from "./AdminCrudForm";
@@ -26,6 +28,12 @@ const IMAGE_COLUMNS: ColumnMapping<AtomImageResponseDto> = {
     minWidth: "140px",
     renderFn: (row: AtomImageResponseDto) =>
       row.capabilities?.join(", ") || "—",
+  },
+  ownerId: {
+    label: "Owner",
+    minWidth: "160px",
+    renderFn: (row: AtomImageResponseDto) =>
+      row.ownerId ? row.ownerId : "public",
   },
 };
 
@@ -58,9 +66,16 @@ const SIZE_FIELDS: AdminField[] = [
 
 export function NucleusCatalogAdmin() {
   const [sizes, setSizes] = useState<AtomSizeResponseDto[]>([]);
+  const [companies, setCompanies] = useState<AdminCompanyResponseDto[]>([]);
 
   const loadSizes = useCallback(async () => {
-    setSizes(await atomSizeApi.listSizes(true));
+    const [loadedSizes, loadedCompanies] = await Promise.all([
+      atomSizeApi.listSizes(true),
+      adminApi.findCompanies(),
+    ]);
+
+    setSizes(loadedSizes);
+    setCompanies(loadedCompanies);
   }, []);
 
   useEffect(() => {
@@ -95,6 +110,16 @@ export function NucleusCatalogAdmin() {
           value: size.id,
           displayText: `${size.name} v${size.version}`,
         })),
+    },
+    {
+      name: "ownerId",
+      label: "Owner",
+      type: "select",
+      tooltip: "Leave empty to publish it to every company",
+      options: companies.map((company) => ({
+        value: company.id,
+        displayText: company.name,
+      })),
     },
     {
       name: "capabilities",

@@ -14,12 +14,15 @@ import { ZoneWithNodesModel } from '../models/zone-with-nodes.model';
 import { ZoneWithNodesAndFibersModel } from '../models/zone-with-nodes-and-fibers.model';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import { authorize } from '@/shared/domain/policy/authorize';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 
 @Injectable()
 export class ZoneService {
   constructor(
     @Inject(ZONE_REPOSITORY_SYMBOL)
     private readonly repository: ZoneRepository,
+
+    private readonly companyHierarchyService: CompanyHierarchyService,
   ) { }
 
   public async findById(id: string): Promise<ZoneEntity> {
@@ -52,19 +55,29 @@ export class ZoneService {
     return entity;
   }
 
-  public findByOwnerId(ownerId?: string): Promise<ZoneWithNodesAndFibersModel[]> {
+  public async findByOwnerId(
+    ownerId?: string,
+  ): Promise<ZoneWithNodesAndFibersModel[]> {
+    const readable = await this.readableOwnerIds();
+
+    if (ownerId != null && !readable.includes(ownerId)) {
+      throw new UnauthorizedError();
+    }
+
+    return this.repository.findByOwnerIds(
+      ownerId != null ? [ownerId] : readable,
+    );
+  }
+
+  private async readableOwnerIds(): Promise<string[]> {
     const user = getCurrentUser();
     if (!user) {
       throw new UnauthorizedError();
     }
 
-    // No cross-company reads: an explicit ownerId must match the caller's company.
-    if (ownerId != null && ownerId !== user.companyId) {
-      throw new UnauthorizedError();
-    }
-
-    return this.repository.findByOwnerId(user.companyId);
+    return this.companyHierarchyService.selfAndDescendants(user.companyId);
   }
+
 
   public findAllActive(): Promise<ZoneEntity[]> {
     return this.repository.findAllActive();

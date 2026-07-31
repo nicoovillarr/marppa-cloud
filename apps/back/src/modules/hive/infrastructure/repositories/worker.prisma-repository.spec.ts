@@ -128,7 +128,7 @@ describe('WorkerPrismaRepository (Integration)', () => {
     });
 
     it('should find workers by owner id', async () => {
-      const result = await repository.findByOwnerId('c-000001');
+      const result = await repository.findByOwnerIds(['c-000001']);
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
@@ -137,7 +137,7 @@ describe('WorkerPrismaRepository (Integration)', () => {
     });
 
     it('should return empty array for non-existent owner id', async () => {
-      const result = await repository.findByOwnerId('c-nonexistent');
+      const result = await repository.findByOwnerIds(['c-nonexistent']);
 
       expect(result).toEqual([]);
     });

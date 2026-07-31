@@ -30,7 +30,7 @@ export class WorkerApiService {
   }
 
   public async findByIdWithRelations(id: string): Promise<WorkerWithRelationsResponseModel> {
-    const data = await this.service.findByIdWithRelations(id);
+    const data = await this.service.findByIdWithRelationsForRead(id);
 
     const worker = plainToInstance(WorkerResponseModel, data.worker, { excludeExtraneousValues: true });
     const flavor = plainToInstance(WorkerFlavorResponseModel, data.flavor, { excludeExtraneousValues: true });
