@@ -2,6 +2,7 @@ import { EventType, ResourceStatus } from '@marppa-cloud/db';
 import { IEventProcessor } from '@/event/application/EventWorker';
 import type { EventPayload } from '@/event/domain/models/EventPayload';
 import { ORBIT_SERVICE_TOKEN, OrbitService } from '../domain/services/OrbitService';
+import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 
 import { EventProcessor } from '@/decorators/EventProcessor';
 import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
@@ -17,6 +18,7 @@ export class PortalCreateProcessor implements IEventProcessor {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly wsServer: WebSocketServer,
 
     @Inject(EVENT_REPOSITORY_TOKEN)
     private readonly repository: EventRepository,
@@ -26,13 +28,18 @@ export class PortalCreateProcessor implements IEventProcessor {
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {
-    let portal: { id: string; status: string; address: string; type: string; apiKey: string; [k: string]: unknown } | null = null;
+    let portal: { id: string; ownerId: string; status: string; address: string; type: string; apiKey: string; [k: string]: unknown } | null = null;
 
     const updatePortalStatus = async (status: ResourceStatus) => {
       await this.prisma.portal.update({
         where: { id: portal!.id },
         data: { status, updatedBy: event.createdBy },
       });
+      this.wsServer.sendPortalMessage(
+        { id: portal!.id, ownerId: portal!.ownerId },
+        'UPDATED',
+        { status },
+      );
     };
 
     try {
