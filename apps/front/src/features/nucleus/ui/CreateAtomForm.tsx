@@ -37,6 +37,7 @@ export function CreateAtomForm() {
       atomName: "",
       atomImageId: "",
       atomSizeId: "",
+      atomTag: "",
     },
   });
 
@@ -48,12 +49,14 @@ export function CreateAtomForm() {
 
   const atomSizeId = watch("atomSizeId");
   const selectedSize = sizes.find((size) => String(size.id) === String(atomSizeId));
+  const atomTag = watch("atomTag");
 
   useEffect(() => {
     if (selectedImage) {
       setValue("atomSizeId", String(selectedImage.defaultSizeId));
+      setValue("atomTag", selectedImage.defaultTag);
     }
-  }, [selectedImage?.id, setValue]);
+  }, [selectedImage?.id, selectedImage?.defaultSizeId, selectedImage?.defaultTag, setValue]);
 
   useEffect(() => {
     setRequiredValues((prev) =>
@@ -82,7 +85,7 @@ export function CreateAtomForm() {
   const onSubmit = async (data: any) => {
     buttonRef.current?.setIsLoading(true);
 
-    const { atomName, atomImageId } = data;
+    const { atomName, atomImageId, atomTag } = data;
 
     if (!ATOM_NAME.test(atomName ?? "")) {
       setError("atomName", {
@@ -125,6 +128,16 @@ export function CreateAtomForm() {
       return;
     }
 
+    const tag = String(atomTag ?? "").trim();
+    if (!/^[\w][\w.\-]{0,127}$/.test(tag)) {
+      setError("atomTag", {
+        type: "manual",
+        message: "Enter a valid container image tag",
+      });
+      await buttonRef.current?.setIsLoading(false);
+      return;
+    }
+
     const missingRequired = requiredKeys.filter((key) => !requiredValues[key]?.trim());
     if (missingRequired.length > 0) {
       toast.error(`Set a value for: ${missingRequired.join(", ")}`);
@@ -141,6 +154,7 @@ export function CreateAtomForm() {
       atomName,
       Number(atomImageId),
       Number(atomSizeId),
+      tag,
       allEnvVars,
     );
 
@@ -198,7 +212,7 @@ export function CreateAtomForm() {
           options={images?.map((img) => ({
             value: img.id,
             title: img.name,
-            subtitle: `${img.registry}/${img.repository}:${img.tag}`,
+            subtitle: `${img.registry}/${img.repository}:${img.defaultTag}`,
           }))}
           required
         />
@@ -210,6 +224,21 @@ export function CreateAtomForm() {
 
         {selectedImage && (
           <>
+            <FormInput
+              controlName="atomTag"
+              control={control}
+              label="Tag"
+              placeholder={selectedImage.defaultTag}
+              className="w-full"
+              required
+            />
+
+            <p className="text-xs text-ink-muted -mt-2">
+              {atomTag === selectedImage.defaultTag
+                ? "This is the default tag for this image."
+                : `Pulling ${selectedImage.registry}/${selectedImage.repository}:${atomTag || "…"}.`}
+            </p>
+
             <FormRadioCards
               controlName="atomSizeId"
               control={control}

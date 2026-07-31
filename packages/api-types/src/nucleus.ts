@@ -10,6 +10,7 @@ export const MIN_ATOM_RAM_MB = 64;
 export interface CreateAtomRequest {
   name: string;
   imageId: number;
+  tag?: string;
   sizeId?: number;
   ownerId?: string;
   envVars?: CreateAtomEnvVarRequest[];
@@ -32,6 +33,7 @@ export interface AtomResponse {
   status: string;
   ownerId: string;
   imageId: number;
+  tag: string;
   sizeId: number;
   cpuCores: number;
   ramMB: number;
@@ -47,7 +49,7 @@ export interface AtomImageResponse {
   description: string | null;
   registry: string;
   repository: string;
-  tag: string;
+  defaultTag: string;
   digest: string | null;
   architecture: string;
   capabilities: string[];

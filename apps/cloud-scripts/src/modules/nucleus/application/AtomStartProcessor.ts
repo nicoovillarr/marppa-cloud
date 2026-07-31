@@ -127,7 +127,7 @@ export class AtomStartProcessor implements IEventProcessor {
       await this.nucleusService.startAtom(
         atom.id,
         atom.name,
-        atom.image,
+        { ...atom.image, tag: atom.tag },
         {
           zoneId: node.zoneId,
           cidr: node.zone.cidr,

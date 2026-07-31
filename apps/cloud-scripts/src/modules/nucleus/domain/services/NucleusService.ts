@@ -6,13 +6,15 @@ export type AtomImageSource = Pick<
   AtomImage,
   | 'registry'
   | 'repository'
-  | 'tag'
   | 'digest'
   | 'architecture'
   | 'capabilities'
   | 'sysctls'
   | 'command'
->;
+> & {
+  // Resolved pull tag — usually Atom.tag, not AtomImage.defaultTag.
+  tag: string;
+};
 
 /**
  * Where an atom sits in the mesh. Containers are attached to the zone bridge the

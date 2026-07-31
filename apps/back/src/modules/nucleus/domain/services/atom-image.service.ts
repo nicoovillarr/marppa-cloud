@@ -57,7 +57,7 @@ export class AtomImageService {
       data.name,
       data.registry ?? DEFAULT_REGISTRY,
       data.repository,
-      data.tag,
+      data.defaultTag,
       data.architecture ?? DEFAULT_ARCHITECTURE,
       data.defaultSizeId,
       {
@@ -88,7 +88,7 @@ export class AtomImageService {
         name: data.name,
         registry: data.registry,
         repository: data.repository,
-        tag: data.tag,
+        defaultTag: data.defaultTag,
         architecture: data.architecture,
         defaultSizeId: data.defaultSizeId,
         description: data.description,

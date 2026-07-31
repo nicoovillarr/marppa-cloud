@@ -77,8 +77,12 @@ export class AtomCreateProcessor implements IEventProcessor {
       await updateAtomStatus(STATES.work);
 
       // The image comes from the AtomImage row the FK points at, never from the
-      // event payload: an atom can only ever pull an approved image.
-      if (!(await this.nucleusService.ensureAtomImageExists(atom.image))) {
+      // event payload: an atom can only ever pull an approved image. The tag is
+      // snapshotted on the Atom so the same catalog entry can serve variants.
+      if (!(await this.nucleusService.ensureAtomImageExists({
+        ...atom.image,
+        tag: atom.tag,
+      }))) {
         throw new AbortError(
           `Could not pull atom image for event ID: ${event.id}.`,
           EventType.ATOM_CREATE_FAILED,

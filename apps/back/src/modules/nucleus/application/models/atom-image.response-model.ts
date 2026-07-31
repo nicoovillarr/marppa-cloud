@@ -6,7 +6,7 @@ export class AtomImageResponseModel {
   @Expose() description: string | null;
   @Expose() registry: string;
   @Expose() repository: string;
-  @Expose() tag: string;
+  @Expose() defaultTag: string;
   @Expose() digest: string | null;
   @Expose() architecture: string;
   @Expose() capabilities: string[];

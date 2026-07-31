@@ -335,6 +335,10 @@ model Atom {
   imageId Int
   image   AtomImage @relation(fields: [imageId], references: [id])
 
+  // Chosen at create time; defaults from AtomImage.defaultTag. Same catalog
+  // contract (requiredEnvVars, capabilities, …) applies across tags.
+  tag String
+
   sizeId Int
   size   AtomSize @relation(fields: [sizeId], references: [id])
 
@@ -355,7 +359,7 @@ model AtomImage {
 
   registry     String  @default("docker.io")
   repository   String
-  tag          String
+  defaultTag   String
   digest       String?
   architecture String  @default("amd64")
 

@@ -1,5 +1,5 @@
-import { AtomImageEntity } from '@/nucleus/domain/entities/atom-image.entity';
 import { AtomImage } from '@prisma/client';
+import { AtomImageEntity } from '@/nucleus/domain/entities/atom-image.entity';
 
 export class AtomImagePrismaMapper {
   static toEntity(raw: AtomImage): AtomImageEntity {
@@ -7,7 +7,7 @@ export class AtomImagePrismaMapper {
       raw.name,
       raw.registry,
       raw.repository,
-      raw.tag,
+      raw.defaultTag,
       raw.architecture,
       raw.defaultSizeId,
       {

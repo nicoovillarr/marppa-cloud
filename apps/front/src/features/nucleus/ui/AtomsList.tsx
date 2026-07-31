@@ -27,7 +27,7 @@ const COLUMNS: ColumnMapping<AtomWithRelationsResponseDto> = {
   image: {
     label: "Image",
     minWidth: "250px",
-    renderFn: (atom: AtomWithRelationsResponseDto) => imageRef(atom.image),
+    renderFn: (atom: AtomWithRelationsResponseDto) => imageRef(atom),
   },
   IP: {
     label: "IP Address",

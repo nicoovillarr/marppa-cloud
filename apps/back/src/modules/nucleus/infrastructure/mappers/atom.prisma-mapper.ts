@@ -9,6 +9,7 @@ export class AtomPrismaMapper {
       ResourceStatus[raw.status as string],
       raw.createdBy,
       raw.imageId,
+      raw.tag,
       raw.ownerId,
       raw.sizeId,
       raw.cpuCores,

@@ -136,6 +136,7 @@ export class AtomService {
       getEventStateTransition(EventTypeKey.ATOM_CREATE).entry,
       user.userId,
       image.id!,
+      data.tag?.trim() || image.defaultTag,
       data.ownerId ?? user.companyId,
       size.id!,
       size.cpuCores,

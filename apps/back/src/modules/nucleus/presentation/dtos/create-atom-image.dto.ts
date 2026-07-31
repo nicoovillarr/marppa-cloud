@@ -15,7 +15,7 @@ export class CreateAtomImageDto {
   repository: string;
 
   @IsString()
-  tag: string;
+  defaultTag: string;
 
   @IsNumber()
   defaultSizeId: number;

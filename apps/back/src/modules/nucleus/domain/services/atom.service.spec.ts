@@ -38,6 +38,7 @@ describe('AtomService', () => {
     ResourceStatus.INACTIVE,
     'u-000001',
     1,
+    '7-alpine',
     'c-000001',
     2,
     0.5,
@@ -124,6 +125,20 @@ describe('AtomService', () => {
       expect(created.sizeId).toBe(mockSize.id);
       expect(created.cpuCores).toBe(mockSize.cpuCores);
       expect(created.ramMB).toBe(mockSize.ramMB);
+    });
+
+    it("should fall back to the image's default tag", async () => {
+      await service.createAtom(dto);
+
+      const created = (repository.create as jest.Mock).mock.calls[0][0];
+      expect(created.tag).toBe(mockImage.defaultTag);
+    });
+
+    it('should use an explicitly requested tag', async () => {
+      await service.createAtom({ ...dto, tag: '7-bookworm' });
+
+      const created = (repository.create as jest.Mock).mock.calls[0][0];
+      expect(created.tag).toBe('7-bookworm');
     });
 
     it('should refuse a deprecated size', async () => {

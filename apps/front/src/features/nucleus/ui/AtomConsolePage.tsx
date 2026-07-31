@@ -48,7 +48,7 @@ export function AtomConsolePage() {
             <p className="font-semibold truncate">{atom?.name ?? "Console"}</p>
             {atom && (
               <p className="text-xs text-ink-muted font-mono truncate">
-                {imageRef(atom.image)}
+                {imageRef(atom)}
               </p>
             )}
           </div>

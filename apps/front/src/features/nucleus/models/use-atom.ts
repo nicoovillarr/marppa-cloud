@@ -52,13 +52,14 @@ export const useAtom = () => {
         name: string,
         imageId: number,
         sizeId: number,
+        tag: string,
         envVars?: CreateAtomEnvVarDto[],
     ) => {
         setIsLoading(true);
         setError(null);
 
         try {
-            return await service.createAtom(name, imageId, sizeId, envVars);
+            return await service.createAtom(name, imageId, sizeId, tag, envVars);
         } catch (error) {
             setError(error);
         } finally {

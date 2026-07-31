@@ -10,6 +10,7 @@ export class AtomResponseModel {
   @Expose() updatedBy: string | null;
   @Expose() ownerId: string;
   @Expose() imageId: number;
+  @Expose() tag: string;
   @Expose() sizeId: number;
   @Expose() cpuCores: number;
   @Expose() ramMB: number;

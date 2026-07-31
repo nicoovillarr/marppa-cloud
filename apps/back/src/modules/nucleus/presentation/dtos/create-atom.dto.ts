@@ -27,6 +27,15 @@ export class CreateAtomDto {
   @IsNumber()
   imageId: number;
 
+  // Defaults to AtomImage.defaultTag when omitted.
+  @IsString()
+  @IsOptional()
+  @MaxLength(128)
+  @Matches(/^[\w][\w.\-]{0,127}$/, {
+    message: 'tag must be a valid container image tag',
+  })
+  tag?: string;
+
   @IsNumber()
   @IsOptional()
   sizeId?: number;

@@ -20,9 +20,10 @@ export class AtomService {
         name: string,
         imageId: number,
         sizeId: number,
+        tag: string,
         envVars?: CreateAtomEnvVarDto[],
     ): Promise<AtomResponseDto> {
-        const dto = await atomsApi.createAtom({ name, imageId, sizeId, envVars });
+        const dto = await atomsApi.createAtom({ name, imageId, sizeId, tag, envVars });
         return dto;
     }
 

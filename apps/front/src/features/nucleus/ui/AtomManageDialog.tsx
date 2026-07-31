@@ -24,10 +24,14 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-export const imageRef = (image: AtomWithRelationsResponseDto["image"]) =>
-  image
-    ? `${image.registry}/${image.repository}${image.digest ? `@${image.digest}` : `:${image.tag}`}`
-    : "—";
+export const imageRef = (atom: Pick<AtomWithRelationsResponseDto, "tag" | "image">) => {
+  const image = atom.image;
+  if (!image) return "—";
+  if (image.digest) {
+    return `${image.registry}/${image.repository}@${image.digest}`;
+  }
+  return `${image.registry}/${image.repository}:${atom.tag}`;
+};
 
 export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
   const { startAtom, terminateAtom, deleteAtom } = useAtom();
@@ -61,7 +65,7 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
       <section className="space-y-1 rounded border border-border dark: p-3">
         <InfoRow label="Name" value={atom.name} />
         <InfoRow label="Status" value={atom.status} />
-        <InfoRow label="Image" value={imageRef(atom.image)} />
+        <InfoRow label="Image" value={imageRef(atom)} />
         <InfoRow label="IP address" value={atom.node?.ipAddress ?? "not assigned"} />
       </section>
 

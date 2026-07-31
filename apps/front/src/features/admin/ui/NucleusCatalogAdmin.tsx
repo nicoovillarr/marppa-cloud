@@ -20,7 +20,7 @@ const IMAGE_COLUMNS: ColumnMapping<AtomImageResponseDto> = {
     minWidth: "260px",
     canCopy: true,
     renderFn: (row: AtomImageResponseDto) =>
-      `${row.registry}/${row.repository}:${row.tag}`,
+      `${row.registry}/${row.repository}:${row.defaultTag}`,
   },
   architecture: { label: "Arch", minWidth: "90px" },
   capabilities: {
@@ -96,7 +96,7 @@ export function NucleusCatalogAdmin() {
       required: true,
       placeholder: "library/redis",
     },
-    { name: "tag", label: "Tag", required: true, placeholder: "7-alpine" },
+    { name: "defaultTag", label: "Default tag", required: true, placeholder: "7-alpine" },
     { name: "digest", label: "Digest", placeholder: "sha256:…" },
     { name: "architecture", label: "Architecture", placeholder: "amd64" },
     {

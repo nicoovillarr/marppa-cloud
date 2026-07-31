@@ -4,7 +4,7 @@ export type AtomImageResponseDto = {
     description: string | null;
     registry: string;
     repository: string;
-    tag: string;
+    defaultTag: string;
     digest: string | null;
     architecture: string;
     capabilities: string[];
@@ -18,7 +18,7 @@ export type AtomImageResponseDto = {
 export type CreateAtomImageDto = {
     name: string;
     repository: string;
-    tag: string;
+    defaultTag: string;
     defaultSizeId: number;
     registry?: string;
     architecture?: string;
