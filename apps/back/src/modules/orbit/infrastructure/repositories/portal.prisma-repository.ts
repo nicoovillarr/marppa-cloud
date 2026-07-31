@@ -76,7 +76,7 @@ export class PortalPrismaRepository implements PortalRepository {
   }
 
   async update(data: PortalEntity): Promise<PortalEntity> {
-    const sanitize = PrismaMapper.toCreate(data);
+    const sanitize = PrismaMapper.toUpdate(data);
 
     const portal = await this.prisma.portal.update({
       where: { id: data.id },

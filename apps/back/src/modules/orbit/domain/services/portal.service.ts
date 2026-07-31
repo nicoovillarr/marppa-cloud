@@ -171,7 +171,7 @@ export class PortalService {
     await this.portalRepository.update(queued);
   }
 
-  private async assertOwnedZone(zoneId?: string): Promise<void> {
+  private async assertOwnedZone(zoneId?: string | null): Promise<void> {
     if (zoneId == null) {
       return;
     }

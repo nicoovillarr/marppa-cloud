@@ -41,5 +41,5 @@ export class UpdatePortalDto {
 
   @IsString()
   @IsOptional()
-  zoneId?: string;
+  zoneId?: string | null;
 }
