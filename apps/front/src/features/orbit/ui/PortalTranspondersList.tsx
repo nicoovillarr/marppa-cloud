@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ColumnMapping, Table } from "@/core/ui/Table";
 import { FormLabel } from "@/core/ui/inputs/form/FormLabel";
-import { LuPlus } from "react-icons/lu";
+import { LuPlus, LuTrash2 } from "react-icons/lu";
 import { PortalWithTranspondersWithNodesResponseDto } from "../api/portal.api.types";
 import { TransponderForm } from "./TransponderForm";
 import { useDialog } from "@/core/ui/DialogProvider";
@@ -12,6 +12,7 @@ import { usePortal } from "../models/use-portal";
 import { StatusBadge } from "@/core/ui/StatusBadge";
 import { usePortalRealtime } from "../models/use-orbit-realtime";
 import { useTransponder } from "../models/use-transponder";
+import { useTransponderStore } from "../models/transponder.store";
 import { toast } from "sonner";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 
@@ -54,7 +55,7 @@ export function PortalTranspondersList({
     });
   };
 
-  const onDeleteTransponder = (rowData: TransponderWithNodeResponseModel) => {
+  const onDeleteTransponder = useCallback((rowData: TransponderWithNodeResponseModel) => {
     showDialog({
       type: "confirm",
       title: "Delete Transponder",
@@ -69,11 +70,14 @@ export function PortalTranspondersList({
           toast.success("Transponder deletion queued");
           refresh();
         } else {
-          toast.error("Failed to delete transponder");
+          toast.error(
+            useTransponderStore.getState().error ??
+            "Failed to delete transponder"
+          );
         }
       },
     });
-  };
+  }, [showDialog, portalId, deleteTransponder, refresh]);
 
   const contextMenu = useCallback(
     (rowData: TransponderWithNodeResponseModel) => [
@@ -84,7 +88,7 @@ export function PortalTranspondersList({
         action: () => onDeleteTransponder(rowData),
       },
     ],
-    [portalId, deleteTransponder, refresh]
+    [onDeleteTransponder]
   );
 
   const onAddTransponder = () => {
@@ -127,7 +131,30 @@ export function PortalTranspondersList({
       renderFn: (value: TransponderWithNodeResponseModel) =>
         value.node?.ipAddress || value.nodeId || "N/A",
     },
-  }), []);
+    actions: {
+      label: "",
+      minWidth: "48px",
+      onClick: () => false,
+      renderFn: (value: TransponderWithNodeResponseModel) => {
+        const deletable = DELETABLE_STATUSES.includes(value.status);
+        return (
+          <button
+            type="button"
+            className="text-ink-muted transition-colors hover:text-status-danger disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-ink-muted cursor-pointer"
+            disabled={!deletable}
+            title={
+              deletable
+                ? "Delete transponder"
+                : `Must be ${DELETABLE_STATUSES.join(" or ")} to be deleted (is ${value.status})`
+            }
+            onClick={() => onDeleteTransponder(value)}
+          >
+            <LuTrash2 size={16} />
+          </button>
+        );
+      },
+    },
+  }), [onDeleteTransponder]);
 
   useEffect(() => {
     refresh();
