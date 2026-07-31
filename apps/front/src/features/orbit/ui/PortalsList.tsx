@@ -1,8 +1,9 @@
 "use client";
+import { useVisibleCompanies } from "@/company/models/use-visible-companies";
 
 import { Button } from "@/core/ui/Button";
 import { ColumnMapping, Table, TableHandler } from "@/core/ui/Table";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { LuListPlus } from "react-icons/lu";
 import { toast } from "sonner";
 import { PortalDetails } from "./PortalDetails";
@@ -46,6 +47,23 @@ const COLUMNS: ColumnMapping<PortalWithTranspondersResponseDto> = {
 };
 
 export function PortalsList() {
+  const { nameOf, hasMoreThanOne } = useVisibleCompanies();
+
+  const columns = useMemo(
+    () =>
+      hasMoreThanOne
+        ? {
+            ...COLUMNS,
+            ownerId: {
+              label: "Company",
+              minWidth: "160px",
+              renderFn: (row: any) => nameOf(row.ownerId),
+            },
+          }
+        : COLUMNS,
+    [hasMoreThanOne, nameOf]
+  );
+
   const { showDialog } = useDialog();
 
   const {
@@ -138,7 +156,7 @@ export function PortalsList() {
           <Table
             ref={tableRef}
             select="multiple"
-            columns={COLUMNS}
+            columns={columns}
             data={portals}
             contextMenuGroups={contextMenu}
             onRowClick={(rowData) => onRowClick(rowData.id)}

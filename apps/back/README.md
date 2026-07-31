@@ -212,6 +212,38 @@ Writing `ownerId` is separately restricted: a tenant may only scope an image to 
 own company, while a platform admin may scope one to any tenant — which is the
 whole point of the admin dashboard's Owner field.
 
+### Company hierarchy: what flows which way
+
+`CompanyHierarchyService` walks `parentCompanyId` in both directions, and the two
+directions grant different things on purpose.
+
+- **Templates flow down.** `selfAndAncestors` scopes the catalog, so a subsidiary
+  resolves an image or family owned by a parent. A parent never sees a child's
+  private template.
+- **Live resources are visible up.** `selfAndDescendants` scopes the list and the
+  read-detail paths of `Worker`, `Atom`, `Zone` and `Portal`, so a parent can watch
+  what its subsidiaries run. A child never sees the parent's resources.
+
+**Reading up never becomes managing up.** `defineAbilityFor` still grants `manage`
+on an exact `companyId` match, and every mutation authorises through
+`findById`/`findByIdWithRelations`, which were deliberately left alone —
+`startWorker`, `stopWorker`, `updateWorker` and `deleteWorker` all reach
+authorisation through `findById`, so widening it would have handed a parent the
+power to stop a subsidiary's VM. The read paths are separate methods
+(`findByIdWithRelationsForRead`) wired only to the `GET` routes, which also keeps
+the console and the internal mutation flows on the old exact-match rule.
+
+Zones are the reason inheritance stops at reading. `br_netfilter` is not loaded, so
+traffic between containers on one bridge never reaches nftables and no rule can
+filter it — that is why a zone only ever holds one company's resources. Letting a
+company place nodes in another company's zone would convert a documented
+within-company property into a cross-company one, and no permission model can undo
+it. `NodeService` keeps comparing `zone.ownerId` to the caller's company exactly.
+
+`GET /company/visible` returns the companies the caller can read, which is what the
+resource lists use to label rows with an owner. The column only appears when more
+than one company is in play, so a single-tenant view is unchanged.
+
 ### Infra resource lifecycle
 
 Any resource whose real state lives on the host (zones, nodes, workers, portals,

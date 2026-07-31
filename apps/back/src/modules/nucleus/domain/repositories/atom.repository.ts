@@ -6,7 +6,7 @@ export const ATOM_REPOSITORY_SYMBOL = Symbol('ATOM_REPOSITORY');
 export abstract class AtomRepository {
   abstract findById(id: string): Promise<AtomEntity | null>;
   abstract findByIdWithRelations(id: string): Promise<AtomWithRelationsModel | null>;
-  abstract findByOwnerId(ownerId: string): Promise<AtomWithRelationsModel[]>;
+  abstract findByOwnerIds(ownerIds: string[]): Promise<AtomWithRelationsModel[]>;
   abstract create(atom: AtomEntity): Promise<AtomEntity>;
   abstract update(atom: AtomEntity): Promise<AtomEntity>;
   abstract delete(id: string): Promise<void>;

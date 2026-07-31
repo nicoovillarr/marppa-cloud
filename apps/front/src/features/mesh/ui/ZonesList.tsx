@@ -1,8 +1,9 @@
 "use client";
+import { useVisibleCompanies } from "@/company/models/use-visible-companies";
 
 import { Button } from "@/core/ui/Button";
 import { Table } from "@/core/ui/Table";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { LuListPlus } from "react-icons/lu";
 import { useZone } from "../models/use-zone";
@@ -49,6 +50,23 @@ const COLUMNS = {
 };
 
 export function ZonesList() {
+  const { nameOf, hasMoreThanOne } = useVisibleCompanies();
+
+  const columns = useMemo(
+    () =>
+      hasMoreThanOne
+        ? {
+            ...COLUMNS,
+            ownerId: {
+              label: "Company",
+              minWidth: "160px",
+              renderFn: (row: any) => nameOf(row.ownerId),
+            },
+          }
+        : COLUMNS,
+    [hasMoreThanOne, nameOf]
+  );
+
   const {
     zones,
     fetchZones,
@@ -121,7 +139,7 @@ export function ZonesList() {
       {zones && zones.length > 0 ? (
         <>
           <Table
-            columns={COLUMNS}
+            columns={columns}
             data={zones}
             rowHref={(rowData: ZoneWithNodes) => `/dashboard/mesh/zones/${rowData.id}`}
             getKey={(rowData: ZoneWithNodes) => rowData.id}

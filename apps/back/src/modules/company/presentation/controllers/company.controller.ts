@@ -37,6 +37,11 @@ export class CompanyController {
     return this.companyApiService.delete(id);
   }
 
+  @Get('visible')
+  public findVisible(): Promise<{ id: string; name: string }[]> {
+    return this.companyApiService.findVisible();
+  }
+
   @Get(':id')
   public async findById(
     @Param('id') id: string,

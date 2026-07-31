@@ -42,10 +42,12 @@ export class WorkerPrismaRepository implements WorkerRepository {
     return WorkerWithRelationsPrismaMapper.toDomain(worker);
   }
 
-  async findByOwnerId(ownerId: string): Promise<WorkerWithRelationsModel[]> {
+  async findByOwnerIds(
+    ownerIds: string[],
+  ): Promise<WorkerWithRelationsModel[]> {
     const workers = await this.prisma.worker.findMany({
       where: {
-        ownerId,
+        ownerId: { in: ownerIds },
       },
       include: {
         flavor: true,

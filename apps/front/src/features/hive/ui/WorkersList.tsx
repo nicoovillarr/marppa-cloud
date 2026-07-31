@@ -1,7 +1,8 @@
 "use client";
+import { useVisibleCompanies } from "@/company/models/use-visible-companies";
 
 import { ColumnMapping, Table } from "@/core/ui/Table";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Button } from "@/core/ui/Button";
 import { LuListPlus, LuPlay, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
@@ -53,6 +54,23 @@ const COLUMNS: ColumnMapping<WorkerWithRelationsResponseDto> = {
 };
 
 export function WorkersList() {
+  const { nameOf, hasMoreThanOne } = useVisibleCompanies();
+
+  const columns = useMemo(
+    () =>
+      hasMoreThanOne
+        ? {
+            ...COLUMNS,
+            ownerId: {
+              label: "Company",
+              minWidth: "160px",
+              renderFn: (row: any) => nameOf(row.ownerId),
+            },
+          }
+        : COLUMNS,
+    [hasMoreThanOne, nameOf]
+  );
+
   const { workers, fetchWorkers, startWorker, terminateWorker } = useWorker();
   const { showDialog } = useDialog();
 
@@ -170,7 +188,7 @@ export function WorkersList() {
         <>
           <Table
             select="multiple"
-            columns={COLUMNS}
+            columns={columns}
             data={workers}
             contextMenuGroups={contextMenuGroups}
             onRowClick={(rowData) => onRowClick(rowData.id)}

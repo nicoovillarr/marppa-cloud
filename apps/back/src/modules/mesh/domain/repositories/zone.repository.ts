@@ -8,7 +8,9 @@ export abstract class ZoneRepository {
   abstract findById(id: string): Promise<ZoneEntity | null>;
   abstract findByIdWithNodes(id: string): Promise<ZoneWithNodesModel | null>;
   abstract findByIdFull(id: string): Promise<ZoneWithNodesAndFibersModel | null>;
-  abstract findByOwnerId(ownerId: string): Promise<ZoneWithNodesAndFibersModel[]>;
+  abstract findByOwnerIds(
+    ownerIds: string[],
+  ): Promise<ZoneWithNodesAndFibersModel[]>;
   abstract findAllActive(): Promise<ZoneEntity[]>;
   abstract findLastZone(): Promise<ZoneWithNodesModel | null>;
   abstract create(zone: ZoneEntity): Promise<ZoneEntity>;

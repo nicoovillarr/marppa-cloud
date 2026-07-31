@@ -1,3 +1,4 @@
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ZoneService } from './zone.service';
 import {
@@ -39,7 +40,7 @@ describe('ZoneService', () => {
   const mockZoneRepository = {
     findById: jest.fn(),
     findByIdWithNodes: jest.fn(),
-    findByOwnerId: jest.fn(),
+    findByOwnerIds: jest.fn(),
     findAllActive: jest.fn(),
     findLastZone: jest.fn(),
     create: jest.fn(),
@@ -47,9 +48,19 @@ describe('ZoneService', () => {
     delete: jest.fn(),
   };
 
+
+  const mockCompanyHierarchyService = {
+    selfAndAncestors: jest.fn(async (companyId: string) => [companyId]),
+    selfAndDescendants: jest.fn(async (companyId: string) => [companyId]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: CompanyHierarchyService,
+          useValue: mockCompanyHierarchyService,
+        },
         ZoneService,
         {
           provide: ZONE_REPOSITORY_SYMBOL,
@@ -111,35 +122,35 @@ describe('ZoneService', () => {
     });
   });
 
-  describe('findByOwnerId', () => {
+  describe('findByOwnerIds', () => {
     it('should return zones by owner id from argument when it matches the session company', async () => {
-      mockZoneRepository.findByOwnerId.mockResolvedValue([mockZoneEntity]);
+      mockZoneRepository.findByOwnerIds.mockResolvedValue([mockZoneEntity]);
 
       const result = await service.findByOwnerId('c-000001');
 
-      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000001');
+      expect(repository.findByOwnerIds).toHaveBeenCalledWith(['c-000001']);
       expect(result).toEqual([mockZoneEntity]);
     });
 
-    it('should throw UnauthorizedError when ownerId belongs to another company', () => {
-      expect(() => service.findByOwnerId('c-000002')).toThrow(
+    it('should throw UnauthorizedError when ownerId belongs to another company', async () => {
+      await expect(service.findByOwnerId('c-000002')).rejects.toThrow(
         UnauthorizedError,
       );
     });
 
     it('should return zones by owner id from session if argument is null', async () => {
-      mockZoneRepository.findByOwnerId.mockResolvedValue([mockZoneEntity]);
+      mockZoneRepository.findByOwnerIds.mockResolvedValue([mockZoneEntity]);
 
       const result = await service.findByOwnerId();
 
-      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000001');
+      expect(repository.findByOwnerIds).toHaveBeenCalledWith(['c-000001']);
       expect(result).toEqual([mockZoneEntity]);
     });
 
     it('should throw UnauthorizedError if no user in session and no ownerId provided', async () => {
       jest.spyOn(SessionContext, 'getCurrentUser').mockReturnValue(null);
 
-      expect(() => service.findByOwnerId()).toThrow(UnauthorizedError);
+      await expect(service.findByOwnerId()).rejects.toThrow(UnauthorizedError);
     });
   });
 

@@ -8,13 +8,31 @@ import { CreateCompanyDto } from '../../presentation/dtos/create-company.dto';
 import { UpdateCompanyDto } from '../../presentation/dtos/update-company.dto';
 import { authorize } from '@/shared/domain/policy/authorize';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
+import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 
 @Injectable()
 export class CompanyService {
   constructor(
     @Inject(COMPANY_REPOSITORY_SYMBOL)
     private readonly companyRepository: CompanyRepository,
+    private readonly companyHierarchyService: CompanyHierarchyService,
   ) {}
+
+  public async findVisible(): Promise<CompanyEntity[]> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const readable = await this.companyHierarchyService.selfAndDescendants(
+      user.companyId,
+    );
+
+    const companies = await this.companyRepository.findAll();
+    return companies.filter((company) => readable.includes(company.id!));
+  }
 
   public async create(data: CreateCompanyDto): Promise<CompanyEntity> {
     const { name, alias, description, parentCompanyId } = data;

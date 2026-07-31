@@ -84,7 +84,7 @@ describe('WorkerService', () => {
 
   const mockWorkerRepository = {
     findById: jest.fn(),
-    findByOwnerId: jest.fn(),
+    findByOwnerIds: jest.fn(),
     findByIdWithRelations: jest.fn(),
     findByOwnerIdWithRelations: jest.fn(),
     sumProvisionedResources: jest.fn(),
@@ -110,6 +110,7 @@ describe('WorkerService', () => {
 
   const mockCompanyHierarchyService = {
     selfAndAncestors: jest.fn(async (companyId: string) => [companyId]),
+    selfAndDescendants: jest.fn(async (companyId: string) => [companyId]),
   };
 
   beforeEach(async () => {
@@ -197,20 +198,20 @@ describe('WorkerService', () => {
 
   describe('findByOwnerId', () => {
     it('should return workers by owner id', async () => {
-      mockWorkerRepository.findByOwnerId.mockResolvedValue([mockWorkerWithRelations]);
+      mockWorkerRepository.findByOwnerIds.mockResolvedValue([mockWorkerWithRelations]);
 
       const result = await service.findByOwnerId('c-000001');
 
-      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000001');
+      expect(repository.findByOwnerIds).toHaveBeenCalledWith(['c-000001']);
       expect(result).toEqual([mockWorkerWithRelations]);
     });
 
     it('should return empty array if no workers found', async () => {
-      mockWorkerRepository.findByOwnerId.mockResolvedValue([]);
+      mockWorkerRepository.findByOwnerIds.mockResolvedValue([]);
 
       const result = await service.findByOwnerId('c-000001');
 
-      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000001');
+      expect(repository.findByOwnerIds).toHaveBeenCalledWith(['c-000001']);
       expect(result).toEqual([]);
     });
 

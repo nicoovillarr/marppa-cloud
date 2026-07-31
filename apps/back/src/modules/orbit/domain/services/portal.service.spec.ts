@@ -1,3 +1,4 @@
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PortalService } from './portal.service';
 import {
@@ -41,7 +42,7 @@ describe('PortalService', () => {
   const mockPortalRepository = {
     findById: jest.fn(),
     findByIdWithTranspondersWithNode: jest.fn(),
-    findByOwnerId: jest.fn(),
+    findByOwnerIds: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
   };
@@ -54,9 +55,19 @@ describe('PortalService', () => {
     assertCanManage: jest.fn(),
   };
 
+
+  const mockCompanyHierarchyService = {
+    selfAndAncestors: jest.fn(async (companyId: string) => [companyId]),
+    selfAndDescendants: jest.fn(async (companyId: string) => [companyId]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: CompanyHierarchyService,
+          useValue: mockCompanyHierarchyService,
+        },
         PortalService,
         {
           provide: PORTAL_REPOSITORY,
@@ -116,21 +127,21 @@ describe('PortalService', () => {
     });
   });
 
-  describe('findByOwnerId', () => {
+  describe('findByOwnerIds', () => {
     it('should return portals of the caller company', async () => {
-      mockPortalRepository.findByOwnerId.mockResolvedValue([mockPortalEntity]);
+      mockPortalRepository.findByOwnerIds.mockResolvedValue([mockPortalEntity]);
 
       const result = await service.findByOwnerId('c-000001');
 
-      expect(repository.findByOwnerId).toHaveBeenCalledWith('c-000001');
+      expect(repository.findByOwnerIds).toHaveBeenCalledWith(['c-000001']);
       expect(result).toEqual([mockPortalEntity]);
     });
 
-    it('should throw UnauthorizedError for another company id', () => {
-      expect(() => service.findByOwnerId('c-000002')).toThrow(
+    it('should throw UnauthorizedError for another company id', async () => {
+      await expect(service.findByOwnerId('c-000002')).rejects.toThrow(
         UnauthorizedError,
       );
-      expect(repository.findByOwnerId).not.toHaveBeenCalled();
+      expect(repository.findByOwnerIds).not.toHaveBeenCalled();
     });
   });
 

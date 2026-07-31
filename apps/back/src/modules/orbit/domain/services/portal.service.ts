@@ -19,6 +19,7 @@ import { PortalWithTranspondersWithNodeModel } from '../models/portal-with-trans
 import { ZoneService } from '@/mesh/domain/services/zone.service';
 import { DNS_PROVIDER, DnsProvider } from './dns-provider.service';
 import { authorize } from '@/shared/domain/policy/authorize';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 
 @Injectable()
 export class PortalService {
@@ -29,6 +30,8 @@ export class PortalService {
 
     @Inject(DNS_PROVIDER)
     private readonly dnsProvider: DnsProvider,
+
+    private readonly companyHierarchyService: CompanyHierarchyService,
   ) { }
 
   public getPortalTypes(): string[] {
@@ -58,18 +61,27 @@ export class PortalService {
     return model;
   }
 
-  public findByOwnerId(ownerId?: string): Promise<PortalEntity[]> {
-    const user = getCurrentUser();
-    if (user == null) {
+  public async findByOwnerId(ownerId?: string): Promise<PortalEntity[]> {
+    const readable = await this.readableOwnerIds();
+
+    if (ownerId != null && !readable.includes(ownerId)) {
       throw new UnauthorizedError();
     }
 
-    if (ownerId != null && ownerId !== user.companyId) {
-      throw new UnauthorizedError();
-    }
-
-    return this.portalRepository.findByOwnerId(user.companyId);
+    return this.portalRepository.findByOwnerIds(
+      ownerId != null ? [ownerId] : readable,
+    );
   }
+
+  private async readableOwnerIds(): Promise<string[]> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    return this.companyHierarchyService.selfAndDescendants(user.companyId);
+  }
+
 
   public async create(data: CreatePortalDto): Promise<PortalEntity> {
     const user = getCurrentUser();

@@ -1,3 +1,4 @@
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AtomService } from './atom.service';
 import { AtomSizeService } from './atom-size.service';
@@ -60,9 +61,19 @@ describe('AtomService', () => {
   };
   const mockCompanyService = { findById: jest.fn() };
 
+
+  const mockCompanyHierarchyService = {
+    selfAndAncestors: jest.fn(async (companyId: string) => [companyId]),
+    selfAndDescendants: jest.fn(async (companyId: string) => [companyId]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: CompanyHierarchyService,
+          useValue: mockCompanyHierarchyService,
+        },
         AtomService,
         { provide: ATOM_REPOSITORY_SYMBOL, useValue: mockAtomRepository },
         { provide: AtomImageService, useValue: mockAtomImageService },

@@ -30,4 +30,29 @@ export class CompanyHierarchyService {
 
     return chain;
   }
+
+  async selfAndDescendants(companyId: string): Promise<string[]> {
+    const childrenOf = new Map<string, string[]>();
+
+    for (const link of await this.repository.findParentLinks()) {
+      if (!link.parentCompanyId) continue;
+
+      const siblings = childrenOf.get(link.parentCompanyId) ?? [];
+      siblings.push(link.id);
+      childrenOf.set(link.parentCompanyId, siblings);
+    }
+
+    const tree: string[] = [];
+    const pending = [companyId];
+
+    while (pending.length) {
+      const current = pending.shift()!;
+      if (tree.includes(current)) continue;
+
+      tree.push(current);
+      pending.push(...(childrenOf.get(current) ?? []));
+    }
+
+    return tree;
+  }
 }

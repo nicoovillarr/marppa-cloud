@@ -8,6 +8,14 @@ import { UpdateCompanyDto } from '../../presentation/dtos/update-company.dto';
 export class CompanyApiService {
   constructor(private readonly companyService: CompanyService) {}
 
+  public async findVisible(): Promise<{ id: string; name: string }[]> {
+    const companies = await this.companyService.findVisible();
+    return companies.map((company) => ({
+      id: company.id!,
+      name: company.name,
+    }));
+  }
+
   public async create(data: CreateCompanyDto): Promise<CompanyEntity> {
     return this.companyService.create(data);
   }

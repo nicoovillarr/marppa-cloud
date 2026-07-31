@@ -43,6 +43,7 @@ describe('WorkerFamilyService', () => {
 
   const mockCompanyHierarchyService = {
     selfAndAncestors: jest.fn(async (companyId: string) => [companyId]),
+    selfAndDescendants: jest.fn(async (companyId: string) => [companyId]),
   };
 
   beforeEach(async () => {
