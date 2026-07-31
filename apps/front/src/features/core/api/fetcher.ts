@@ -60,7 +60,7 @@ function buildRequest(method: RequestMethod, body?: RequestBody): RequestInit {
 
 let pendingSessionRefresh: Promise<boolean> | null = null;
 
-function refreshSession(): Promise<boolean> {
+export function refreshSession(): Promise<boolean> {
   pendingSessionRefresh ??= fetch(
     `/api${SESSION_REFRESH_ACTION}`,
     buildRequest("GET")
@@ -73,6 +73,17 @@ function refreshSession(): Promise<boolean> {
     });
 
   return pendingSessionRefresh;
+}
+
+function redirectToLogin(): void {
+  if (typeof window === "undefined") return;
+
+  const { pathname, search } = window.location;
+  if (pathname.startsWith("/login")) return;
+
+  const target = new URL("/login", window.location.origin);
+  target.searchParams.set("redirect", `${pathname}${search}`);
+  window.location.replace(target.toString());
 }
 
 function toErrorMessage(data: any): string {
@@ -94,17 +105,18 @@ export const fetcher = async <T>(
 
   let res = await fetch(url, buildRequest(method, payload));
 
-  if (
-    res.status === 401 &&
-    action !== SESSION_REFRESH_ACTION &&
-    (await refreshSession())
-  ) {
-    res = await fetch(url, buildRequest(method, payload));
+  if (res.status === 401 && action !== SESSION_REFRESH_ACTION) {
+    if (await refreshSession()) {
+      res = await fetch(url, buildRequest(method, payload));
+    } else {
+      redirectToLogin();
+    }
   }
 
   let data: any;
   try {
-    data = await res.json();
+    const text = await res.text();
+    data = text ? JSON.parse(text) : null;
   } catch {
     data = {
       message: "There was a problem while processing the server response",
@@ -115,5 +127,5 @@ export const fetcher = async <T>(
     throw new Error(toErrorMessage(data));
   }
 
-  return data;
+  return data as T;
 };

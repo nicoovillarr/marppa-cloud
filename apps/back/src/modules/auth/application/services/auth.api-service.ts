@@ -20,7 +20,6 @@ import { isRegistrationEnabled } from '@/auth/domain/config/registration';
 import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
 import { TooManyRequestsError } from '@/shared/domain/errors/too-many-requests.error';
 import { InvalidCredentialsError } from '@/user/domain/errors/invalid-credentials.error';
-import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 
 @Injectable()
 export class AuthApiService {
@@ -98,26 +97,34 @@ export class AuthApiService {
 
   async logout(req: Request) {
     const refreshToken = req.cookies.refresh_token;
-    if (!refreshToken) {
-      throw new UnauthorizedError();
+    if (refreshToken) {
+      await this.authService.invalidateSession(refreshToken);
+      return;
     }
 
-    await this.authService.invalidateSession(refreshToken);
+    this.authService.clearCookies();
   }
 
   async tick(req: Request): Promise<boolean> {
     const oldRefreshToken = req.cookies.refresh_token;
     if (!oldRefreshToken) {
+      this.authService.clearCookies();
       return false;
     }
 
     const userId = await this.validateRefreshToken(oldRefreshToken);
     if (!userId) {
+      if (await this.authService.wasRotatedRecently(oldRefreshToken)) {
+        return true;
+      }
+
+      this.authService.clearCookies();
       return false;
     }
 
     const user = await this.userService.findUserForSessionRefresh(userId);
     if (!user) {
+      this.authService.clearCookies();
       return false;
     }
 

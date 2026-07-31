@@ -99,6 +99,51 @@ describe('AuthPrismaRepository (Integration)', () => {
       expect(result).toBeNull();
     });
 
+    it('should find the just-expired session while it is inside the grace window', async () => {
+      const result = await repository.findExpiredSessionByRefreshToken(
+        createdSessionRefreshToken,
+        new Date(Date.now() - 30_000),
+      );
+
+      expect(result?.refreshToken).toBe(createdSessionRefreshToken);
+    });
+
+    it('should not find the expired session once the grace window has passed', async () => {
+      const result = await repository.findExpiredSessionByRefreshToken(
+        createdSessionRefreshToken,
+        new Date(Date.now() + 30_000),
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('should report an active session created inside the grace window', async () => {
+      await expect(
+        repository.hasActiveSessionCreatedSince(
+          userId,
+          new Date(Date.now() + 30_000),
+        ),
+      ).resolves.toBe(false);
+
+      const replacement = new SessionEntity(
+        userId,
+        '192.168.1.100',
+        'Mozilla/5.0',
+        'Windows',
+        'Desktop',
+        'Chrome',
+        { refreshToken: 'test-refresh-token-rotated' },
+      );
+      await repository.createSession(replacement);
+
+      await expect(
+        repository.hasActiveSessionCreatedSince(
+          userId,
+          new Date(Date.now() - 30_000),
+        ),
+      ).resolves.toBe(true);
+    });
+
     it('should create another session for cleanup test', async () => {
       const session = new SessionEntity(
         userId,

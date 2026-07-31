@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/auth/models/useAuth";
 import { LuGithub, LuLinkedin, LuMenu, LuX } from "react-icons/lu";
 import { useModuleLinks } from "./Sidebar";
@@ -44,6 +44,7 @@ export function AppBar() {
   const { isLoading, isLoggedIn, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const links = useModuleLinks();
+  const router = useRouter();
 
   const onLogout = async () => {
     try {
@@ -51,7 +52,7 @@ export function AppBar() {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      redirect("/");
+      router.replace("/");
     }
   };
 

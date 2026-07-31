@@ -13,6 +13,8 @@ import { UserEntity } from '@/user/domain/entities/user.entity';
 import { JwtEntity } from '@/auth/domain/entities/jwt.entity';
 import { RequestData } from '../../../../libs/utils';
 
+const ROTATION_GRACE_MS = 30 * 1000;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -71,6 +73,10 @@ export class AuthService {
     this.tokenStorageService.clear();
   }
 
+  clearCookies(): void {
+    this.tokenStorageService.clear();
+  }
+
   async deleteSession(refreshToken: string): Promise<void> {
     await this.repo.deleteSessionByRefreshToken(refreshToken);
   }
@@ -79,6 +85,20 @@ export class AuthService {
     refreshToken: string,
   ): Promise<SessionEntity | null> {
     return await this.repo.findSessionByRefreshToken(refreshToken);
+  }
+
+  async wasRotatedRecently(refreshToken: string): Promise<boolean> {
+    const cutoff = new Date(Date.now() - ROTATION_GRACE_MS);
+
+    const expired = await this.repo.findExpiredSessionByRefreshToken(
+      refreshToken,
+      cutoff,
+    );
+    if (!expired) {
+      return false;
+    }
+
+    return await this.repo.hasActiveSessionCreatedSince(expired.userId, cutoff);
   }
 
   async getTokenInformation(refreshToken: string): Promise<JwtEntity | null> {

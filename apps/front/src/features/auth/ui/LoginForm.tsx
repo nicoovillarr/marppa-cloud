@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { redirect } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { TurnstileInstance } from "@marsidev/react-turnstile";
 
@@ -18,8 +18,17 @@ interface FormValues {
   password: string;
 }
 
+function safeRedirectTarget(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
+    return "/dashboard";
+  }
+  return raw;
+}
+
 export function LoginForm() {
   const { login, error } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const captchaRef = useRef<TurnstileInstance>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -38,7 +47,7 @@ export function LoginForm() {
 
     try {
       await login(email, password, captchaToken ?? undefined);
-      redirect("/dashboard");
+      router.replace(safeRedirectTarget(searchParams.get("redirect")));
     } catch {
       captchaRef.current?.reset();
       setCaptchaToken(null);

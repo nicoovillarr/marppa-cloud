@@ -192,6 +192,16 @@ None of this touches application code — it's purely router/switch configuratio
 
 **In the meantime — host-only substitute.** Full VLAN/DMZ isolation is a Layer 2 property (a firewall on the host alone can't stop another LAN device from reaching it at the wire level), but a host-side egress/ingress allowlist still meaningfully bounds what a compromised host could do: no scanning the LAN, no exfiltrating to arbitrary destinations, no reachability from the LAN beyond an explicit admin IP. Applied via `nftables`, opt-in and fail-closed at boot (`REQUIRE_EGRESS_HARDENING=true` in `apps/cloud-scripts`) — see `docs/host-network-hardening.md` for the concrete ruleset and the reasoning.
 
+## Session rotation
+
+The access token lives 15 minutes and the refresh token 7 days; `GET /auth/tick` trades a refresh token for a fresh pair and is the only endpoint that rotates them. Rotation is not a delete: `deleteSessionByRefreshToken` stamps `expiredAt`, so the replaced row stays in the table.
+
+That soft-expire is what makes concurrent rotation survivable. Two requests can present the same refresh token — the browser boot tick and a query that got a 401, or two open tabs. The first one rotates and issues new cookies; the second one no longer finds an active session. Deleting the row would leave that second request unable to tell "this token was just rotated" from "this session is dead", and its `Set-Cookie` clearing the jar would wipe the tokens the winner had just issued, which is precisely how a browser ends up holding a `has_session` marker with no usable session and bouncing between `/login` and `/dashboard`.
+
+So a `tick` that finds no active session asks a second question before clearing anything: was this token expired within the last 30 seconds (`ROTATION_GRACE_MS`), and does the user have an active session created inside that same window? Both true means another request already rotated it — the tick reports success and emits no cookies, leaving the winner's intact. A logout produces the first condition but never the second, so revoked sessions still clear correctly. Replaying a stolen old token inside the window buys nothing: no tokens are issued on that path.
+
+The client side of the same problem is handled by `refreshSession()` in `apps/front/src/features/core/api/fetcher.ts` being single-flight and shared with `authApi.tick`, so everything a page mounts collapses into one `/auth/tick`. The grace window covers what a single promise cannot: separate tabs.
+
 ## Hive
 
 The Hive is a core module of the MCS that provides virtualization for running applications. It is designed to be lightweight and efficient, allowing for quick deployment and management of VMs. Within the Hive, users can create, manage, and scale Workers (VMs) as needed, providing a flexible environment for application development and deployment.

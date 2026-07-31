@@ -29,6 +29,36 @@ export class AuthPrismaRepository implements AuthRepository {
     });
   }
 
+  async findExpiredSessionByRefreshToken(
+    refreshToken: string,
+    cutoff: Date,
+  ): Promise<SessionEntity | null> {
+    const session: Session | null = await this.prisma.session.findFirst({
+      where: {
+        refreshToken: refreshToken,
+        expiredAt: { gte: cutoff },
+      },
+    });
+    if (!session) return null;
+
+    return SessionPrismaMapper.toEntity(session);
+  }
+
+  async hasActiveSessionCreatedSince(
+    userId: string,
+    cutoff: Date,
+  ): Promise<boolean> {
+    const count = await this.prisma.session.count({
+      where: {
+        userId: userId,
+        expiredAt: null,
+        createdAt: { gte: cutoff },
+      },
+    });
+
+    return count > 0;
+  }
+
   async deleteExpiredSessions(cutoff: Date): Promise<number> {
     const result = await this.prisma.session.deleteMany({
       where: {

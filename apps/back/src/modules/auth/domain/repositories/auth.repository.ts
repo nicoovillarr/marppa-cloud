@@ -8,5 +8,13 @@ export abstract class AuthRepository {
   abstract findSessionByRefreshToken(
     refreshToken: string,
   ): Promise<SessionEntity | null>;
+  abstract findExpiredSessionByRefreshToken(
+    refreshToken: string,
+    cutoff: Date,
+  ): Promise<SessionEntity | null>;
+  abstract hasActiveSessionCreatedSince(
+    userId: string,
+    cutoff: Date,
+  ): Promise<boolean>;
   abstract deleteExpiredSessions(cutoff: Date): Promise<number>;
 }

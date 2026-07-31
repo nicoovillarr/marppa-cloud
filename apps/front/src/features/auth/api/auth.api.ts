@@ -1,4 +1,4 @@
-import { fetcher } from "@/core/api/fetcher";
+import { fetcher, refreshSession } from "@/core/api/fetcher";
 import {
     ConfirmPasswordResetDto,
     LoginDto,
@@ -8,12 +8,11 @@ import {
 
 export const authApi = {
     tick: async () => {
-        const response = await fetcher<boolean>("/auth/tick", "GET");
-        return response;
+        return await refreshSession();
     },
 
     login: async ({ email, password, captchaToken }: LoginDto) => {
-        const response = await fetcher<boolean>(
+        await fetcher(
             "/auth/login",
             "POST",
             {
@@ -23,11 +22,11 @@ export const authApi = {
             },
         );
 
-        return response;
+        return true;
     },
 
     register: async ({ email, password, name, captchaToken }: RegisterDto) => {
-        const response = await fetcher<boolean>(
+        await fetcher(
             "/auth/register",
             "POST",
             {
@@ -38,12 +37,11 @@ export const authApi = {
             }
         );
 
-        return response;
+        return true;
     },
 
     logout: async () => {
-        const response = await fetcher("/auth/logout", "POST", {});
-        return response;
+        await fetcher("/auth/logout", "POST", {});
     },
 
     requestPasswordReset: async ({ email, captchaToken }: RequestPasswordResetDto) => {

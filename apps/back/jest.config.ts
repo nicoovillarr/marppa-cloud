@@ -22,6 +22,8 @@ export default {
         "^@/admin/(.*)$": "<rootDir>/modules/admin/$1",
         "^@/auth/(.*)$": "<rootDir>/modules/auth/$1",
         "^@/user/(.*)$": "<rootDir>/modules/user/$1",
+        "^@/tokens/(.*)$": "<rootDir>/modules/tokens/$1",
+        "^@/system/(.*)$": "<rootDir>/modules/system/$1",
         "^@/company/(.*)$": "<rootDir>/modules/company/$1",
         "^@/shared/(.*)$": "<rootDir>/modules/shared/$1",
         "^@/event/(.*)$": "<rootDir>/modules/event/$1",

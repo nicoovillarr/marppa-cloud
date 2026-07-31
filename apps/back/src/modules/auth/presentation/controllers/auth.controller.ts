@@ -29,8 +29,8 @@ export class AuthController {
     return await this.authApiService.login(data, req);
   }
 
+  @Public()
   @Post('logout')
-  @UseGuards(LoggedInGuard)
   async logout(@Req() req: Request) {
     return await this.authApiService.logout(req);
   }

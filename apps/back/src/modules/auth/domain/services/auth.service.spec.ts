@@ -66,6 +66,8 @@ describe('AuthService', () => {
     createSession: jest.fn(),
     deleteSessionByRefreshToken: jest.fn(),
     findSessionByRefreshToken: jest.fn(),
+    findExpiredSessionByRefreshToken: jest.fn(),
+    hasActiveSessionCreatedSince: jest.fn(),
   };
 
   const mockTokenGenerator = {
@@ -182,6 +184,48 @@ describe('AuthService', () => {
         'refresh-token-123',
       );
       expect(tokenStorageService.clear).toHaveBeenCalled();
+    });
+  });
+
+  describe('wasRotatedRecently', () => {
+    it('should report a rotation when the token expired inside the grace window and a session replaced it', async () => {
+      mockAuthRepository.findExpiredSessionByRefreshToken.mockResolvedValue(
+        mockSession,
+      );
+      mockAuthRepository.hasActiveSessionCreatedSince.mockResolvedValue(true);
+
+      await expect(service.wasRotatedRecently('refresh-token-123')).resolves.toBe(
+        true,
+      );
+    });
+
+    it('should not report a rotation when the token expired outside the grace window', async () => {
+      mockAuthRepository.findExpiredSessionByRefreshToken.mockResolvedValue(null);
+
+      await expect(service.wasRotatedRecently('refresh-token-123')).resolves.toBe(
+        false,
+      );
+      expect(repository.hasActiveSessionCreatedSince).not.toHaveBeenCalled();
+    });
+
+    it('should not report a rotation when no session replaced the expired one', async () => {
+      mockAuthRepository.findExpiredSessionByRefreshToken.mockResolvedValue(
+        mockSession,
+      );
+      mockAuthRepository.hasActiveSessionCreatedSince.mockResolvedValue(false);
+
+      await expect(service.wasRotatedRecently('refresh-token-123')).resolves.toBe(
+        false,
+      );
+    });
+  });
+
+  describe('clearCookies', () => {
+    it('should clear auth cookies without touching the session table', async () => {
+      service.clearCookies();
+
+      expect(tokenStorageService.clear).toHaveBeenCalled();
+      expect(repository.deleteSessionByRefreshToken).not.toHaveBeenCalled();
     });
   });
 
