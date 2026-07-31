@@ -6,6 +6,7 @@ import { EventProcessor } from '@/decorators/EventProcessor';
 import { AbortError } from '@/event/domain/errors/AbortError';
 import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
 import { ORBIT_SERVICE_TOKEN, OrbitService } from '../domain/services/OrbitService';
+import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
 import { getEventStates } from '@/shared/domain/EventStateMachine';
@@ -17,6 +18,7 @@ export class PortalUpdateProcessor implements IEventProcessor {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly wsServer: WebSocketServer,
 
     @Inject(EVENT_REPOSITORY_TOKEN)
     private readonly repository: EventRepository,
@@ -26,13 +28,18 @@ export class PortalUpdateProcessor implements IEventProcessor {
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {
-    let portal: { id: string; status: string; address: string; type: string; apiKey: string; [k: string]: unknown } | null = null;
+    let portal: { id: string; ownerId: string; status: string; address: string; type: string; apiKey: string; [k: string]: unknown } | null = null;
 
     const updatePortalStatus = async (status: ResourceStatus) => {
       await this.prisma.portal.update({
         where: { id: portal!.id },
         data: { status, updatedBy: event.createdBy },
       });
+      this.wsServer.sendPortalMessage(
+        { id: portal!.id, ownerId: portal!.ownerId },
+        'UPDATED',
+        { status },
+      );
     };
 
     try {

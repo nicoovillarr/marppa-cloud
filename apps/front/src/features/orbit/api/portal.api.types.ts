@@ -10,7 +10,7 @@ export type CreatePortalDto = {
     apiKey: string;
     enableCompression?: boolean;
     corsEnabled?: boolean;
-    zoneId?: string;
+    zoneId?: string | null;
 }
 
 export type UpdatePortalDto = Partial<CreatePortalDto>;

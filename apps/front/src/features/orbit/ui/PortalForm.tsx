@@ -9,7 +9,6 @@ import { LuSave } from "react-icons/lu";
 import { IoReloadSharp } from "react-icons/io5";
 import { useZone } from "src/features/mesh/models/use-zone";
 import { PortalTranspondersList } from "./PortalTranspondersList";
-import { redirect } from "next/navigation";
 import { CreatePortalDto, PortalWithTranspondersResponseDto } from "../api/portal.api.types";
 
 interface PortalFormProps {
@@ -39,7 +38,6 @@ export function PortalForm({
 
   const internalSubmit = async (data: CreatePortalDto) => {
     const form = {
-      id: portal?.id,
       name: data.name,
       description: data.description,
       address: data.address,
@@ -57,8 +55,6 @@ export function PortalForm({
 
     buttonRef.current?.setProgress(100);
     buttonRef.current?.setIsLoading(false);
-
-    redirect('/dashboard/orbit/portals');
   };
 
   const resetApiKey = () => {
@@ -131,7 +127,7 @@ export function PortalForm({
             disabled={disableApiKey}
             disabledText="Hidden"
             type={disableApiKey ? "password" : "text"}
-            required
+            required={!disableApiKey}
           />
 
           {disableApiKey && (

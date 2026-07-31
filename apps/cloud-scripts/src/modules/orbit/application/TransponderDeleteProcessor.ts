@@ -6,6 +6,7 @@ import { EventProcessor } from '@/decorators/EventProcessor';
 import { AbortError } from '@/event/domain/errors/AbortError';
 import { EVENT_REPOSITORY_TOKEN, EventRepository } from '@/event/domain/repositories/EventRepository';
 import { ORBIT_SERVICE_TOKEN, OrbitService } from '../domain/services/OrbitService';
+import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
 import { getEventStates } from '@/shared/domain/EventStateMachine';
@@ -17,6 +18,7 @@ export class TransponderDeleteProcessor implements IEventProcessor {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly wsServer: WebSocketServer,
 
     @Inject(EVENT_REPOSITORY_TOKEN)
     private readonly repository: EventRepository,
@@ -26,13 +28,22 @@ export class TransponderDeleteProcessor implements IEventProcessor {
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {
-    let transponder: { id: string; status: string; portal: { transponders: unknown[] }; [k: string]: unknown } | null = null;
+    let transponder: { id: string; status: string; portalId: string; portal: { ownerId: string; transponders: unknown[] }; [k: string]: unknown } | null = null;
 
     const updateTransponderStatus = async (status: ResourceStatus) => {
       await this.prisma.transponder.update({
         where: { id: transponder!.id },
         data: { status, updatedBy: event.createdBy },
       });
+      this.wsServer.sendTransponderMessage(
+        {
+          id: transponder!.id,
+          portalId: transponder!.portalId,
+          ownerId: transponder!.portal.ownerId,
+        },
+        status === ResourceStatus.DELETED ? 'DELETED' : 'UPDATED',
+        { status },
+      );
     };
 
     try {

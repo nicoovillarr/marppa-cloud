@@ -28,6 +28,11 @@ export function PortalDetails({
       data
     );
 
+    if (!updatedPortal) {
+      toast.error("Failed to update portal.");
+      return;
+    }
+
     setPortal(updatedPortal);
     toast.success("Portal updated successfully!");
   };

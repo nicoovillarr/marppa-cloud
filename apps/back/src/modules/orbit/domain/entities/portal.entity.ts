@@ -13,7 +13,7 @@ interface PortalOptionalProps {
   createdAt?: Date;
   updatedAt?: Date;
   updatedBy?: string;
-  zoneId?: string;
+  zoneId?: string | null;
 }
 
 export class PortalEntity extends PatchableEntity {
@@ -28,7 +28,7 @@ export class PortalEntity extends PatchableEntity {
   public readonly createdAt?: Date;
   public readonly updatedAt?: Date;
   public readonly updatedBy?: string;
-  public readonly zoneId?: string;
+  public readonly zoneId?: string | null;
 
   constructor(
     public readonly name: string,

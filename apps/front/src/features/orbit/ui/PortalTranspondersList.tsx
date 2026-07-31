@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ColumnMapping, Table } from "@/core/ui/Table";
 import { FormLabel } from "@/core/ui/inputs/form/FormLabel";
 import { LuPlus } from "react-icons/lu";
@@ -10,6 +10,7 @@ import { useDialog } from "@/core/ui/DialogProvider";
 import { TransponderWithNodeResponseModel } from "../api/transponder.api.type";
 import { usePortal } from "../models/use-portal";
 import { StatusBadge } from "@/core/ui/StatusBadge";
+import { usePortalRealtime } from "../models/use-orbit-realtime";
 
 export function PortalTranspondersList({
   portalId,
@@ -27,6 +28,12 @@ export function PortalTranspondersList({
   const [_, setSelectedTransponders] = useState<Set<string>>(
     new Set()
   );
+
+  const refresh = useCallback(() => {
+    fetchPortalById(portalId).then((p) => setPortal(p));
+  }, [portalId, fetchPortalById]);
+
+  usePortalRealtime(portalId, refresh);
 
   const onRowClick = (rowData: TransponderWithNodeResponseModel) => {
     showDialog({
@@ -80,7 +87,7 @@ export function PortalTranspondersList({
   }), []);
 
   useEffect(() => {
-    fetchPortalById(portalId).then((p) => setPortal(p));
+    refresh();
   }, [portalId]);
 
   return (

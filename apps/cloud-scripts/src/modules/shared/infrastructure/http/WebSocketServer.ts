@@ -577,6 +577,22 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
       return atom?.ownerId === companyId;
     }
 
+    if (parts[0] === 'orbit' && parts[1] === 'portal' && parts[2]) {
+      const portal = await this.prisma.portal.findUnique({
+        where: { id: parts[2] },
+        select: { ownerId: true },
+      });
+      return portal?.ownerId === companyId;
+    }
+
+    if (parts[0] === 'orbit' && parts[1] === 'transponder' && parts[2]) {
+      const transponder = await this.prisma.transponder.findUnique({
+        where: { id: parts[2] },
+        select: { portal: { select: { ownerId: true } } },
+      });
+      return transponder?.portal.ownerId === companyId;
+    }
+
     if (parts[0] === 'hive' && parts[1] === 'worker' && parts[2]) {
       const worker = await this.prisma.worker.findUnique({
         where: { id: parts[2] },
@@ -669,6 +685,31 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     this.sendMessage(`mesh:node:${node.id}`, type, data);
     this.sendMessage(`company:${node.ownerId}:mesh`, type, {
       nodeId: node.id,
+      data,
+    });
+  }
+
+  public sendPortalMessage(
+    portal: { id: string; ownerId: string },
+    type: string,
+    data: unknown,
+  ): void {
+    this.sendMessage(`orbit:portal:${portal.id}`, type, data);
+    this.sendMessage(`company:${portal.ownerId}:orbit`, type, {
+      portalId: portal.id,
+      data,
+    });
+  }
+
+  public sendTransponderMessage(
+    transponder: { id: string; portalId: string; ownerId: string },
+    type: string,
+    data: unknown,
+  ): void {
+    this.sendMessage(`orbit:transponder:${transponder.id}`, type, data);
+    this.sendMessage(`company:${transponder.ownerId}:orbit`, type, {
+      transponderId: transponder.id,
+      portalId: transponder.portalId,
       data,
     });
   }

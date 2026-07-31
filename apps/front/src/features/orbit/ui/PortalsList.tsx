@@ -13,6 +13,7 @@ import { PortalWithTranspondersResponseDto } from "../api/portal.api.types";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { useDialog } from "@/core/ui/DialogProvider";
 import { StatusBadge } from "@/core/ui/StatusBadge";
+import { useOrbitRealtime } from "../models/use-orbit-realtime";
 
 const COLUMNS: ColumnMapping<PortalWithTranspondersResponseDto> = {
   id: {
@@ -65,6 +66,8 @@ export function PortalsList() {
   );
 
   const { showDialog } = useDialog();
+
+  useOrbitRealtime();
 
   const {
     portalTypes,

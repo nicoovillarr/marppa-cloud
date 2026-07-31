@@ -269,6 +269,18 @@ describe('PortalService', () => {
       );
     });
 
+    it('should clear the zone when the update sends a null zoneId', async () => {
+      mockPortalRepository.findById.mockResolvedValue(mockPortalEntity);
+      mockPortalRepository.update.mockResolvedValue(mockPortalEntity);
+
+      await service.update('p-000001', { zoneId: null });
+
+      expect(mockZoneService.findById).not.toHaveBeenCalled();
+      expect(repository.update).toHaveBeenCalledWith(
+        expect.objectContaining({ zoneId: null }),
+      );
+    });
+
     it('should throw UnauthorizedError if no user in session', async () => {
       jest.spyOn(SessionContext, 'getCurrentUser').mockReturnValue(null);
 
