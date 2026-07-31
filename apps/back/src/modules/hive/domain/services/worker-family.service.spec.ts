@@ -1,3 +1,4 @@
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerFamilyService } from './worker-family.service';
 import { PlatformAdminService } from '@/shared/domain/services/platform-admin.service';
@@ -39,9 +40,18 @@ describe('WorkerFamilyService', () => {
     isPlatformAdmin: jest.fn().mockResolvedValue(false),
   };
 
+
+  const mockCompanyHierarchyService = {
+    selfAndAncestors: jest.fn(async (companyId: string) => [companyId]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: CompanyHierarchyService,
+          useValue: mockCompanyHierarchyService,
+        },
         WorkerFamilyService,
         {
           provide: WORKER_FAMILY_REPOSITORY_SYMBOL,
@@ -79,13 +89,13 @@ describe('WorkerFamilyService', () => {
       await service.findAll();
 
       expect(repository.findAvailableFor).toHaveBeenCalledWith(
-        'c-000001',
+        ['c-000001'],
         false,
       );
     });
 
     it('should let a platform admin see every family, deprecated included', async () => {
-      mockPlatformAdminService.isPlatformAdmin.mockResolvedValue(true);
+      mockPlatformAdminService.isPlatformAdmin.mockResolvedValueOnce(true);
       mockWorkerFamilyRepository.findAll.mockResolvedValue([]);
 
       await service.findAll(true);

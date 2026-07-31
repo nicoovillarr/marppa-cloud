@@ -11,6 +11,7 @@ import { AtomImageInUseError } from '../errors/atom-image-in-use.error';
 import { AtomImageForbiddenCapabilityError } from '../errors/atom-image-forbidden-capability.error';
 import { forbiddenCapabilities } from '@marppa-cloud/shared';
 import { PlatformAdminService } from '@/shared/domain/services/platform-admin.service';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
@@ -24,6 +25,7 @@ export class AtomImageService {
     @Inject(ATOM_IMAGE_REPOSITORY_SYMBOL)
     private readonly repository: AtomImageRepository,
     private readonly platformAdminService: PlatformAdminService,
+    private readonly companyHierarchyService: CompanyHierarchyService,
   ) { }
 
   async findById(id: number): Promise<AtomImageEntity> {
@@ -44,7 +46,7 @@ export class AtomImageService {
       return this.repository.findAll();
     }
 
-    return this.repository.findAvailableFor(this.currentCompanyId());
+    return this.repository.findAvailableFor(await this.visibleOwnerIds());
   }
 
   async create(data: CreateAtomImageDto): Promise<AtomImageEntity> {
@@ -118,7 +120,13 @@ export class AtomImageService {
     if (image.isPublic) return true;
     if (await this.platformAdminService.isPlatformAdmin()) return true;
 
-    return image.ownerId === getCurrentUser()?.companyId;
+    return (await this.visibleOwnerIds()).includes(image.ownerId!);
+  }
+
+  private visibleOwnerIds(): Promise<string[]> {
+    return this.companyHierarchyService.selfAndAncestors(
+      this.currentCompanyId(),
+    );
   }
 
   private async assertOwnerWritable(ownerId?: string): Promise<void> {

@@ -31,9 +31,9 @@ export class WorkerImagePrismaRepository implements WorkerImageRepository {
     return workerImages.map(WorkerImagePrismaMapper.toEntity);
   }
 
-  async findAvailableFor(companyId: string): Promise<WorkerImageEntity[]> {
+  async findAvailableFor(companyIds: string[]): Promise<WorkerImageEntity[]> {
     const workerImages = await this.prisma.workerImage.findMany({
-      where: { OR: [{ ownerId: null }, { ownerId: companyId }] },
+      where: { OR: [{ ownerId: null }, { ownerId: { in: companyIds } }] },
       orderBy: { name: 'asc' },
     });
 

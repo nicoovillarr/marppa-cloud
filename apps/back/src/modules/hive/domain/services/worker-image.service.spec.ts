@@ -1,3 +1,4 @@
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerImageService } from './worker-image.service';
 import {
@@ -62,9 +63,18 @@ describe('WorkerImageService', () => {
       run,
     );
 
+
+  const mockCompanyHierarchyService = {
+    selfAndAncestors: jest.fn(async (companyId: string) => [companyId]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: CompanyHierarchyService,
+          useValue: mockCompanyHierarchyService,
+        },
         WorkerImageService,
         {
           provide: WORKER_IMAGE_REPOSITORY_SYMBOL,
@@ -262,7 +272,7 @@ describe('WorkerImageService', () => {
 
       await asCompany('c-acme', () => service.findAll());
 
-      expect(repository.findAvailableFor).toHaveBeenCalledWith('c-acme');
+      expect(repository.findAvailableFor).toHaveBeenCalledWith(['c-acme']);
       expect(repository.findAll).not.toHaveBeenCalled();
     });
 
@@ -282,6 +292,71 @@ describe('WorkerImageService', () => {
           }),
         ),
       ).rejects.toThrow(ForbiddenError);
+    });
+  });
+
+  describe('inheritance down the company tree', () => {
+    const parentImage = new WorkerImageEntity(
+      'parent-debian',
+      'Linux',
+      'Debian',
+      'https://example.com/parent.qcow2',
+      'x86_64',
+      'KVM',
+      { id: 9, ownerId: 'c-parent' },
+    );
+
+    it('lets a child company resolve its parent image', async () => {
+      mockPlatformAdminService.isPlatformAdmin.mockResolvedValue(false);
+      mockCompanyHierarchyService.selfAndAncestors.mockResolvedValue([
+        'c-child',
+        'c-parent',
+      ]);
+      mockWorkerImageRepository.findById.mockResolvedValue(parentImage);
+
+      const result = await asCompany('c-child', () => service.findById(9));
+
+      expect(result.ownerId).toBe('c-parent');
+    });
+
+    it('does not let a parent resolve its child image', async () => {
+      mockPlatformAdminService.isPlatformAdmin.mockResolvedValue(false);
+      mockCompanyHierarchyService.selfAndAncestors.mockResolvedValue([
+        'c-parent',
+      ]);
+      mockWorkerImageRepository.findById.mockResolvedValue(
+        new WorkerImageEntity(
+          'child-debian',
+          'Linux',
+          'Debian',
+          'https://example.com/child.qcow2',
+          'x86_64',
+          'KVM',
+          { id: 10, ownerId: 'c-child' },
+        ),
+      );
+
+      await expect(
+        asCompany('c-parent', () => service.findById(10)),
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('asks the catalog for the whole ancestor chain', async () => {
+      mockPlatformAdminService.isPlatformAdmin.mockResolvedValue(false);
+      mockCompanyHierarchyService.selfAndAncestors.mockResolvedValue([
+        'c-child',
+        'c-parent',
+        'c-root',
+      ]);
+      mockWorkerImageRepository.findAvailableFor.mockResolvedValue([]);
+
+      await asCompany('c-child', () => service.findAll());
+
+      expect(repository.findAvailableFor).toHaveBeenCalledWith([
+        'c-child',
+        'c-parent',
+        'c-root',
+      ]);
     });
   });
 });

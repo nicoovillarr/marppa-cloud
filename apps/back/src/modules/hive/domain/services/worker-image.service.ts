@@ -9,6 +9,7 @@ import { CreateWorkerImageDto } from '@/hive/presentation/dtos/create-worker-ima
 import { UpdateWorkerImageDto } from '@/hive/presentation/dtos/update-worker-image.dto';
 import { WorkerImageInUseError } from '../errors/worker-image-in-use.error';
 import { PlatformAdminService } from '@/shared/domain/services/platform-admin.service';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
@@ -19,6 +20,7 @@ export class WorkerImageService {
     @Inject(WORKER_IMAGE_REPOSITORY_SYMBOL)
     private readonly workerImageRepository: WorkerImageRepository,
     private readonly platformAdminService: PlatformAdminService,
+    private readonly companyHierarchyService: CompanyHierarchyService,
   ) { }
 
   async findById(id: number): Promise<WorkerImageEntity> {
@@ -39,7 +41,9 @@ export class WorkerImageService {
       return this.workerImageRepository.findAll();
     }
 
-    return this.workerImageRepository.findAvailableFor(this.currentCompanyId());
+    return this.workerImageRepository.findAvailableFor(
+      await this.visibleOwnerIds(),
+    );
   }
 
   async create(data: CreateWorkerImageDto): Promise<WorkerImageEntity> {
@@ -105,7 +109,13 @@ export class WorkerImageService {
     if (image.isPublic) return true;
     if (await this.platformAdminService.isPlatformAdmin()) return true;
 
-    return image.ownerId === getCurrentUser()?.companyId;
+    return (await this.visibleOwnerIds()).includes(image.ownerId!);
+  }
+
+  private visibleOwnerIds(): Promise<string[]> {
+    return this.companyHierarchyService.selfAndAncestors(
+      this.currentCompanyId(),
+    );
   }
 
   private async assertOwnerWritable(ownerId?: string): Promise<void> {

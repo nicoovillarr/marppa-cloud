@@ -31,9 +31,9 @@ export class AtomImagePrismaRepository implements AtomImageRepository {
     return images.map(AtomImagePrismaMapper.toEntity);
   }
 
-  async findAvailableFor(companyId: string): Promise<AtomImageEntity[]> {
+  async findAvailableFor(companyIds: string[]): Promise<AtomImageEntity[]> {
     const images = await this.prisma.atomImage.findMany({
-      where: { OR: [{ ownerId: null }, { ownerId: companyId }] },
+      where: { OR: [{ ownerId: null }, { ownerId: { in: companyIds } }] },
       orderBy: { name: 'asc' },
     });
 

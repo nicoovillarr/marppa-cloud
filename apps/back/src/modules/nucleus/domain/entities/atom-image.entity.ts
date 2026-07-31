@@ -49,8 +49,8 @@ export class AtomImageEntity extends PatchableEntity {
     return this.ownerId == null;
   }
 
-  isVisibleTo(companyId: string): boolean {
-    return this.isPublic || this.ownerId === companyId;
+  isVisibleTo(companyIds: string[]): boolean {
+    return this.isPublic || companyIds.includes(this.ownerId!);
   }
 
   toObject(): Record<string, any> {

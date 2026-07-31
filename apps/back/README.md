@@ -186,6 +186,19 @@ public image, a company id restricts it to that tenant. Names stay globally uniq
 so a tenant-specific image needs its own name (`acme-debian-12`, not a second
 `debian-12`) — the same constraint `WorkerFamily` already lives with.
 
+**Visibility is inherited downward.** An image owned by company A resolves for A
+and for everything below it in the `CompanyHierarchy` tree, so a parent can publish
+a template its subsidiaries consume without making it public. `CompanyHierarchyService.selfAndAncestors`
+walks `parentCompanyId` upward from the caller and the catalog queries
+`ownerId IN (chain)`. It walks **up only**: a parent does not see a child's private
+image. Writing is not inherited either — `ownerId` on a create still has to be the
+caller's own company, or a platform admin acting for a tenant.
+
+The walk reads every `(id, parentCompanyId)` pair and resolves in memory rather than
+issuing a recursive CTE: the company table is a tenant list, not a data table, and
+keeping it out of raw SQL means the whole rule is unit-testable. It stops on a
+repeated id, so a cycle that somehow reached the database cannot hang a request.
+
 The part that matters is **where** the check runs. Listing is scoped
 (`findAvailableFor`, with platform admins seeing everything), but `Atom` and
 `Worker` creation resolve the image through `imageService.findById(imageId)`, so

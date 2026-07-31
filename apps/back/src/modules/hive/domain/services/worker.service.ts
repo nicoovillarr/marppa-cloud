@@ -17,6 +17,7 @@ import { WorkerInvalidStatusError } from '../errors/worker-invalid-status.error'
 import { authorize } from '@/shared/domain/policy/authorize';
 import { WorkerFlavorService } from './worker-flavor.service';
 import { WorkerImageService } from './worker-image.service';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
 import { WorkerArchitectureMismatchError } from '../errors/worker-architecture-mismatch.error';
@@ -31,6 +32,7 @@ export class WorkerService {
     private readonly macAddressService: MacAddressService,
     private readonly workerFlavorService: WorkerFlavorService,
     private readonly workerImageService: WorkerImageService,
+    private readonly companyHierarchyService: CompanyHierarchyService,
     private readonly hostCapacityService: HostCapacityService,
   ) { }
 
@@ -82,7 +84,10 @@ export class WorkerService {
       data.flavorId,
     );
 
-    if (!family.isVisibleTo(user.companyId) || family.isDeprecated) {
+    const visibleOwnerIds =
+      await this.companyHierarchyService.selfAndAncestors(user.companyId);
+
+    if (!family.isVisibleTo(visibleOwnerIds) || family.isDeprecated) {
       throw new NotFoundError();
     }
 

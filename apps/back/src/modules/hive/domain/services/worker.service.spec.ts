@@ -1,3 +1,4 @@
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerService } from './worker.service';
 import { WorkerWithRelationsModel } from '../models/worker-with-relations.model';
@@ -106,9 +107,18 @@ describe('WorkerService', () => {
     assertFitsOnStart: jest.fn(),
   };
 
+
+  const mockCompanyHierarchyService = {
+    selfAndAncestors: jest.fn(async (companyId: string) => [companyId]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: CompanyHierarchyService,
+          useValue: mockCompanyHierarchyService,
+        },
         WorkerService,
         {
           provide: WORKER_REPOSITORY_SYMBOL,

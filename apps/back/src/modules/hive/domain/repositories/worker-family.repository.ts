@@ -7,7 +7,7 @@ export const WORKER_FAMILY_REPOSITORY_SYMBOL = Symbol(
 
 export abstract class WorkerFamilyRepository {
   abstract findAvailableFor(
-    companyId: string,
+    companyIds: string[],
     includeDeprecated: boolean,
   ): Promise<WorkerFamilyWithFlavorsModel[]>;
   abstract findAll(
