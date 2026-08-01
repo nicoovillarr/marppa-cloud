@@ -34,7 +34,7 @@ export function PortalForm({
 
   const buttonRef = useRef<ButtonRef>(null);
   const methods = useForm({
-    defaultValues: { corsEnabled: true } as FieldValues,
+    defaultValues: { corsEnabled: true, enableCompression: true } as FieldValues,
   });
 
   const { control, handleSubmit, reset } = methods;
@@ -47,6 +47,7 @@ export function PortalForm({
       type: data.type,
       apiKey: portal != null && disableApiKey ? undefined : data.apiKey,
       corsEnabled: data.corsEnabled,
+      enableCompression: data.enableCompression,
       zoneId: data.zoneId,
     };
 
@@ -74,6 +75,7 @@ export function PortalForm({
         address: portal.address,
         type: portal.type,
         corsEnabled: portal.corsEnabled,
+        enableCompression: portal.enableCompression,
         zoneId: portal.zoneId,
       });
     }
@@ -146,12 +148,21 @@ export function PortalForm({
           )}
         </aside>
 
-        <FormCheckbox
-          controlName="corsEnabled"
-          control={control}
-          label="CORS"
-          text="Allow requests from any origin"
-        />
+        <aside className="flex gap-x-8">
+          <FormCheckbox
+            controlName="corsEnabled"
+            control={control}
+            label="CORS"
+            text="Allow requests from any origin"
+          />
+
+          <FormCheckbox
+            controlName="enableCompression"
+            control={control}
+            label="Compression"
+            text="Encode responses with gzip and zstd"
+          />
+        </aside>
 
         {portal && (
           <>

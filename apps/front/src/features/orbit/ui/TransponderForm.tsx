@@ -3,8 +3,9 @@
 import { Button } from "@/core/ui/Button";
 import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { useEffect } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { FieldValues, FormProvider, useForm } from "react-hook-form";
 import { LuSave } from "react-icons/lu";
+import { FormCheckbox } from "@/core/ui/inputs/form/FormCheckbox";
 import { FormSelect } from "@/core/ui/inputs/form/FormSelect";
 import { useTransponder } from "../models/use-transponder";
 import { useNode } from "src/features/mesh/models/use-node";
@@ -32,7 +33,9 @@ export function TransponderForm({
     fetchNodes,
   } = useNode();
 
-  const methods = useForm();
+  const methods = useForm({
+    defaultValues: { allowCookies: true, gzipEnabled: false } as FieldValues,
+  });
   const { control, handleSubmit, reset } = methods;
 
   const onSubmit = async (data: any) => {
@@ -117,6 +120,22 @@ export function TransponderForm({
             control={control}
             controlName="priority"
             type="number"
+          />
+
+          <FormCheckbox
+            className="flex-1"
+            label="Cookies"
+            control={control}
+            controlName="allowCookies"
+            text="Forward cookies to the node"
+          />
+
+          <FormCheckbox
+            className="flex-1"
+            label="Compression"
+            control={control}
+            controlName="gzipEnabled"
+            text="Encode responses with gzip"
           />
         </div>
 
