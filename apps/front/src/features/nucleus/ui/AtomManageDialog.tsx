@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ResourceStatus } from "@/core/models/resource-status.enum";
+import { ResourceStatus, STATUS_KIND } from "@/core/models/resource-status.enum";
 import { Button } from "@/core/ui/Button";
 import { InlineCode } from "@/core/ui/InlineCode";
 import { closeCurrentDialog } from "@/core/ui/DialogProvider";
@@ -40,6 +40,9 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
 
   const isOff = atom.status === ResourceStatus.INACTIVE;
   const isRunning = atom.status === ResourceStatus.ACTIVE;
+  const hasFailed = atom.status === ResourceStatus.FAILED;
+  const isSettling = STATUS_KIND[atom.status] === "transition";
+  const canDelete = isOff || hasFailed;
   const hasNode = atom.node != null;
 
   const run = async (
@@ -97,7 +100,7 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
           <Button
             text="Delete"
             style="danger"
-            disabled={busy || !isOff}
+            disabled={busy || !canDelete}
             onClick={() =>
               run(
                 () => deleteAtom(atom.id),
@@ -117,10 +120,17 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
           />
         </div>
 
-        {!isOff && !isRunning && (
+        {isSettling && (
           <p className="text-xs text-ink-muted">
             <InlineCode code={atom.status} /> is a transient state — actions
             become available once it settles.
+          </p>
+        )}
+
+        {hasFailed && (
+          <p className="text-xs text-ink-muted">
+            <InlineCode code={atom.status} /> is terminal — deleting is the only
+            way forward.
           </p>
         )}
 

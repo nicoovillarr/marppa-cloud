@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ResourceStatus } from "@/core/models/resource-status.enum";
+import { ResourceStatus, STATUS_KIND } from "@/core/models/resource-status.enum";
 import { Button } from "@/core/ui/Button";
 import { InlineCode } from "@/core/ui/InlineCode";
 import { closeCurrentDialog } from "@/core/ui/DialogProvider";
@@ -34,6 +34,9 @@ export function WorkerManageDialog({
 
   const isOff = worker.status === ResourceStatus.INACTIVE;
   const isRunning = worker.status === ResourceStatus.ACTIVE;
+  const hasFailed = worker.status === ResourceStatus.FAILED;
+  const isSettling = STATUS_KIND[worker.status] === "transition";
+  const canDelete = isOff || hasFailed;
 
   const run = async (
     action: () => Promise<boolean>,
@@ -91,7 +94,7 @@ export function WorkerManageDialog({
           <Button
             text="Delete"
             style="danger"
-            disabled={busy || !isOff}
+            disabled={busy || !canDelete}
             onClick={() =>
               run(
                 () => deleteWorker(worker.id),
@@ -111,10 +114,17 @@ export function WorkerManageDialog({
           />
         </div>
 
-        {!isOff && !isRunning && (
+        {isSettling && (
           <p className="text-xs text-ink-muted">
             <InlineCode code={worker.status} /> is a transient state — actions
             become available once it settles.
+          </p>
+        )}
+
+        {hasFailed && (
+          <p className="text-xs text-ink-muted">
+            <InlineCode code={worker.status} /> is terminal — deleting is the
+            only way forward.
           </p>
         )}
 
