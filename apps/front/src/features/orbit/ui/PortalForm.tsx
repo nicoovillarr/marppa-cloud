@@ -40,12 +40,15 @@ export function PortalForm({
   const { control, handleSubmit, reset } = methods;
 
   const internalSubmit = async (data: CreatePortalDto) => {
+    const keepsStoredApiKey = portal != null && disableApiKey;
+    const addressChanged = portal == null || data.address !== portal.address;
+
     const form = {
       name: data.name,
       description: data.description,
-      address: data.address,
+      address: addressChanged ? data.address : undefined,
       type: data.type,
-      apiKey: portal != null && disableApiKey ? undefined : data.apiKey,
+      apiKey: keepsStoredApiKey ? undefined : data.apiKey,
       corsEnabled: data.corsEnabled,
       enableCompression: data.enableCompression,
       zoneId: data.zoneId,

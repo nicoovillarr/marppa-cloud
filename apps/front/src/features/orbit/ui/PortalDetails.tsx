@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { CreatePortalDto, PortalWithTranspondersResponseDto } from "../api/portal.api.types";
 import { usePortal } from "../models/use-portal";
+import { usePortalStore } from "../models/portal.store";
 
 interface PortalDetailsProps {
   portalId: string;
@@ -29,7 +30,9 @@ export function PortalDetails({
     );
 
     if (!updatedPortal) {
-      toast.error("Failed to update portal.");
+      toast.error(
+        usePortalStore.getState().error ?? "Failed to update portal."
+      );
       return;
     }
 

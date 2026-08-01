@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { PortalForm } from "./PortalForm";
 import { redirect } from "next/navigation";
 import { usePortal } from "../models/use-portal";
+import { usePortalStore } from "../models/portal.store";
 import { useEffect } from "react";
 import { CreatePortalDto } from "../api/portal.api.types";
 
@@ -15,13 +16,17 @@ export function CreatePortal() {
   } = usePortal();
 
   const onSubmit = async (form: CreatePortalDto) => {
-    try {
-      await createPortal(form);
-      toast.success("Portal created successfully!");
-      redirect(`/dashboard/orbit/portals`);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create portal.");
+    const portal = await createPortal(form);
+
+    if (!portal) {
+      toast.error(
+        usePortalStore.getState().error ?? "Failed to create portal."
+      );
+      return;
     }
+
+    toast.success("Portal created successfully!");
+    redirect(`/dashboard/orbit/portals`);
   };
 
   useEffect(() => {
