@@ -64,8 +64,9 @@ export class StubMeshService extends MeshService {
     return false;
   }
 
-  public async deleteNodeFromZone(bridgeName: string, mac: string): Promise<void> {
+  public async deleteNodeFromZone(bridgeName: string, mac: string): Promise<boolean> {
     console.log(`[STUB] deleteNodeFromZone: bridge=${bridgeName} mac=${mac}`);
+    return true;
   }
 
   public async linkVnetToBridge(vnetName: string, bridgeName: string): Promise<void> {
@@ -85,8 +86,9 @@ export class StubMeshService extends MeshService {
     console.log(`[STUB] addFiber: bridge=${bridgeName} ${protocol} ${externalPort}→${targetIp}:${internalPort} iface=${externalInterface}`);
   }
 
-  public async removeFiber(bridgeName: string, protocol: string, externalPort: number | number[], targetIp: string, internalPort: number | number[], externalInterface?: string): Promise<void> {
+  public async removeFiber(bridgeName: string, protocol: string, externalPort: number | number[], targetIp: string, internalPort: number | number[], externalInterface?: string): Promise<number> {
     console.log(`[STUB] removeFiber: bridge=${bridgeName} ${protocol} ${externalPort}→${targetIp}:${internalPort} iface=${externalInterface}`);
+    return 0;
   }
 
   public async isPortAvailable(_ipAddress: string, _targetPort: number, _protocol: string): Promise<boolean> {

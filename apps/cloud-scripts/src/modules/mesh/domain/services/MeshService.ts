@@ -29,7 +29,7 @@ export abstract class MeshService {
   
   abstract checkNodeInZone(bridgeName: string, ip: string): Promise<boolean>;
   
-  abstract deleteNodeFromZone(bridgeName: string, mac: string): Promise<void>;
+  abstract deleteNodeFromZone(bridgeName: string, mac: string): Promise<boolean>;
   
   abstract linkVnetToBridge(vnetName: string, bridgeName: string): Promise<void>;
   
@@ -39,7 +39,7 @@ export abstract class MeshService {
   
   abstract addFiber(bridgeName: string, protocol: string, externalPort: number | number[], targetIp: string, internalPort: number | number[], externalInterface?: string): Promise<void>;
   
-  abstract removeFiber(bridgeName: string, protocol: string, externalPort: number | number[], targetIp: string, internalPort: number | number[], externalInterface?: string): Promise<void>;
+  abstract removeFiber(bridgeName: string, protocol: string, externalPort: number | number[], targetIp: string, internalPort: number | number[], externalInterface?: string): Promise<number>;
   
   abstract isPortAvailable(ipAddress: string, targetPort: number, protocol: string): Promise<boolean>;
   

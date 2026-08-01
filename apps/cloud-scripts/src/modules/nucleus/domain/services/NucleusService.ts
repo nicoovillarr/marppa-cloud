@@ -47,9 +47,9 @@ export abstract class NucleusService {
     specs: AtomResourceSpecs,
   ): Promise<void>;
 
-  abstract stopAtom(id: string): Promise<void>;
+  abstract stopAtom(id: string): Promise<boolean>;
 
-  abstract deleteAtom(id: string): Promise<void>;
+  abstract deleteAtom(id: string): Promise<boolean>;
 
   abstract isAtomRunning(id: string): Promise<boolean>;
 

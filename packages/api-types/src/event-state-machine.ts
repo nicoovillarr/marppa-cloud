@@ -92,6 +92,29 @@ export const EVENT_STATE_MACHINE: Partial<
   [EventTypeKey.NODE_UPDATE_FIBER]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
 };
 
+export type StatusKind = 'stable' | 'transition' | 'terminal';
+
+export const STATUS_KIND: Record<ResourceStatus, StatusKind> = {
+  [ResourceStatus.QUEUED]: 'transition',
+  [ResourceStatus.PROVISIONING]: 'transition',
+  [ResourceStatus.UPDATING]: 'transition',
+  [ResourceStatus.TERMINATING]: 'transition',
+  [ResourceStatus.DELETING]: 'transition',
+
+  [ResourceStatus.ACTIVE]: 'stable',
+  [ResourceStatus.INACTIVE]: 'stable',
+
+  [ResourceStatus.FAILED]: 'terminal',
+  [ResourceStatus.TERMINATED]: 'terminal',
+  [ResourceStatus.DELETED]: 'terminal',
+};
+
+export const TRANSITION_STATUSES: ResourceStatus[] = Object.values(ResourceStatus)
+  .filter((status) => STATUS_KIND[status] === 'transition');
+
+export const STABLE_STATUSES: ResourceStatus[] = Object.values(ResourceStatus)
+  .filter((status) => STATUS_KIND[status] === 'stable');
+
 /** Returns the canonical transition for a command event, or throws if none is defined. */
 export function getEventStateTransition(type: EventTypeKey): EventStateTransition {
   const transition = EVENT_STATE_MACHINE[type];

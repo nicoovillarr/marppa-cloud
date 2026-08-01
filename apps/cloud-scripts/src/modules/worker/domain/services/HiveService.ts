@@ -38,7 +38,7 @@ export abstract class HiveService {
   
   abstract startWorker(vmName: string): Promise<void>;
   
-  abstract deleteWorker(vmName: string): Promise<void>;
+  abstract deleteWorker(vmName: string): Promise<boolean>;
   
   abstract editWorkerZone(vmName: string, bridgeName?: string | null, mac?: string | null): Promise<void>;
   

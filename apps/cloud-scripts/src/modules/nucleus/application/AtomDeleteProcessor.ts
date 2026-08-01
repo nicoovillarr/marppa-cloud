@@ -15,6 +15,7 @@ import { NUCLEUS_SERVICE_TOKEN, NucleusService } from '../domain/services/Nucleu
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { Inject } from '@/decorators/Inject';
 import { getEventStates } from '@/shared/domain/EventStateMachine';
+import { TeardownReport } from '@/shared/domain/TeardownReport';
 import {
   NodeTeardownService,
   nodeTeardownInclude,
@@ -93,22 +94,32 @@ export class AtomDeleteProcessor implements IEventProcessor {
 
       await updateAtomStatus(STATES.work);
 
+      const report = new TeardownReport();
+
       if (atom.node) {
-        await this.nodeTeardown.teardown(atom.node, null, event.createdBy);
+        await this.nodeTeardown.teardown(atom.node, null, event.createdBy, report);
       }
 
-      await this.nucleusService.deleteAtom(atom.id);
+      const containerExisted = await this.nucleusService.deleteAtom(atom.id);
+      report.record(
+        `container ${atom.id}`,
+        containerExisted ? 'removed' : 'absent',
+      );
 
       await this.prisma.atomEnvVar.deleteMany({ where: { atomId: atom.id } });
 
       await updateAtomStatus(STATES.ok);
 
-      this.wsServer.sendAtomMessage(atom, 'DELETED', null);
+      this.wsServer.sendAtomMessage(atom, 'DELETED', {
+        teardown: report.entries,
+      });
 
       const createdEventId = await this.repository.createEvent(
         EventType.ATOM_DELETED,
         event.createdBy,
         event.companyId,
+        undefined,
+        report.toNotes(),
       );
       await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
       await this.repository.addEventResource(createdEventId, 'Atom', atom.id);

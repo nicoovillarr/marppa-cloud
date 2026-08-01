@@ -7,6 +7,7 @@ import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
 import { MESH_SERVICE_TOKEN, MeshService } from '../domain/services/MeshService';
 import { ORBIT_SERVICE_TOKEN, OrbitService } from '@/orbit/domain/services/OrbitService';
+import { TeardownReport } from '@/shared/domain/TeardownReport';
 
 export type NodeTeardownPayload = Prisma.NodeGetPayload<{
   include: { fibers: true; transponders: true; zone: true };
@@ -36,20 +37,29 @@ export class NodeTeardownService {
     node: NodeTeardownPayload,
     macAddress: string | null,
     updatedBy: string,
+    report: TeardownReport,
   ): Promise<void> {
     for (const fiber of node.fibers) {
-      await this.removeFiberFromHost(node, fiber);
+      await this.removeFiberFromHost(node, fiber, report);
     }
 
     await this.prisma.fiber.deleteMany({ where: { nodeId: node.id } });
 
-    await this.removeTranspondersRoutedToNode(node, updatedBy);
+    await this.removeTranspondersRoutedToNode(node, updatedBy, report);
 
     if (macAddress) {
-      await this.meshService.deleteNodeFromZone(node.zoneId, macAddress);
+      const removed = await this.meshService.deleteNodeFromZone(
+        node.zoneId,
+        macAddress,
+      );
+      report.record(
+        `dhcp reservation ${macAddress}`,
+        removed ? 'removed' : 'absent',
+      );
     }
 
     await this.prisma.node.delete({ where: { id: node.id } });
+    report.record(`node ${node.id}`, 'removed');
 
     this.wsServer.sendNodeMessage(
       { id: node.id, ownerId: node.zone.ownerId },
@@ -61,6 +71,7 @@ export class NodeTeardownService {
   private async removeTranspondersRoutedToNode(
     node: NodeTeardownPayload,
     updatedBy: string,
+    report: TeardownReport,
   ): Promise<void> {
     if (!node.transponders.length) {
       return;
@@ -103,6 +114,8 @@ export class NodeTeardownService {
           'DELETED',
           { status: ResourceStatus.DELETED },
         );
+
+        report.record(`transponder ${transponder.id}`, 'removed', transponder.path);
       }
 
       const remainingTransponders = portal.transponders.filter(
@@ -114,16 +127,22 @@ export class NodeTeardownService {
           ...portal,
           transponders: remainingTransponders,
         });
+        report.record(
+          `portal ${portal.id}`,
+          'kept',
+          `${remainingTransponders.length} transponders left`,
+        );
         continue;
       }
 
-      await this.deleteEmptiedPortal(portal, updatedBy);
+      await this.deleteEmptiedPortal(portal, updatedBy, report);
     }
   }
 
   private async deleteEmptiedPortal(
-    portal: { id: string; ownerId: string },
+    portal: { id: string; ownerId: string; address: string },
     updatedBy: string,
+    report: TeardownReport,
   ): Promise<void> {
     this.logger.info(
       `[NodeTeardownService] Portal ${portal.id} has no transponders left, deleting it`,
@@ -145,13 +164,17 @@ export class NodeTeardownService {
       'DELETED',
       { status: ResourceStatus.DELETED },
     );
+
+    report.record(`portal ${portal.id}`, 'removed', portal.address);
   }
 
   private async removeFiberFromHost(
     node: NodeTeardownPayload,
     fiber: NodeTeardownPayload['fibers'][number],
+    report: TeardownReport,
   ): Promise<void> {
     if (fiber.hostPort == null || fiber.status === ResourceStatus.DELETED) {
+      report.record(`fiber ${fiber.id}`, 'absent', 'never published to the host');
       return;
     }
 
@@ -159,12 +182,18 @@ export class NodeTeardownService {
       `[NodeTeardownService] Removing fiber ${fiber.id} (${fiber.protocol}/${fiber.hostPort}) of node ${node.id}`,
     );
 
-    await this.meshService.removeFiber(
+    const removedRules = await this.meshService.removeFiber(
       node.zoneId,
       fiber.protocol,
       fiber.hostPort,
       node.ipAddress,
       fiber.targetPort,
+    );
+
+    report.record(
+      `fiber ${fiber.id}`,
+      removedRules ? 'removed' : 'absent',
+      `${fiber.protocol}/${fiber.hostPort}, ${removedRules} nft rules`,
     );
   }
 }

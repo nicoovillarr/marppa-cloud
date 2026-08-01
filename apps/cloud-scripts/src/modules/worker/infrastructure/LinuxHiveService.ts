@@ -240,16 +240,18 @@ export class LinuxHiveService extends HiveService {
     return availableMB;
   }
 
+  private async isWorkerDefined(vmName: string): Promise<boolean> {
+    try {
+      await Command.runCommand('sudo', ['virsh', 'dominfo', vmName]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /** Removes leftovers of a previous failed WORKER_CREATE attempt. */
   private async discardPartialWorker(id: string, imgPath: string): Promise<void> {
-    let defined = true;
-    try {
-      await Command.runCommand('sudo', ['virsh', 'dominfo', id]);
-    } catch {
-      defined = false;
-    }
-
-    if (defined) {
+    if (await this.isWorkerDefined(id)) {
       if (await this.isWorkerRunning(id)) {
         throw new Error(
           `Refusing to recreate worker ${id}: a domain with that name is running`,
@@ -791,6 +793,12 @@ local-hostname: ${name}
 
   public async forceStopWorker(vmName: string): Promise<void> {
     this.validateVmName(vmName);
+
+    if (!(await this.isWorkerRunning(vmName))) {
+      console.log(`VM ${vmName} is not running, nothing to force off`);
+      return;
+    }
+
     await Command.runCommand('sudo', ['virsh', 'destroy', `${vmName}`]);
   }
 
@@ -809,16 +817,22 @@ local-hostname: ${name}
     await Command.runCommand('sudo', ['virsh', 'start', vmName]);
   }
 
-  public async deleteWorker(vmName: string): Promise<void> {
+  public async deleteWorker(vmName: string): Promise<boolean> {
     this.validateVmName(vmName);
     console.log(`Deleting worker VM: ${vmName}`);
 
-    await Command.runCommand('sudo', [
-      'virsh',
-      'undefine',
-      `${vmName}`,
-      '--remove-all-storage',
-    ]);
+    const defined = await this.isWorkerDefined(vmName);
+
+    if (defined) {
+      await Command.runCommand('sudo', [
+        'virsh',
+        'undefine',
+        `${vmName}`,
+        '--remove-all-storage',
+      ]);
+    } else {
+      console.log(`VM ${vmName} is not defined, only clearing its files`);
+    }
 
     await fsPromises.rm(path.join(CLOUD_INIT_DIR_BASE, vmName), {
       recursive: true,
@@ -826,6 +840,8 @@ local-hostname: ${name}
     });
 
     await fsPromises.rm(path.join(IMAGE_DIR, `${vmName}.img`), { force: true });
+
+    return defined;
   }
 
   public async editWorkerZone(
@@ -943,6 +959,11 @@ local-hostname: ${name}
 
   public async isWorkerRunning(vmName: string): Promise<boolean> {
     this.validateVmName(vmName);
+
+    if (!(await this.isWorkerDefined(vmName))) {
+      return false;
+    }
+
     const status = await Command.runCommand('sudo', [
       'virsh',
       'domstate',

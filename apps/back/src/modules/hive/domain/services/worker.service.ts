@@ -220,11 +220,9 @@ export class WorkerService {
 
     const entity = await this.findById(id);
 
-    if (entity.status !== ResourceStatus.INACTIVE) {
-      throw new WorkerInvalidStatusError(
-        ResourceStatus.INACTIVE,
-        entity.status,
-      );
+    const deletable = [ResourceStatus.INACTIVE, ResourceStatus.FAILED];
+    if (!deletable.includes(entity.status)) {
+      throw new WorkerInvalidStatusError(deletable, entity.status);
     }
 
     const updated = entity.clone({
