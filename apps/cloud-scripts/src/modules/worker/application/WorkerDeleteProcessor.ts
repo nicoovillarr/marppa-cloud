@@ -90,17 +90,10 @@ export class WorkerDeleteProcessor implements IEventProcessor {
         );
       }
 
-      if (worker.node && this.nodeTeardown.transpondersBlocking(worker.node)) {
-        throw new AbortError(
-          `Worker ${worker.id} has a node still routed by transponders`,
-          EventType.WORKER_DELETE_FAILED,
-        );
-      }
-
       await updateWorkerStatus(STATES.work);
 
       if (worker.node) {
-        await this.nodeTeardown.teardown(worker.node, worker.macAddress);
+        await this.nodeTeardown.teardown(worker.node, worker.macAddress, event.createdBy);
       }
 
       await this.hiveService.deleteWorker(worker.id);
@@ -113,7 +106,12 @@ export class WorkerDeleteProcessor implements IEventProcessor {
       await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
       await this.repository.addEventResource(createdEventId, 'Worker', worker.id);
     } catch (error) {
-      if (error instanceof AbortError) throw error;
+      if (error instanceof AbortError) {
+        if (worker?.status === STATES.entry) {
+          await updateWorkerStatus(STATES.fail);
+        }
+        throw error;
+      }
 
       this.logger.error(`Error processing event ID ${event.id}: ${String(error)}`);
 

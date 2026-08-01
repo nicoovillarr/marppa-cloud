@@ -102,7 +102,12 @@ export class AtomCreateProcessor implements IEventProcessor {
       await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
       await this.repository.addEventResource(createdEventId, 'Atom', atom.id);
     } catch (error) {
-      if (error instanceof AbortError) throw error;
+      if (error instanceof AbortError) {
+        if (atom?.status === STATES.entry) {
+          await updateAtomStatus(STATES.fail);
+        }
+        throw error;
+      }
 
       if (atom) {
         await updateAtomStatus(event.retries >= 4 ? STATES.fail : STATES.entry);

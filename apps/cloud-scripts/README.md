@@ -647,6 +647,16 @@ NIC) but keeps the row; the zone refuses to be deleted while nodes exist. Full
 teardown: terminate worker → delete node (unassign) → delete node again (removes the
 row) → delete worker → delete zone.
 
+Deleting a worker or an atom tears its node down in cascade: fibers are removed from
+the host and dropped, and every transponder routed to that node is deleted and its
+portal's Caddy config regenerated. A portal left with zero live transponders is deleted
+too — its Caddy site and ddclient entry go away, and its address is released
+(`deletedAt` is stamped, freeing the `[address, deletedAt]` unique). That last step is
+irreversible and loses the portal's `apiKey`; portals shared with nodes that survive the
+teardown keep their remaining routes and are only regenerated. Deleting a worker used to
+abort when any transponder still pointed at its node, which left the worker stuck in
+`QUEUED` with no way forward.
+
 `SYSTEM_RESET` wipes every VM, zone and portal on the host and restores
 `NFTABLES_RESET_SOURCE`. It runs the same preflight first.
 
@@ -729,6 +739,12 @@ backend sets `entry` before dispatching, the processor validates `entry`, moves 
 `work`, and finishes in `ok` or `fail`. cloud-scripts reads it through
 `@/shared/domain/EventStateMachine`, which casts the twin api-types/Prisma enums in one
 place.
+
+An `AbortError` is terminal — `EventWorker` marks the event failed and never retries it.
+The processor that raises one drives its resource to `fail` first, but only when the
+resource was loaded and still sat in `entry`: an abort raised because the resource was
+missing, or because it was already in flight under another event, must not overwrite the
+status that other event owns.
 
 ### AppContainer — DI container internals
 

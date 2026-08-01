@@ -91,17 +91,10 @@ export class AtomDeleteProcessor implements IEventProcessor {
         );
       }
 
-      if (atom.node && this.nodeTeardown.transpondersBlocking(atom.node)) {
-        throw new AbortError(
-          `Atom ${atom.id} has a node still routed by transponders`,
-          EventType.ATOM_DELETE_FAILED,
-        );
-      }
-
       await updateAtomStatus(STATES.work);
 
       if (atom.node) {
-        await this.nodeTeardown.teardown(atom.node, null);
+        await this.nodeTeardown.teardown(atom.node, null, event.createdBy);
       }
 
       await this.nucleusService.deleteAtom(atom.id);
@@ -120,7 +113,12 @@ export class AtomDeleteProcessor implements IEventProcessor {
       await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
       await this.repository.addEventResource(createdEventId, 'Atom', atom.id);
     } catch (error) {
-      if (error instanceof AbortError) throw error;
+      if (error instanceof AbortError) {
+        if (atom?.status === STATES.entry) {
+          await updateAtomStatus(STATES.fail);
+        }
+        throw error;
+      }
 
       this.logger.error(`Error processing event ID ${event.id}: ${String(error)}`);
 

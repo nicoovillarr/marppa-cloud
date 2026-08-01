@@ -92,7 +92,12 @@ export class PortalUpdateProcessor implements IEventProcessor {
       await this.repository.addEventResource(eventCreatedId, 'Event', String(event.id));
       await this.repository.addEventResource(eventCreatedId, 'Portal', portal.id);
     } catch (error) {
-      if (error instanceof AbortError) throw error;
+      if (error instanceof AbortError) {
+        if (portal?.status === STATES.entry) {
+          await updatePortalStatus(STATES.fail);
+        }
+        throw error;
+      }
       if (portal) {
         await updatePortalStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }

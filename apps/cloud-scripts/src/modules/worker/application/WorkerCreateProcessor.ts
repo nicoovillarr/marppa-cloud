@@ -121,7 +121,12 @@ export class WorkerCreateProcessor implements IEventProcessor {
       await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
       await this.repository.addEventResource(createdEventId, 'Worker', worker.id);
     } catch (error) {
-      if (error instanceof AbortError) throw error;
+      if (error instanceof AbortError) {
+        if (worker?.status === STATES.entry) {
+          await updateWorkerStatus(STATES.fail);
+        }
+        throw error;
+      }
 
       if (worker) {
         await updateWorkerStatus(

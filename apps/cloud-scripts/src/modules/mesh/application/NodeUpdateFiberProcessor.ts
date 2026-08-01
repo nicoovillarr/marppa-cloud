@@ -105,7 +105,12 @@ export class NodeUpdateFiberProcessor implements IEventProcessor {
       await updateFiberStatus(ResourceStatus.ACTIVE);
       await addCompleteEvent(fiber.id);
     } catch (error) {
-      if (error instanceof AbortError) throw error;
+      if (error instanceof AbortError) {
+        if (fiber?.status === ResourceStatus.ACTIVE) {
+          await updateFiberStatus(ResourceStatus.FAILED);
+        }
+        throw error;
+      }
 
       this.logger.error(`Error processing event ID ${event.id}: ${String(error)}`);
       if (fiber) {

@@ -73,7 +73,12 @@ export class NodeDeleteFiberProcessor implements IEventProcessor {
       await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
       await this.repository.addEventResource(createdEventId, 'Fiber', String(fiber.id));
     } catch (error) {
-      if (error instanceof AbortError) throw error;
+      if (error instanceof AbortError) {
+        if (fiber?.status === ResourceStatus.QUEUED) {
+          await updateFiberStatus(ResourceStatus.FAILED);
+        }
+        throw error;
+      }
 
       this.logger.error(`Error processing event ID ${event.id}: ${String(error)}`);
       if (fiber) {

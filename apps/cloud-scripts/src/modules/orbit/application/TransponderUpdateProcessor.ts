@@ -93,7 +93,12 @@ export class TransponderUpdateProcessor implements IEventProcessor {
       await this.repository.addEventResource(eventCreatedId, 'Event', String(event.id));
       await this.repository.addEventResource(eventCreatedId, 'Transponder', transponder.id);
     } catch (error) {
-      if (error instanceof AbortError) throw error;
+      if (error instanceof AbortError) {
+        if (transponder?.status === STATES.entry) {
+          await updateTransponderStatus(STATES.fail);
+        }
+        throw error;
+      }
       if (transponder) {
         await updateTransponderStatus(event.retries >= 4 ? STATES.fail : STATES.entry);
       }

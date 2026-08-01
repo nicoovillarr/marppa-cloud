@@ -19,11 +19,12 @@ import { StubMeshService } from './infrastructure/services/StubMeshService';
 import { MESH_SERVICE_TOKEN } from './domain/services/MeshService';
 import { NodeTeardownService } from './application/NodeTeardownService';
 import { WorkerModule } from '@/worker/WorkerModule';
+import { OrbitModule } from '@/orbit/OrbitModule';
 
 const useStubs = process.env.USE_STUBS === 'true';
 
 @Module({
-  imports: [SharedModule, EventModule, forwardRef(() => WorkerModule)],
+  imports: [SharedModule, EventModule, OrbitModule, forwardRef(() => WorkerModule)],
   providers: [
     {
       provide: MESH_SERVICE_TOKEN,
