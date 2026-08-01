@@ -2,6 +2,7 @@
 
 import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { useEffect, useRef, useState } from "react";
+import { FormCheckbox } from "@/core/ui/inputs/form/FormCheckbox";
 import { FormSelect } from "@/core/ui/inputs/form/FormSelect";
 import { useForm, FormProvider } from "react-hook-form";
 import { Button, ButtonRef } from "@/core/ui/Button";
@@ -32,7 +33,7 @@ export function PortalForm({
   const [disableApiKey, setDisableApiKey] = useState(true);
 
   const buttonRef = useRef<ButtonRef>(null);
-  const methods = useForm();
+  const methods = useForm({ defaultValues: { corsEnabled: true } });
 
   const { control, handleSubmit, reset } = methods;
 
@@ -43,6 +44,7 @@ export function PortalForm({
       address: data.address,
       type: data.type,
       apiKey: portal != null && disableApiKey ? undefined : data.apiKey,
+      corsEnabled: data.corsEnabled,
       zoneId: data.zoneId,
     };
 
@@ -69,6 +71,7 @@ export function PortalForm({
         description: portal.description,
         address: portal.address,
         type: portal.type,
+        corsEnabled: portal.corsEnabled,
         zoneId: portal.zoneId,
       });
     }
@@ -140,6 +143,13 @@ export function PortalForm({
             />
           )}
         </aside>
+
+        <FormCheckbox
+          controlName="corsEnabled"
+          control={control}
+          label="CORS"
+          text="Allow requests from any origin"
+        />
 
         {portal && (
           <>

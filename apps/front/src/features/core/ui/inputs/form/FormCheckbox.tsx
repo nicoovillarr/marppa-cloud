@@ -35,6 +35,7 @@ export function FormCheckbox({
           <Checkbox
             {...field}
             className="h-[42px] items-center"
+            checked={field.value}
             defaultChecked={defaultChecked}
             disabled={disabled}
             onChangedValue={(value) => handleOnChange(field, value)}
