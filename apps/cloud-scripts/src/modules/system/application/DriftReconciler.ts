@@ -7,7 +7,7 @@ import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 import { HIVE_SERVICE_TOKEN, HiveService } from '@/worker/domain/services/HiveService';
 import { NUCLEUS_SERVICE_TOKEN, NucleusService } from '@/nucleus/domain/services/NucleusService';
-import { STABLE_STATUSES, TRANSITION_STATUSES } from '@marppa-cloud/api-types';
+import { EVENT_STATE_MACHINE, STABLE_STATUSES, TRANSITION_STATUSES } from '@marppa-cloud/api-types';
 
 const SETTLED_STATES = STABLE_STATUSES as unknown as ResourceStatus[];
 
@@ -20,6 +20,8 @@ const STUCK_STATES = TRANSITION_STATUSES as unknown as ResourceStatus[];
 const UPDATE_GUARD_MS = 15_000;
 
 const STUCK_GRACE_MS = 10 * 60 * 1000;
+
+const COMMAND_EVENT_TYPES = Object.keys(EVENT_STATE_MACHINE);
 
 @Injectable()
 export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
@@ -155,7 +157,13 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
 
   private async liveEventResourceKeys(): Promise<Set<string>> {
     const rows = await this.prisma.eventResource.findMany({
-      where: { event: { processedAt: null, failedAt: null } },
+      where: {
+        event: {
+          processedAt: null,
+          failedAt: null,
+          type: { in: COMMAND_EVENT_TYPES },
+        },
+      },
       select: { resourceType: true, resourceId: true },
     });
 
