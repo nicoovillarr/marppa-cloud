@@ -4,7 +4,7 @@ import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { useEffect, useRef, useState } from "react";
 import { FormCheckbox } from "@/core/ui/inputs/form/FormCheckbox";
 import { FormSelect } from "@/core/ui/inputs/form/FormSelect";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, FieldValues } from "react-hook-form";
 import { Button, ButtonRef } from "@/core/ui/Button";
 import { LuSave } from "react-icons/lu";
 import { IoReloadSharp } from "react-icons/io5";
@@ -33,7 +33,9 @@ export function PortalForm({
   const [disableApiKey, setDisableApiKey] = useState(true);
 
   const buttonRef = useRef<ButtonRef>(null);
-  const methods = useForm({ defaultValues: { corsEnabled: true } });
+  const methods = useForm({
+    defaultValues: { corsEnabled: true } as FieldValues,
+  });
 
   const { control, handleSubmit, reset } = methods;
 
