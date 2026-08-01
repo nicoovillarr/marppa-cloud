@@ -749,9 +749,13 @@ from `EVENT_STATE_MACHINE`: `entry` is not a synonym for transitory, since
 also means adding a status fails the build until it is classified.
 
 `DriftReconciler` sweeps resources left in a `transition` status: it marks them `FAILED`
-and broadcasts `reason: 'STUCK_RELEASED'`. A resource is only swept once every event
+and broadcasts `reason: 'STUCK_RELEASED'`. A resource is only swept once every **command** event
 referencing it has a `processedAt` or `failedAt` — a live event always wins, so the sweep
-never races a processor. It also waits out `STUCK_GRACE_MS` (10 min). A resource whose
+never races a processor. "Command" is the set of `EVENT_STATE_MACHINE` keys, and that
+filter is load-bearing: informational events (`WORKER_DELETED`, `*_FAILED`, …) are created
+by processors, carry the resource, and are never dispatched, so their `processedAt` and
+`failedAt` stay null forever. Counting those as live would exclude every resource that has
+any history and turn the sweep into a no-op. It also waits out `STUCK_GRACE_MS` (10 min). A resource whose
 event is still pending forever (the process died mid-work) is not swept: BullMQ
 redelivers that job, so it belongs to the queue, not here. `deleteWorker`/`deleteAtom`
 accept `FAILED` as well as `INACTIVE`, which is what makes the swept resource actionable
