@@ -7,14 +7,19 @@ import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
 import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 import { HIVE_SERVICE_TOKEN, HiveService } from '@/worker/domain/services/HiveService';
 import { NUCLEUS_SERVICE_TOKEN, NucleusService } from '@/nucleus/domain/services/NucleusService';
+import { STABLE_STATUSES, TRANSITION_STATUSES } from '@marppa-cloud/api-types';
 
-const SETTLED_STATES = [ResourceStatus.ACTIVE, ResourceStatus.INACTIVE];
+const SETTLED_STATES = STABLE_STATUSES as unknown as ResourceStatus[];
+
+const STUCK_STATES = TRANSITION_STATUSES as unknown as ResourceStatus[];
 
 /**
  * A row updated inside this window is likely mid-transition under a processor
  * that hasn't committed yet — comparing against the host now would race it.
  */
 const UPDATE_GUARD_MS = 15_000;
+
+const STUCK_GRACE_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
@@ -45,6 +50,7 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         const crashedWorkerIds = await this.reconcileWorkers();
         const crashedAtomIds = await this.reconcileAtoms();
         await this.reconcileNodes(crashedWorkerIds, crashedAtomIds);
+        await this.releaseStuckResources();
       } catch (err) {
         this.logger.error(`[DriftReconciler] Error: ${String(err)}`);
       }
@@ -145,6 +151,148 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
     }
 
     return crashed;
+  }
+
+  private async liveEventResourceKeys(): Promise<Set<string>> {
+    const rows = await this.prisma.eventResource.findMany({
+      where: { event: { processedAt: null, failedAt: null } },
+      select: { resourceType: true, resourceId: true },
+    });
+
+    return new Set(rows.map((row) => `${row.resourceType}:${row.resourceId}`));
+  }
+
+  private async releaseStuck<
+    T extends { id: string | number; status: ResourceStatus },
+  >(
+    resourceType: string,
+    liveKeys: Set<string>,
+    rows: T[],
+    markFailed: (row: T) => Promise<unknown>,
+    broadcast?: (row: T) => void,
+  ): Promise<void> {
+    for (const row of rows) {
+      if (liveKeys.has(`${resourceType}:${row.id}`)) continue;
+
+      this.logger.warn(
+        `[DriftReconciler] ${resourceType} ${row.id} stuck in ${row.status} with no live event — marking FAILED`,
+      );
+
+      await markFailed(row);
+      broadcast?.(row);
+    }
+  }
+
+  private async releaseStuckResources(): Promise<void> {
+    const liveKeys = await this.liveEventResourceKeys();
+    const stuckBefore = new Date(Date.now() - STUCK_GRACE_MS);
+    const stuckWhere = {
+      status: { in: STUCK_STATES },
+      updatedAt: { lt: stuckBefore },
+    };
+    const failed = { status: ResourceStatus.FAILED };
+    const broadcastData = {
+      status: ResourceStatus.FAILED,
+      reason: 'STUCK_RELEASED',
+    };
+
+    await this.releaseStuck(
+      'Worker',
+      liveKeys,
+      await this.prisma.worker.findMany({
+        where: {
+          status: { in: STUCK_STATES },
+          OR: [
+            { updatedAt: { lt: stuckBefore } },
+            { updatedAt: null, createdAt: { lt: stuckBefore } },
+          ],
+        },
+        select: { id: true, status: true, ownerId: true },
+      }),
+      (row) => this.prisma.worker.update({ where: { id: row.id }, data: failed }),
+      (row) => this.wsServer.sendWorkerMessage(row, 'UPDATED', broadcastData),
+    );
+
+    await this.releaseStuck(
+      'Atom',
+      liveKeys,
+      await this.prisma.atom.findMany({
+        where: stuckWhere,
+        select: { id: true, status: true, ownerId: true },
+      }),
+      (row) => this.prisma.atom.update({ where: { id: row.id }, data: failed }),
+      (row) => this.wsServer.sendAtomMessage(row, 'UPDATED', broadcastData),
+    );
+
+    await this.releaseStuck(
+      'Zone',
+      liveKeys,
+      await this.prisma.zone.findMany({
+        where: stuckWhere,
+        select: { id: true, status: true, ownerId: true },
+      }),
+      (row) => this.prisma.zone.update({ where: { id: row.id }, data: failed }),
+      (row) => this.wsServer.sendZoneMessage(row, 'UPDATED', broadcastData),
+    );
+
+    await this.releaseStuck(
+      'Node',
+      liveKeys,
+      await this.prisma.node.findMany({
+        where: stuckWhere,
+        select: { id: true, status: true, zone: { select: { ownerId: true } } },
+      }),
+      (row) => this.prisma.node.update({ where: { id: row.id }, data: failed }),
+      (row) =>
+        this.wsServer.sendNodeMessage(
+          { id: row.id, ownerId: row.zone.ownerId },
+          'UPDATED',
+          broadcastData,
+        ),
+    );
+
+    await this.releaseStuck(
+      'Portal',
+      liveKeys,
+      await this.prisma.portal.findMany({
+        where: stuckWhere,
+        select: { id: true, status: true, ownerId: true },
+      }),
+      (row) => this.prisma.portal.update({ where: { id: row.id }, data: failed }),
+      (row) => this.wsServer.sendPortalMessage(row, 'UPDATED', broadcastData),
+    );
+
+    await this.releaseStuck(
+      'Transponder',
+      liveKeys,
+      await this.prisma.transponder.findMany({
+        where: stuckWhere,
+        select: {
+          id: true,
+          status: true,
+          portalId: true,
+          portal: { select: { ownerId: true } },
+        },
+      }),
+      (row) =>
+        this.prisma.transponder.update({ where: { id: row.id }, data: failed }),
+      (row) =>
+        this.wsServer.sendTransponderMessage(
+          { id: row.id, portalId: row.portalId, ownerId: row.portal.ownerId },
+          'UPDATED',
+          broadcastData,
+        ),
+    );
+
+    await this.releaseStuck(
+      'Fiber',
+      liveKeys,
+      await this.prisma.fiber.findMany({
+        where: stuckWhere,
+        select: { id: true, status: true },
+      }),
+      (row) => this.prisma.fiber.update({ where: { id: row.id }, data: failed }),
+    );
   }
 
   /**
