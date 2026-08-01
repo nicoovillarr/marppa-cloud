@@ -215,7 +215,10 @@ export class AtomService {
     }
 
     const entity = await this.findById(id);
-    this.assertStatus(entity, ResourceStatus.INACTIVE);
+    this.assertStatus(entity, [
+      ResourceStatus.INACTIVE,
+      ResourceStatus.FAILED,
+    ]);
 
     const updated = entity.clone({
       status: getEventStateTransition(EventTypeKey.ATOM_DELETE).entry,
@@ -276,8 +279,12 @@ export class AtomService {
     return !!company && !company.parentCompanyId;
   }
 
-  assertStatus(atom: AtomEntity, expected: ResourceStatus): void {
-    if (atom.status !== expected) {
+  assertStatus(
+    atom: AtomEntity,
+    expected: ResourceStatus | ResourceStatus[],
+  ): void {
+    const allowed = Array.isArray(expected) ? expected : [expected];
+    if (!allowed.includes(atom.status)) {
       throw new AtomInvalidStatusError(expected, atom.status);
     }
   }
