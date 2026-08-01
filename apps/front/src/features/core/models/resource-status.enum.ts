@@ -1,1 +1,1 @@
-export { ResourceStatus } from '@marppa-cloud/api-types';
+export { ResourceStatus, STATUS_KIND } from '@marppa-cloud/api-types';
