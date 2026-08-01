@@ -130,22 +130,24 @@ export class DockerNucleusService extends NucleusService {
     await this.docker(args);
   }
 
-  public async stopAtom(id: string): Promise<void> {
+  public async stopAtom(id: string): Promise<boolean> {
     const atomId = this.assertAtomId(id);
 
     if (!(await this.containerExists(atomId))) {
       console.log(`Atom container ${atomId} does not exist, nothing to stop`);
-      return;
+      return false;
     }
 
     await this.docker(['rm', '--force', atomId]);
+
+    return true;
   }
 
   /**
    * Identical to stopping: the container is rebuilt from the row on every start,
    * so there is no stopped container worth keeping around.
    */
-  public deleteAtom(id: string): Promise<void> {
+  public deleteAtom(id: string): Promise<boolean> {
     return this.stopAtom(id);
   }
 

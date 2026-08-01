@@ -48,8 +48,9 @@ export class StubHiveService extends HiveService {
     console.log(`[STUB] startWorker: ${vmName}`);
   }
 
-  public async deleteWorker(vmName: string): Promise<void> {
+  public async deleteWorker(vmName: string): Promise<boolean> {
     console.log(`[STUB] deleteWorker: ${vmName}`);
+    return true;
   }
 
   public async editWorkerZone(vmName: string, bridgeName?: string | null, mac?: string | null): Promise<void> {

@@ -817,11 +817,13 @@ local-hostname: ${name}
     await Command.runCommand('sudo', ['virsh', 'start', vmName]);
   }
 
-  public async deleteWorker(vmName: string): Promise<void> {
+  public async deleteWorker(vmName: string): Promise<boolean> {
     this.validateVmName(vmName);
     console.log(`Deleting worker VM: ${vmName}`);
 
-    if (await this.isWorkerDefined(vmName)) {
+    const defined = await this.isWorkerDefined(vmName);
+
+    if (defined) {
       await Command.runCommand('sudo', [
         'virsh',
         'undefine',
@@ -838,6 +840,8 @@ local-hostname: ${name}
     });
 
     await fsPromises.rm(path.join(IMAGE_DIR, `${vmName}.img`), { force: true });
+
+    return defined;
   }
 
   public async editWorkerZone(

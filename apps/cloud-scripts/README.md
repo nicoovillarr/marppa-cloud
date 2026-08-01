@@ -740,6 +740,29 @@ backend sets `entry` before dispatching, the processor validates `entry`, moves 
 `@/shared/domain/EventStateMachine`, which casts the twin api-types/Prisma enums in one
 place.
 
+`STATUS_KIND` in the same file classifies each status as `stable`, `transition` or
+`terminal`, independent of which event produced it. `transition` means a processor is
+expected to move the resource out of it, so a resource sitting there with no live event
+is stuck and gets swept by `DriftReconciler`. The classification is declared, not derived
+from `EVENT_STATE_MACHINE`: `entry` is not a synonym for transitory, since
+`NODE_UNASSIGN_WORKER` enters from `ACTIVE`. Declaring it as a `Record` over the enum
+also means adding a status fails the build until it is classified.
+
+`DriftReconciler` sweeps resources left in a `transition` status: it marks them `FAILED`
+and broadcasts `reason: 'STUCK_RELEASED'`. A resource is only swept once every event
+referencing it has a `processedAt` or `failedAt` — a live event always wins, so the sweep
+never races a processor. It also waits out `STUCK_GRACE_MS` (10 min). A resource whose
+event is still pending forever (the process died mid-work) is not swept: BullMQ
+redelivers that job, so it belongs to the queue, not here. `deleteWorker`/`deleteAtom`
+accept `FAILED` as well as `INACTIVE`, which is what makes the swept resource actionable
+— without that the sweep would only relabel the deadlock.
+
+Host-side removals follow one contract: **absent is success, but never silent.** Every
+teardown step records into a `TeardownReport` (`removed` / `absent` / `kept`), which the
+delete processors ship both over WebSocket, as `teardown` in the `DELETED` payload, and
+into `Event.notes` of the `*_DELETED` event. Idempotency without that report would hide
+drift instead of surfacing it.
+
 An `AbortError` is terminal — `EventWorker` marks the event failed and never retries it.
 The processor that raises one drives its resource to `fail` first, but only when the
 resource was loaded and still sat in `entry`: an abort raised because the resource was

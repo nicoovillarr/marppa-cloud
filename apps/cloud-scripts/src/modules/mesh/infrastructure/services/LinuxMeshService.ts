@@ -79,6 +79,59 @@ export class LinuxMeshService extends MeshService {
     await Command.runCommand('sudo', ['rm', '-f', filePath]);
   }
 
+  private async nftTableExists(tableArgs: string[]): Promise<boolean> {
+    const tables = await Command.runCommand('sudo', ['nft', 'list', 'tables']);
+    const wanted = `table ${tableArgs.join(' ')}`;
+
+    return tables.split('\n').some((line) => line.trim() === wanted);
+  }
+
+  private async deleteRulesByHandle(
+    tableArgs: string[],
+    chain: string,
+    matchFn: (line: string) => boolean,
+  ): Promise<number> {
+    if (!(await this.nftTableExists(tableArgs))) {
+      console.log(
+        `nftables table ${tableArgs.join(' ')} does not exist, nothing to delete`,
+      );
+      return 0;
+    }
+
+    const output = await Command.runCommand('sudo', [
+      'nft',
+      '-a',
+      'list',
+      'chain',
+      ...tableArgs,
+      chain,
+    ]);
+
+    let deleted = 0;
+
+    for (const line of output.split('\n')) {
+      const trimmed = line.trim();
+      const handleMatch = trimmed.match(/handle\s+(\d+)/);
+      if (!handleMatch || !matchFn(trimmed)) continue;
+
+      await Command.runCommand('sudo', [
+        'nft',
+        'delete',
+        'rule',
+        ...tableArgs,
+        chain,
+        'handle',
+        handleMatch[1],
+      ]);
+      console.log(
+        `Deleted rule from ${tableArgs.join(' ')} ${chain} handle ${handleMatch[1]}`,
+      );
+      deleted += 1;
+    }
+
+    return deleted;
+  }
+
   private async deviceExists(name: string): Promise<boolean> {
     try {
       await Command.runCommand('ip', ['link', 'show', name]);
@@ -537,43 +590,8 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
   ) {
     if (!externalInterface)
       throw new Error('BRIDGE_NAME environment variable is required');
-    const deleteMatchingRules = async (
-      tableArgs: string[],
-      chain: string,
-      matchFn: (line: string) => boolean,
-    ) => {
-      const output = await Command.runCommand('sudo', [
-        'nft',
-        '-a',
-        'list',
-        'chain',
-        ...tableArgs,
-        chain,
-      ]);
-      const lines = output.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        const match = trimmed.match(/handle\s+(\d+)/);
-        if (match && matchFn(trimmed)) {
-          const handle = match[1];
-          await Command.runCommand('sudo', [
-            'nft',
-            'delete',
-            'rule',
-            ...tableArgs,
-            chain,
-            'handle',
-            handle,
-          ]);
-          console.log(
-            `Deleted rule from ${tableArgs.join(' ')} ${chain} handle ${handle}`,
-          );
-        }
-      }
-    };
-
     try {
-      await deleteMatchingRules(
+      await this.deleteRulesByHandle(
         ['ip', 'nat'],
         'postrouting',
         (line) =>
@@ -582,11 +600,11 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
           (line.includes('masquerade') || line.includes('return')),
       );
 
-      await deleteMatchingRules(['inet', 'filter'], 'input', (line) =>
+      await this.deleteRulesByHandle(['inet', 'filter'], 'input', (line) =>
         line.includes(`iifname "${bridgeName}"`),
       );
 
-      await deleteMatchingRules(
+      await this.deleteRulesByHandle(
         ['inet', 'filter'],
         'forward',
         (line) =>
@@ -594,7 +612,7 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
           line.includes(`oifname "${bridgeName}"`),
       );
 
-      await deleteMatchingRules(
+      await this.deleteRulesByHandle(
         ['ip', 'nat'],
         'prerouting',
         (line) =>
@@ -706,7 +724,15 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
 
   public async deleteNodeFromZone(bridgeName, mac) {
     const dnsmasqFile = path.join(this.dnsmasqDir, `${bridgeName}.conf`);
-    let content = await fsPromises.readFile(dnsmasqFile, 'utf8');
+
+    let content: string;
+    try {
+      content = await fsPromises.readFile(dnsmasqFile, 'utf8');
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+      console.log(`${dnsmasqFile} does not exist, nothing to remove`);
+      return false;
+    }
 
     const lines = content.split('\n');
     const newLines = lines.filter(
@@ -715,11 +741,13 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
 
     if (lines.length === newLines.length) {
       console.log(`MAC ${mac} not found in ${dnsmasqFile}, nothing to remove`);
-      return;
+      return false;
     }
 
     await this.writeRootFile(dnsmasqFile, newLines.join('\n'));
     await Command.runCommand('sudo', ['systemctl', 'restart', 'dnsmasq']);
+
+    return true;
   }
 
   public async linkVnetToBridge(vnetName, bridgeName) {
@@ -996,56 +1024,28 @@ dhcp-range=${dhcpStart},${dhcpEnd},12h
       `Removing port forwarding for ${protocol}/${externalPort} → ${targetIp}:${internalPort} via ${bridgeName}`,
     );
 
-    const deleteRuleByHandle = async (
-      tableArgs: string[],
-      chain: string,
-      matchFn: (line: string) => boolean,
-    ) => {
-      const output = await Command.runCommand('sudo', [
-        'nft',
-        '-a',
-        'list',
-        'chain',
-        ...tableArgs,
-        chain,
-      ]);
-      for (const line of output.split('\n')) {
-        const trimmed = line.trim();
-        const handleMatch = trimmed.match(/handle\s+(\d+)/);
-        if (handleMatch && matchFn(trimmed)) {
-          await Command.runCommand('sudo', [
-            'nft',
-            'delete',
-            'rule',
-            ...tableArgs,
-            chain,
-            'handle',
-            handleMatch[1],
-          ]);
-        }
-      }
-    };
-
-    await deleteRuleByHandle(
-      ['ip', 'nat'],
-      'prerouting',
-      (line) =>
-        line.includes(`iifname "${externalInterface}"`) &&
-        line.includes(`${protocol} dport ${externalPort}`) &&
-        line.includes(`dnat to ${targetIp}:${internalPort}`),
-    );
-
-    await deleteRuleByHandle(
-      ['inet', 'filter'],
-      'forward',
-      (line) =>
-        line.includes(`iifname "${externalInterface}"`) &&
-        line.includes(`ip daddr ${targetIp}`) &&
-        line.includes(`${protocol} dport ${internalPort}`),
-    );
+    const removed =
+      (await this.deleteRulesByHandle(
+        ['ip', 'nat'],
+        'prerouting',
+        (line) =>
+          line.includes(`iifname "${externalInterface}"`) &&
+          line.includes(`${protocol} dport ${externalPort}`) &&
+          line.includes(`dnat to ${targetIp}:${internalPort}`),
+      )) +
+      (await this.deleteRulesByHandle(
+        ['inet', 'filter'],
+        'forward',
+        (line) =>
+          line.includes(`iifname "${externalInterface}"`) &&
+          line.includes(`ip daddr ${targetIp}`) &&
+          line.includes(`${protocol} dport ${internalPort}`),
+      ));
 
     await this.saveNftConfiguration();
-    console.log('✅ Port forwarding rule removed and saved.');
+    console.log(`✅ Port forwarding removed and saved (${removed} rules).`);
+
+    return removed;
   }
 
   public async isPortAvailable(ipAddress, targetPort, protocol) {

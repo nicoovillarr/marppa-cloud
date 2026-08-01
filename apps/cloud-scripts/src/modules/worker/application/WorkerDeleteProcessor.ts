@@ -16,6 +16,7 @@ import {
   nodeTeardownInclude,
   type NodeTeardownPayload,
 } from '@/mesh/application/NodeTeardownService';
+import { TeardownReport } from '@/shared/domain/TeardownReport';
 
 const STATES = getEventStates(EventType.WORKER_DELETE);
 
@@ -92,17 +93,37 @@ export class WorkerDeleteProcessor implements IEventProcessor {
 
       await updateWorkerStatus(STATES.work);
 
+      const report = new TeardownReport();
+
       if (worker.node) {
-        await this.nodeTeardown.teardown(worker.node, worker.macAddress, event.createdBy);
+        await this.nodeTeardown.teardown(
+          worker.node,
+          worker.macAddress,
+          event.createdBy,
+          report,
+        );
       }
 
-      await this.hiveService.deleteWorker(worker.id);
+      const domainWasDefined = await this.hiveService.deleteWorker(worker.id);
+      report.record(
+        `vm ${worker.id}`,
+        domainWasDefined ? 'removed' : 'absent',
+        domainWasDefined ? undefined : 'no libvirt domain, only files cleared',
+      );
 
       await updateWorkerStatus(STATES.ok);
 
-      this.wsServer.sendWorkerMessage(worker, 'DELETED', null);
+      this.wsServer.sendWorkerMessage(worker, 'DELETED', {
+        teardown: report.entries,
+      });
 
-      const createdEventId = await this.repository.createEvent(EventType.WORKER_DELETED, event.createdBy, event.companyId);
+      const createdEventId = await this.repository.createEvent(
+        EventType.WORKER_DELETED,
+        event.createdBy,
+        event.companyId,
+        undefined,
+        report.toNotes(),
+      );
       await this.repository.addEventResource(createdEventId, 'Event', String(event.id));
       await this.repository.addEventResource(createdEventId, 'Worker', worker.id);
     } catch (error) {

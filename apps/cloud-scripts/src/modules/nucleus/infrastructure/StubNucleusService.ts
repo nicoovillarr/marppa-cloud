@@ -36,14 +36,14 @@ export class StubNucleusService extends NucleusService {
     this.running.add(id);
   }
 
-  public async stopAtom(id: string): Promise<void> {
+  public async stopAtom(id: string): Promise<boolean> {
     console.log(`[STUB] stopAtom: ${id}`);
-    this.running.delete(id);
+    return this.running.delete(id);
   }
 
-  public async deleteAtom(id: string): Promise<void> {
+  public async deleteAtom(id: string): Promise<boolean> {
     console.log(`[STUB] deleteAtom: ${id}`);
-    this.running.delete(id);
+    return this.running.delete(id);
   }
 
   public async isAtomRunning(id: string): Promise<boolean> {

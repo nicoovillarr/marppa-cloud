@@ -464,7 +464,17 @@ export class LinuxOrbitService extends OrbitService {
 
   public async deletePortalConfig(portalId) {
     await this.removeRootFile(this.caddySitePath(portalId));
-    await this.reloadCaddy();
+
+    try {
+      await this.reloadCaddy();
+    } catch (err) {
+      console.warn(
+        `Caddy refused to reload after removing portal ${portalId}; the site file is gone but the running config still serves it: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+
     await this.removeDdclientConfig(portalId);
 
     console.log(`Caddy and ddclient config for portal ${portalId} deleted`);
