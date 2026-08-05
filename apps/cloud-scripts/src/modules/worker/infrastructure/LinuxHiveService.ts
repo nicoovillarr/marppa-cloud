@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
 import { isValidSshPublicKey } from '@marppa-cloud/shared';
+import { WORKER_VOLUME_DEVICE_TARGETS } from '@marppa-cloud/api-types';
 import { Command } from '@/libs/Command';
 import { sleep } from '@/libs/sleep';
 import {
@@ -17,6 +18,10 @@ import { Injectable } from '@/decorators/Injectable';
 
 const IMAGE_DIR = '/var/lib/libvirt/images';
 const CLOUD_INIT_DIR_BASE = '/var/lib/libvirt/cloud-init';
+const VOLUME_DIR = '/var/lib/libvirt/images/volumes';
+
+const BOOT_DEVICE_TARGET = 'vda';
+const VOLUME_FSTAB_OPTIONS = 'defaults,nofail';
 
 // Packages baked into the base image at prep time so the first boot needs no Internet.
 const BASE_IMAGE_PACKAGES = [
@@ -35,6 +40,9 @@ const SHUTDOWN_TIMEOUT_MS = 60_000;
 const SHUTDOWN_POLL_MS = 2_000;
 
 const SAFE_VM_NAME = /^[a-zA-Z0-9_-]+$/;
+const SAFE_DEVICE_TARGET = /^vd[b-z]$/;
+const SAFE_MOUNT_POINT = /^\/[a-zA-Z0-9._-]+(\/[a-zA-Z0-9._-]+)*$/;
+const VOLUME_FILE_NAME = /^vol-\d+\.qcow2$/;
 const ALLOWED_IMAGE_URL = /^https?:\/\/[a-zA-Z0-9.\-]+(:\d+)?\//;
 const SAFE_USERNAME = /^[a-z_][a-z0-9_-]{0,31}$/;
 const SAFE_WORKER_ID = /^[a-zA-Z0-9_-]+$/;
@@ -311,10 +319,7 @@ export class LinuxHiveService extends HiveService {
     ]);
 
     const grubPath = path.join(tmpDir, 'grub');
-    const userName = process.env.USERNAME ?? process.env.USER;
-    if (!userName || !SAFE_USERNAME.test(userName)) {
-      throw new Error(`Invalid USERNAME env var: "${userName}" — must match /^[a-z_][a-z0-9_-]{0,31}$/`);
-    }
+    const userName = this.serviceUser();
     await Command.runCommand('sudo', [
       'chown',
       `${userName}:${userName}`,
@@ -824,12 +829,7 @@ local-hostname: ${name}
     const defined = await this.isWorkerDefined(vmName);
 
     if (defined) {
-      await Command.runCommand('sudo', [
-        'virsh',
-        'undefine',
-        `${vmName}`,
-        '--remove-all-storage',
-      ]);
+      await Command.runCommand('sudo', ['virsh', 'undefine', `${vmName}`]);
     } else {
       console.log(`VM ${vmName} is not defined, only clearing its files`);
     }
@@ -937,6 +937,303 @@ local-hostname: ${name}
       diskPath,
       `${newDiskSizeGb}G`,
     ]);
+  }
+
+  // --- Volumes ---
+
+  public async createWorkerVolume(
+    volumeId: number,
+    sizeGiB: number,
+  ): Promise<string> {
+    this.validateVolumeId(volumeId);
+
+    if (!Number.isInteger(sizeGiB) || sizeGiB <= 0) {
+      throw new TypeError(`Invalid volume size: ${sizeGiB}`);
+    }
+
+    await this.assertHostDiskAvailable(sizeGiB);
+    await this.ensureVolumeDir();
+
+    const volumePath = this.workerVolumePath(volumeId);
+
+    console.log(`Creating ${sizeGiB}GiB volume at ${volumePath}`);
+
+    await Command.runCommand('sudo', ['rm', '-f', volumePath]);
+    await Command.runCommand('qemu-img', [
+      'create',
+      '-f',
+      'qcow2',
+      volumePath,
+      `${sizeGiB}G`,
+    ]);
+
+    await Command.runCommand('sudo', [
+      'guestfish',
+      '--rw',
+      '-a',
+      volumePath,
+      'run',
+      ':',
+      'mkfs',
+      'ext4',
+      '/dev/sda',
+      ':',
+      'set-label',
+      '/dev/sda',
+      this.workerVolumeLabel(volumeId),
+    ]);
+
+    return volumePath;
+  }
+
+  public async deleteWorkerVolume(volumePath: string): Promise<boolean> {
+    this.validateVolumePath(volumePath);
+
+    if (!fs.existsSync(volumePath)) {
+      console.log(`Volume ${volumePath} is already gone`);
+      return false;
+    }
+
+    await Command.runCommand('sudo', ['rm', '-f', volumePath]);
+    return true;
+  }
+
+  public async nextVolumeDeviceTarget(vmName: string): Promise<string> {
+    this.validateVmName(vmName);
+
+    const taken = new Set(await this.domainBlockTargets(vmName));
+    const free = WORKER_VOLUME_DEVICE_TARGETS.find(
+      (target) => !taken.has(target),
+    );
+
+    if (!free) {
+      throw new Error(`Worker ${vmName} has no free virtio disk slot left`);
+    }
+
+    return free;
+  }
+
+  public async attachWorkerVolume(
+    vmName: string,
+    volumePath: string,
+    deviceTarget: string,
+    mountPoint: string,
+  ): Promise<void> {
+    this.validateVolumeAttachment(vmName, volumePath, deviceTarget, mountPoint);
+
+    if (!fs.existsSync(volumePath)) {
+      throw new Error(`Volume not found at ${volumePath}`);
+    }
+
+    await this.assertWorkerStoppedForVolumeChange(vmName, 'attach');
+
+    console.log(`Attaching ${volumePath} to ${vmName} as ${deviceTarget}`);
+
+    if (!(await this.domainBlockSources(vmName)).includes(volumePath)) {
+      const xmlPath = `/tmp/${vmName}-${path.basename(volumePath)}.xml`;
+      await fsPromises.writeFile(
+        xmlPath,
+        this.volumeDeviceXml(volumePath, deviceTarget),
+      );
+      await Command.runCommand('sudo', [
+        'virsh',
+        'attach-device',
+        vmName,
+        xmlPath,
+        '--config',
+      ]);
+      await fsPromises.rm(xmlPath, { force: true });
+    }
+
+    await this.writeGuestMount(
+      vmName,
+      mountPoint,
+      this.volumeLabelFromPath(volumePath),
+    );
+  }
+
+  public async detachWorkerVolume(
+    vmName: string,
+    volumePath: string,
+    deviceTarget: string,
+    mountPoint: string,
+  ): Promise<void> {
+    this.validateVolumeAttachment(vmName, volumePath, deviceTarget, mountPoint);
+
+    await this.assertWorkerStoppedForVolumeChange(vmName, 'detach');
+
+    console.log(`Detaching ${volumePath} (${deviceTarget}) from ${vmName}`);
+
+    if ((await this.domainBlockSources(vmName)).includes(volumePath)) {
+      await Command.runCommand('sudo', [
+        'virsh',
+        'detach-disk',
+        vmName,
+        deviceTarget,
+        '--config',
+      ]);
+    }
+
+    await this.writeGuestMount(vmName, mountPoint, null);
+  }
+
+  private async assertWorkerStoppedForVolumeChange(
+    vmName: string,
+    action: string,
+  ): Promise<void> {
+    if (await this.isWorkerRunning(vmName)) {
+      throw new Error(
+        `Refusing to ${action} a volume on ${vmName}: the worker is running`,
+      );
+    }
+  }
+
+  private async writeGuestMount(
+    vmName: string,
+    mountPoint: string,
+    label: string | null,
+  ): Promise<void> {
+    const imgPath = path.join(IMAGE_DIR, `${vmName}.img`);
+
+    if (!fs.existsSync(imgPath)) {
+      console.log(`Boot image of ${vmName} is gone, skipping the fstab update`);
+      return;
+    }
+
+    const current = await Command.runCommand('sudo', [
+      'guestfish',
+      '--ro',
+      '-a',
+      imgPath,
+      '-i',
+      'read-file',
+      '/etc/fstab',
+    ]);
+
+    const withoutEntry = this.fstabWithoutMountPoint(current, mountPoint);
+    const updated =
+      label == null
+        ? withoutEntry
+        : `${withoutEntry}${this.fstabLine(label, mountPoint)}\n`;
+
+    const guestfishArgs = ['guestfish', '--rw', '-a', imgPath, '-i'];
+    if (label != null) {
+      guestfishArgs.push('mkdir-p', mountPoint, ':');
+    }
+    guestfishArgs.push('write', '/etc/fstab', updated);
+
+    await Command.runCommand('sudo', guestfishArgs);
+  }
+
+  private fstabWithoutMountPoint(fstab: string, mountPoint: string): string {
+    const kept = fstab
+      .split('\n')
+      .filter((line) => line.trim().split(/\s+/)[1] !== mountPoint)
+      .join('\n')
+      .replace(/\n+$/, '');
+
+    return kept.length > 0 ? `${kept}\n` : '';
+  }
+
+  private fstabLine(label: string, mountPoint: string): string {
+    return `LABEL=${label}\t${mountPoint}\text4\t${VOLUME_FSTAB_OPTIONS}\t0\t2`;
+  }
+
+  private volumeDeviceXml(volumePath: string, deviceTarget: string): string {
+    return [
+      `<disk type='file' device='disk'>`,
+      `  <driver name='qemu' type='qcow2'/>`,
+      `  <source file='${volumePath}'/>`,
+      `  <target dev='${deviceTarget}' bus='virtio'/>`,
+      `</disk>`,
+      '',
+    ].join('\n');
+  }
+
+  private async domainBlockRows(vmName: string): Promise<string[][]> {
+    if (!(await this.isWorkerDefined(vmName))) {
+      return [];
+    }
+
+    const output = await Command.runCommand('sudo', [
+      'virsh',
+      'domblklist',
+      vmName,
+    ]);
+
+    return output
+      .split('\n')
+      .slice(2)
+      .map((line) => line.trim().split(/\s+/))
+      .filter((fields) => fields.length >= 2);
+  }
+
+  private async domainBlockTargets(vmName: string): Promise<string[]> {
+    const rows = await this.domainBlockRows(vmName);
+    return [BOOT_DEVICE_TARGET, ...rows.map((fields) => fields[0])];
+  }
+
+  private async domainBlockSources(vmName: string): Promise<string[]> {
+    const rows = await this.domainBlockRows(vmName);
+    return rows.map((fields) => fields[1]);
+  }
+
+  private async ensureVolumeDir(): Promise<void> {
+    if (fs.existsSync(VOLUME_DIR)) {
+      return;
+    }
+
+    const owner = this.serviceUser();
+    await Command.runCommand('sudo', ['mkdir', '-p', VOLUME_DIR]);
+    await Command.runCommand('sudo', ['chown', `${owner}:${owner}`, VOLUME_DIR]);
+    await Command.runCommand('sudo', ['chmod', '755', VOLUME_DIR]);
+  }
+
+  private workerVolumePath(volumeId: number): string {
+    return path.join(VOLUME_DIR, `vol-${volumeId}.qcow2`);
+  }
+
+  private workerVolumeLabel(volumeId: number): string {
+    return `vol-${volumeId}`;
+  }
+
+  private volumeLabelFromPath(volumePath: string): string {
+    return path.basename(volumePath, '.qcow2');
+  }
+
+  private validateVolumeId(volumeId: number): void {
+    if (!Number.isInteger(volumeId) || volumeId <= 0) {
+      throw new TypeError(`Invalid volume id: ${volumeId}`);
+    }
+  }
+
+  private validateVolumePath(volumePath: string): void {
+    const resolved = path.resolve(volumePath);
+
+    if (
+      path.dirname(resolved) !== VOLUME_DIR ||
+      !VOLUME_FILE_NAME.test(path.basename(resolved))
+    ) {
+      throw new Error(`Invalid volume path: ${volumePath}`);
+    }
+  }
+
+  private validateVolumeAttachment(
+    vmName: string,
+    volumePath: string,
+    deviceTarget: string,
+    mountPoint: string,
+  ): void {
+    this.validateVmName(vmName);
+    this.validateVolumePath(volumePath);
+
+    if (!SAFE_DEVICE_TARGET.test(deviceTarget)) {
+      throw new Error(`Invalid volume device target: ${deviceTarget}`);
+    }
+
+    if (!SAFE_MOUNT_POINT.test(mountPoint)) {
+      throw new Error(`Invalid volume mount point: ${mountPoint}`);
+    }
   }
 
   public async isBridgeInUse(bridgeName: string): Promise<boolean> {
@@ -1219,6 +1516,15 @@ local-hostname: ${name}
     if (!SAFE_VM_NAME.test(vmName)) {
       throw new Error(`Invalid VM name: ${vmName}`);
     }
+  }
+
+  private serviceUser(): string {
+    const userName = process.env.USERNAME ?? process.env.USER;
+    if (!userName || !SAFE_USERNAME.test(userName)) {
+      throw new Error(`Invalid USERNAME env var: "${userName}" — must match /^[a-z_][a-z0-9_-]{0,31}$/`);
+    }
+
+    return userName;
   }
 
   private async readVmConsole(

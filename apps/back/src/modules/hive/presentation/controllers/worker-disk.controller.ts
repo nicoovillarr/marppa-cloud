@@ -8,13 +8,29 @@ import {
   Put,
   Delete,
   Controller,
+  Query,
 } from '@nestjs/common';
 import { CreateWorkerDiskDto } from '../dtos/create-worker-disk.dto';
 import { UpdateWorkerDiskDto } from '../dtos/update-worker-disk.dto';
+import { AttachWorkerDiskDto } from '../dtos/attach-worker-disk.dto';
 
 @Controller('hive/disks')
 export class WorkerDiskController {
   constructor(private readonly service: WorkerDiskApiService) { }
+
+  @Get()
+  async findByOwnerId(
+    @Query('ownerId') ownerId?: string,
+  ): Promise<WorkerDiskResponseModel[]> {
+    return await this.service.findByOwnerId(ownerId);
+  }
+
+  @Get('worker/:workerId')
+  async findByWorkerId(
+    @Param('workerId') workerId: string,
+  ): Promise<WorkerDiskResponseModel[]> {
+    return await this.service.findByWorkerId(workerId);
+  }
 
   @Get(':id')
   async findById(@Param('id') id: string): Promise<WorkerDiskResponseModel> {
@@ -34,6 +50,19 @@ export class WorkerDiskController {
     @Body() data: UpdateWorkerDiskDto,
   ): Promise<WorkerDiskResponseModel> {
     return await this.service.update(Number(id), data);
+  }
+
+  @Post(':id/attach')
+  async attach(
+    @Param('id') id: string,
+    @Body() data: AttachWorkerDiskDto,
+  ): Promise<void> {
+    await this.service.attach(Number(id), data.workerId);
+  }
+
+  @Post(':id/detach')
+  async detach(@Param('id') id: string): Promise<void> {
+    await this.service.detach(Number(id));
   }
 
   @Delete(':id')

@@ -101,6 +101,35 @@ mkdir -p ./.logs
 The process runs **unprivileged**: every file under `/etc` is written via
 `sudo install`, never directly. Do not run the app as root.
 
+### Worker volumes
+
+Attachable data volumes live in `/var/lib/libvirt/images/volumes`, created on demand by
+the app — there is no manual setup step. The directory is deliberately **inside**
+`/var/lib/libvirt/images` rather than a sibling of it: on a host where that path is a
+dedicated filesystem, a sibling would silently land on the root filesystem instead, and
+the `df` preflight in `assertHostDiskAvailable` would be measuring the wrong device.
+
+One volume is one qcow2 file, `vol-<id>.qcow2`, formatted **ext4 on the whole device**
+with no partition table and labelled `vol-<id>`. Skipping the partition table keeps
+creation to a single `guestfish` call, and the label is what lets the guest's `/etc/fstab`
+name the volume without depending on the kernel's device enumeration order.
+
+Attach is cold, and works on the domain definition plus the stopped boot image:
+
+- `virsh attach-device --config` adds the disk at the first free `vdb`…`vdz` slot, which
+  is persisted on the row so a retry lands on the same target;
+- the mount is written offline into the boot image's `/etc/fstab` with `guestfish`, using
+  `LABEL=vol-<id> <mount> ext4 defaults,nofail 0 2`.
+
+`nofail` is not optional: without it, a volume that is missing at boot — detached out of
+band, host restored from a partial backup — drops the guest into emergency mode instead of
+booting without its data disk.
+
+`deleteWorker` undefines the domain **without** `--remove-all-storage` and removes the
+boot image and cloud-init directory by path instead. The flag would delete every attached
+volume along with the worker, which is exactly the data the volume lifecycle exists to
+preserve.
+
 ### Passwordless sudo
 
 The grant below names `$USER`. **It must name whoever runs the process.** For a service

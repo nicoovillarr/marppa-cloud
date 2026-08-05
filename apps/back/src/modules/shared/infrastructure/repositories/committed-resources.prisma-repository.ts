@@ -20,12 +20,13 @@ export class CommittedResourcesPrismaRepository
   async sumProvisioned(): Promise<ResourceUsageModel> {
     const alive = { status: { not: ResourceStatus.DELETED } };
 
-    const [workers, atoms] = await Promise.all([
+    const [workers, atoms, volumes] = await Promise.all([
       this.sumWorkers(alive),
       this.sumAtoms(alive),
+      this.sumWorkerDisks(alive),
     ]);
 
-    return workers.plus(atoms);
+    return workers.plus(atoms).plus(volumes);
   }
 
   async sumRunning(excludedResourceId?: string): Promise<ResourceUsageModel> {
@@ -55,6 +56,17 @@ export class CommittedResourcesPrismaRepository
       _sum.ramMB ?? 0,
       _sum.diskGB ?? 0,
     );
+  }
+
+  private async sumWorkerDisks(
+    where: Prisma.WorkerDiskWhereInput,
+  ): Promise<ResourceUsageModel> {
+    const { _sum } = await this.prisma.workerDisk.aggregate({
+      where,
+      _sum: { sizeGiB: true },
+    });
+
+    return new ResourceUsageModel(0, 0, _sum.sizeGiB ?? 0);
   }
 
   private async sumAtoms(

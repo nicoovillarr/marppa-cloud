@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { WorkerDiskPrismaRepository } from './worker-disk.prisma-repository';
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { WorkerDiskEntity } from '../../domain/entities/worker-disk.entity';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 describe('WorkerDiskPrismaRepository (Integration)', () => {
   const testNamePrefix = 'integration-test-disk';
@@ -56,8 +57,8 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
     it('should create a worker disk', async () => {
       const disk = new WorkerDiskEntity(
         `${testNamePrefix}-create`,
+        ResourceStatus.QUEUED,
         100,
-        '/dev/test1',
         'c-000001',
         testWorkerStorageTypeId,
         'u-000001',
@@ -73,7 +74,8 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
       expect(result.id).toBeDefined();
       expect(result.name).toBe(`${testNamePrefix}-create`);
       expect(result.sizeGiB).toBe(100);
-      expect(result.hostPath).toBe('/dev/test1');
+      expect(result.status).toBe(ResourceStatus.QUEUED);
+      expect(result.hostPath).toBeUndefined();
       createdDiskId = result.id!;
     });
 
@@ -92,7 +94,7 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
     });
 
     it('should find worker disks by owner id', async () => {
-      const result = await repository.findByOwnerId('c-000001');
+      const result = await repository.findByOwnerIds(['c-000001']);
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
@@ -101,7 +103,7 @@ describe('WorkerDiskPrismaRepository (Integration)', () => {
     });
 
     it('should return empty array for non-existent owner id', async () => {
-      const result = await repository.findByOwnerId('c-nonexistent');
+      const result = await repository.findByOwnerIds(['c-nonexistent']);
 
       expect(result).toEqual([]);
     });

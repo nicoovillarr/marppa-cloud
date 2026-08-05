@@ -1,6 +1,6 @@
 import { IsString } from 'class-validator';
 
-export class UpdateWorkerDiskDto {
+export class AttachWorkerDiskDto {
   @IsString()
-  name: string;
+  workerId: string;
 }
