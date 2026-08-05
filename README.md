@@ -212,6 +212,22 @@ Workers are the virtual machines that run within the Hive. They can be created, 
 
 The host machine creates Workers by running the `create_worker.sh` script, which sets up the necessary environment and configurations for each Worker. This script is designed to be run on the host machine, and it will create a new Worker VM with the specified parameters.
 
+### Volumes
+
+Volumes are extra disk space attached to a Worker, independent of its boot disk (which is
+a fixed, platform-wide size). A volume is created on its own, attached to a Worker later,
+and survives both a detach and the deletion of the Worker it was attached to — deleting it
+is always an explicit action.
+
+Attaching and detaching require the Worker to be **stopped**: the disk is added to the
+domain definition and the mount is written into the Worker's `/etc/fstab` offline, which
+avoids depending on a reachable guest agent.
+
+In the console, volumes live at **Hive → Volumes** (reachable from the Workers list), and
+each Worker's manage dialog has a Volumes section for attaching and detaching. There is no
+sidebar entry: the sidebar is one link per module, and Hive has no sub-navigation concept
+to hang a second entry on — adding one is a nav change, not a volumes change.
+
 ## Nibble
 
 Nibble is a lightweight, efficient, and secure containerization solution designed to run applications within the Marppa Cloud Solution. It provides a streamlined environment for deploying and managing docker applications.

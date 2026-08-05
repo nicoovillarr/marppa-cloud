@@ -11,6 +11,7 @@ import { NodeSection } from "@/mesh/ui/NodeSection";
 import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
 import { useWorker } from "../models/use-worker";
 import { WorkerSshKeysSection } from "./WorkerSshKeysSection";
+import { WorkerVolumesSection } from "./WorkerVolumesSection";
 
 interface WorkerManageDialogProps {
   worker: WorkerWithRelationsResponseDto;
@@ -150,6 +151,8 @@ export function WorkerManageDialog({
           onChanged?.();
         }}
       />
+
+      <WorkerVolumesSection workerId={worker.id} editable={isOff} />
 
       <WorkerSshKeysSection workerId={worker.id} live={isRunning} />
     </div>
