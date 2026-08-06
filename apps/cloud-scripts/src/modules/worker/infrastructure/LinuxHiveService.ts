@@ -3,6 +3,7 @@ import fsPromises from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
+import { createHash } from 'crypto';
 import { isValidSshPublicKey } from '@marppa-cloud/shared';
 import { WORKER_VOLUME_DEVICE_TARGETS } from '@marppa-cloud/api-types';
 import { Command } from '@/libs/Command';
@@ -35,6 +36,13 @@ const BASE_IMAGE_PACKAGES = [
   'vim',
   'iputils-ping',
   'qemu-guest-agent',
+];
+
+const BASE_IMAGE_RUN_COMMANDS = [
+  'systemctl enable ssh',
+  'systemctl enable nginx',
+  'systemctl enable qemu-guest-agent',
+  'setcap cap_net_raw+ep /usr/bin/ping || true',
 ];
 
 /** Budget for a guest to honour the ACPI shutdown before it is powered off. */
@@ -93,11 +101,25 @@ export class LinuxHiveService extends HiveService {
    */
   private async prepareBaseImage(imgPath: string): Promise<void> {
     const marker = `${imgPath}.prepared`;
-    if (fs.existsSync(marker)) {
+    const fingerprint = LinuxHiveService.baseImageFingerprint();
+    const prepared = LinuxHiveService.markedFingerprint(
+      await fsPromises.readFile(marker, 'utf8').catch(() => null),
+    );
+
+    if (prepared === fingerprint) {
       return;
     }
 
-    console.log(`Preparing base image (installing packages, one-time): ${imgPath}`);
+    console.log(
+      prepared == null
+        ? `Preparing base image: ${imgPath}`
+        : `Base image recipe changed (${prepared.slice(0, 12)} → ${fingerprint.slice(0, 12)}), re-preparing: ${imgPath}`,
+    );
+
+    const runCommandArgs = BASE_IMAGE_RUN_COMMANDS.flatMap((command) => [
+      '--run-command',
+      command,
+    ]);
 
     await Command.runCommand('sudo', [
       'virt-customize',
@@ -106,18 +128,38 @@ export class LinuxHiveService extends HiveService {
       '--update',
       '--install',
       BASE_IMAGE_PACKAGES.join(','),
-      '--run-command',
-      'systemctl enable ssh',
-      '--run-command',
-      'systemctl enable nginx',
-      '--run-command',
-      'systemctl enable qemu-guest-agent',
-      '--run-command',
-      'setcap cap_net_raw+ep /usr/bin/ping || true',
+      ...runCommandArgs,
     ]);
 
-    await fsPromises.writeFile(marker, new Date().toISOString());
+    await fsPromises.writeFile(
+      marker,
+      JSON.stringify({ fingerprint, preparedAt: new Date().toISOString() }),
+    );
     console.log(`✅ Base image prepared: ${imgPath}`);
+  }
+
+  public static baseImageFingerprint(): string {
+    return createHash('sha256')
+      .update(
+        JSON.stringify({
+          packages: [...BASE_IMAGE_PACKAGES].sort(),
+          runCommands: BASE_IMAGE_RUN_COMMANDS,
+        }),
+      )
+      .digest('hex');
+  }
+
+  public static markedFingerprint(marker: string | null): string | null {
+    if (marker == null) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(marker);
+      return typeof parsed?.fingerprint === 'string' ? parsed.fingerprint : null;
+    } catch {
+      return null;
+    }
   }
 
   public async createWorker(
