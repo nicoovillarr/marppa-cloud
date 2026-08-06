@@ -278,6 +278,21 @@ transponders) follows one rule, encoded in `EVENT_STATE_MACHINE`
   by the backend but as a bare number by the worker, which BullMQ rejects outright
   ("Custom Id cannot be integers"), silently breaking every follow-up enqueue including
   the one that marks a job failed.
+- **if a table is the source a process rewrites *from*, every row must be in it.**
+  `WORKER_UPDATE_SSH_KEYS` replaces the guest's `authorized_keys` wholesale with the
+  `WorkerSshKey` rows, which is the right semantics — that is how a key gets *removed*.
+  But the key a worker is created with only ever travelled as the `PublicSSH` property of
+  the `WORKER_CREATE` event, baked into cloud-init and never stored as a row. So the first
+  key ever added through the UI silently deleted the key the worker was reachable with.
+
+  The fix is not to make the write additive, it is to make the table complete:
+  `WorkerApiService.create()` now persists `publicSSH` as a `bootstrap` row alongside
+  dispatching it to cloud-init, and a data migration backfills existing workers by reading
+  that same property back out of their `WORKER_CREATE` event.
+
+  Generalising: a full-replace write is only safe when its source is authoritative. Any
+  value that reaches the host through a second channel — an event property, a config file,
+  a cloud-init template — is a row waiting to be silently overwritten.
 - a soft delete cannot free a `@unique` column. `Portal.address` pairs with a
   `deletedAt` sentinel (`@@unique([address, deletedAt])`, live rows share the epoch
   default) so a deleted portal stops reserving its domain. Any model that soft-deletes

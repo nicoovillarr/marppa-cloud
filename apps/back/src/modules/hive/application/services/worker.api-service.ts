@@ -1,7 +1,7 @@
 import { WorkerService } from '@/hive/domain/services/worker.service';
 import { CreateWorkerDto } from '@/hive/presentation/dtos/create-worker.dto';
 import { UpdateWorkerDto } from '@/hive/presentation/dtos/update-worker.dto';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { WorkerResponseModel } from '../models/worker.response-model';
 import { WorkerWithRelationsResponseModel } from '../models/worker-with-relations.response-model';
@@ -14,12 +14,21 @@ import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import {
+  WORKER_SSH_KEY_REPOSITORY_SYMBOL,
+  WorkerSshKeyRepository,
+} from '@/hive/domain/repositories/worker-ssh-key.repository';
+
+const BOOTSTRAP_SSH_KEY_NAME = 'bootstrap';
 
 @Injectable()
 export class WorkerApiService {
   constructor(
     private readonly service: WorkerService,
     private readonly eventDispatch: EventDispatchService,
+
+    @Inject(WORKER_SSH_KEY_REPOSITORY_SYMBOL)
+    private readonly sshKeyRepository: WorkerSshKeyRepository,
   ) { }
 
   public async findById(id: string): Promise<WorkerResponseModel> {
@@ -76,7 +85,19 @@ export class WorkerApiService {
   }
 
   public async create(data: CreateWorkerDto): Promise<WorkerResponseModel> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
     const entity = await this.service.createWorker(data);
+
+    await this.sshKeyRepository.create(
+      entity.id!,
+      BOOTSTRAP_SSH_KEY_NAME,
+      data.publicSSH.trim(),
+      user.userId,
+    );
 
     await this.eventDispatch.dispatch({
       type: EventTypeKey.WORKER_CREATE,
