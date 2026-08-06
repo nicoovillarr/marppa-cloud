@@ -8,6 +8,11 @@ import { WorkerStartProcessor } from './application/WorkerStartProcessor';
 import { WorkerTerminateProcessor } from './application/WorkerTerminateProcessor';
 import { WorkerDeleteProcessor } from './application/WorkerDeleteProcessor';
 import { WorkerImageCreateProcessor } from './application/WorkerImageCreateProcessor';
+import { WorkerDiskTransitionService } from './application/WorkerDiskTransitionService';
+import { WorkerDiskCreateProcessor } from './application/WorkerDiskCreateProcessor';
+import { WorkerDiskAttachProcessor } from './application/WorkerDiskAttachProcessor';
+import { WorkerDiskDetachProcessor } from './application/WorkerDiskDetachProcessor';
+import { WorkerDiskDeleteProcessor } from './application/WorkerDiskDeleteProcessor';
 import { StubHiveService } from './infrastructure/StubHiveService';
 import { HIVE_SERVICE_TOKEN } from './domain/services/HiveService';
 import { LinuxHiveService } from './infrastructure/LinuxHiveService';
@@ -22,6 +27,7 @@ const useStubs = process.env.USE_STUBS === 'true';
       provide: HIVE_SERVICE_TOKEN,
       useClass: useStubs ? StubHiveService : LinuxHiveService,
     },
+    WorkerDiskTransitionService,
   ],
   processors: [
     WorkerCreateProcessor,
@@ -31,6 +37,10 @@ const useStubs = process.env.USE_STUBS === 'true';
     WorkerTerminateProcessor,
     WorkerDeleteProcessor,
     WorkerImageCreateProcessor,
+    WorkerDiskCreateProcessor,
+    WorkerDiskAttachProcessor,
+    WorkerDiskDetachProcessor,
+    WorkerDiskDeleteProcessor,
   ],
   exports: [HIVE_SERVICE_TOKEN],
 })

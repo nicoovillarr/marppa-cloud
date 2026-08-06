@@ -69,6 +69,12 @@ export const EVENT_STATE_MACHINE: Partial<
   // pre-set a status before dispatch for this transition).
   [EventTypeKey.NODE_UNASSIGN_WORKER]: { entry: ACTIVE, work: TERMINATING, ok: INACTIVE, fail: FAILED },
 
+  // --- worker volumes ---
+  [EventTypeKey.WORKER_DISK_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.WORKER_DISK_ATTACH]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },
+  [EventTypeKey.WORKER_DISK_DETACH]: { entry: QUEUED, work: UPDATING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.WORKER_DISK_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+
   // --- nucleus ---
   // ATOM_CREATE only pulls the approved image; the container itself is built
   // from scratch on every ATOM_START, so create ends at INACTIVE and there is

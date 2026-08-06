@@ -37,6 +37,27 @@ export class WorkerDeleteProcessor implements IEventProcessor {
     private readonly nodeTeardown: NodeTeardownService,
   ) { }
 
+  private async releaseVolumes(
+    workerId: string,
+    updatedBy: string,
+  ): Promise<number> {
+    const { count } = await this.prisma.workerDisk.updateMany({
+      where: {
+        workerId,
+        isBoot: false,
+        status: { not: ResourceStatus.DELETED },
+      },
+      data: {
+        workerId: null,
+        deviceTarget: null,
+        status: ResourceStatus.INACTIVE,
+        updatedBy,
+      },
+    });
+
+    return count;
+  }
+
   public async handle(event: EventPayload): Promise<void> {
     let worker: {
       id: string;
@@ -101,6 +122,15 @@ export class WorkerDeleteProcessor implements IEventProcessor {
           worker.macAddress,
           event.createdBy,
           report,
+        );
+      }
+
+      const released = await this.releaseVolumes(worker.id, event.createdBy);
+      if (released > 0) {
+        report.record(
+          `${released} volume(s) of ${worker.id}`,
+          'kept',
+          'detached, data preserved',
         );
       }
 

@@ -332,9 +332,46 @@ for a tenant that genuinely needs another shape is a **private family**, not a s
   fixed and shows the real size on the worker itself. If it should be visible up front,
   that wants a small `GET /hive/config`, not a duplicated constant in the frontend.
 
-  The growth path is `WorkerDisk`, which is **not wired to provisioning yet** — it has
-  CRUD in the backend, nothing reads it, and its `isBoot` flag is unused. Until it is,
-  `WORKER_BOOT_DISK_GB` is a hard ceiling for every worker.
+  The growth path is `WorkerDisk`, now wired end to end as an **attachable data volume**
+  (see below). `WORKER_BOOT_DISK_GB` remains a hard ceiling for the *boot* disk: a worker
+  that needs more space gets a volume, it does not get a bigger root filesystem.
+- **Volumes are independent resources with their own lifecycle.** A `WorkerDisk` is not a
+  property of a worker: it is created on its own (`POST /hive/disks`), attached to a
+  worker later, and survives both detach and the deletion of the worker it was attached
+  to. It carries a `ResourceStatus` and moves through the same event state machine as
+  every other infra resource, with four command events —
+  `WORKER_DISK_CREATE`/`ATTACH`/`DETACH`/`DELETE`.
+
+  `ACTIVE` on a volume means **attached to a worker**, not "running". The qcow2 exists on
+  the host from `WORKER_DISK_CREATE` onwards and only the attachment toggles, so
+  `INACTIVE` is the resting state of a perfectly healthy, unattached volume.
+
+  **Attach and detach require the worker to be `INACTIVE`.** Hot-plugging a virtio disk
+  and mounting it through the guest agent is possible, but it needs a reachable agent and
+  a guest that cooperates on detach; the cold path is a `virsh attach-device --config`
+  plus an offline `/etc/fstab` edit, which has no such failure modes. Attaching to a
+  running worker is a deliberate future step, not an oversight.
+
+  **The device target (`vdb`…`vdz`) is allocated by the backend at attach time**, not by
+  the processor. The event queue serializes per *primary* resource, and the primary of an
+  attach is the volume — so two volumes attaching to the same worker run in parallel and
+  would both probe the domain and pick `vdb`. Allocating from the DB rows instead lets the
+  `(workerId, deviceTarget)` unique index reject the loser with a clean API error, before
+  anything touches the host. `nextVolumeDeviceTarget()` on the host survives only as the
+  fallback for a row whose target is somehow null.
+
+  The mount point is validated against `isReservedMountPoint()` (shared in
+  `@marppa-cloud/api-types`): a volume cannot be mounted over `/etc`, `/usr`, `/var` and
+  friends, because the fstab entry would shadow the guest OS on the next boot.
+
+  **Deleting a worker keeps its volumes.** `WorkerDeleteProcessor` detaches the rows
+  (`workerId` and `deviceTarget` cleared, status back to `INACTIVE`) and reports them as
+  `kept` in the teardown notes. The qcow2 files are untouched — a volume is user data and
+  its deletion is always an explicit `DELETE /hive/disks/:id`.
+
+  Volume size counts toward the host disk budget in `sumProvisioned()`, alongside worker
+  boot disks. The qcow2 is thin-provisioned, so the host will not actually be full at that
+  point; the budget deliberately tracks what was *promised*, not what is written.
 - **Capacity is checked before an event is queued.** `HiveCapacityService` compares the
   requested specs against the host budget and the sums already committed in the database:
   on create it checks disk (the image file is allocated at create) and that the flavor

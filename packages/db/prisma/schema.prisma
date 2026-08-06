@@ -45,6 +45,22 @@ enum EventType {
   WORKER_IMAGE_CREATE_FAILED
   WORKER_IMAGE_CREATED
 
+  WORKER_DISK_CREATE
+  WORKER_DISK_CREATE_FAILED
+  WORKER_DISK_CREATED
+
+  WORKER_DISK_ATTACH
+  WORKER_DISK_ATTACH_FAILED
+  WORKER_DISK_ATTACHED
+
+  WORKER_DISK_DETACH
+  WORKER_DISK_DETACH_FAILED
+  WORKER_DISK_DETACHED
+
+  WORKER_DISK_DELETE
+  WORKER_DISK_DELETE_FAILED
+  WORKER_DISK_DELETED
+
   ATOM_CREATE
   ATOM_CREATE_FAILED
   ATOM_CREATED
@@ -294,12 +310,14 @@ model WorkerStorageType {
 }
 
 model WorkerDisk {
-  id         Int     @id @default(autoincrement())
-  name       String
-  sizeGiB    Int
-  hostPath   String
-  mountPoint String?
-  isBoot     Boolean @default(false)
+  id           Int            @id @default(autoincrement())
+  name         String
+  status       ResourceStatus @default(QUEUED)
+  sizeGiB      Int
+  hostPath     String?
+  mountPoint   String?
+  deviceTarget String?
+  isBoot       Boolean        @default(false)
 
   ownerId String
   owner   Company @relation(fields: [ownerId], references: [id])
@@ -315,6 +333,8 @@ model WorkerDisk {
 
   updatedAt DateTime @updatedAt
   updatedBy String?
+
+  @@unique([workerId, deviceTarget])
 }
 
 // Nucleus

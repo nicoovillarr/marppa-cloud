@@ -5,7 +5,7 @@ import { ColumnMapping, Table } from "@/core/ui/Table";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Button } from "@/core/ui/Button";
-import { LuListPlus, LuPlay, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
+import { LuHardDrive, LuListPlus, LuPlay, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
 import { useWorker } from "../models/use-worker";
 import { useHiveRealtime } from "../models/use-hive-realtime";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
@@ -170,6 +170,14 @@ export function WorkersList() {
         <h2 className="font-bold text-xl w-full text-ellipsis line-clamp-1">
           Your Workers
         </h2>
+
+        <Button
+          className="mr-2 shrink-0"
+          text="Volumes"
+          icon={<LuHardDrive />}
+          style="secondary"
+          href="/dashboard/hive/volumes"
+        />
 
         <Button
           icon={<LuRefreshCcw />}

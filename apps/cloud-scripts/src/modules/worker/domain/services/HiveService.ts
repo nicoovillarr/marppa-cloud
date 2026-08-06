@@ -47,7 +47,27 @@ export abstract class HiveService {
   abstract editWorkerCpus(vmName: string, newVcpus: number): Promise<void>;
   
   abstract editWorkerDiskSpace(vmName: string, newDiskSizeGb: number): Promise<void>;
-  
+
+  abstract createWorkerVolume(volumeId: number, sizeGiB: number): Promise<string>;
+
+  abstract deleteWorkerVolume(volumePath: string): Promise<boolean>;
+
+  abstract nextVolumeDeviceTarget(vmName: string): Promise<string>;
+
+  abstract attachWorkerVolume(
+    vmName: string,
+    volumePath: string,
+    deviceTarget: string,
+    mountPoint: string,
+  ): Promise<void>;
+
+  abstract detachWorkerVolume(
+    vmName: string,
+    volumePath: string,
+    deviceTarget: string,
+    mountPoint: string,
+  ): Promise<void>;
+
   abstract isBridgeInUse(bridgeName: string): Promise<boolean>;
   
   abstract isWorkerRunning(vmName: string): Promise<boolean>;

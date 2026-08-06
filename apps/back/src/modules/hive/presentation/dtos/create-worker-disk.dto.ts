@@ -1,35 +1,27 @@
+import { IsInt, IsString, IsOptional, Matches, Max, Min } from 'class-validator';
 import {
-  IsBoolean,
-  IsDate,
-  IsNumber,
-  IsString,
-  IsOptional,
-} from 'class-validator';
+  MAX_WORKER_VOLUME_GB,
+  MIN_WORKER_VOLUME_GB,
+  WORKER_VOLUME_MOUNT_POINT,
+} from '@marppa-cloud/api-types';
 
 export class CreateWorkerDiskDto {
   @IsString()
   name: string;
 
-  @IsNumber()
+  @IsInt()
+  @Min(MIN_WORKER_VOLUME_GB)
+  @Max(MAX_WORKER_VOLUME_GB)
   sizeGiB: number;
 
   @IsString()
-  hostPath: string;
+  @IsOptional()
+  ownerId?: string;
 
-  @IsString()
-  ownerId: string;
-
-  @IsNumber()
+  @IsInt()
   storageTypeId: number;
 
   @IsString()
-  @IsOptional()
+  @Matches(WORKER_VOLUME_MOUNT_POINT)
   mountPoint: string;
-
-  @IsBoolean()
-  isBoot: boolean;
-
-  @IsString()
-  @IsOptional()
-  workerId: string | null;
 }

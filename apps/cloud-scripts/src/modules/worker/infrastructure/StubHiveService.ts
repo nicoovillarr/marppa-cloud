@@ -69,6 +69,30 @@ export class StubHiveService extends HiveService {
     console.log(`[STUB] editWorkerDiskSpace: vm=${vmName} size=${newDiskSizeGb}GB`);
   }
 
+  public async createWorkerVolume(volumeId: number, sizeGiB: number): Promise<string> {
+    const volumePath = `/var/lib/libvirt/images/volumes/vol-${volumeId}.qcow2`;
+    console.log(`[STUB] createWorkerVolume: id=${volumeId} size=${sizeGiB}GiB → ${volumePath}`);
+    return volumePath;
+  }
+
+  public async deleteWorkerVolume(volumePath: string): Promise<boolean> {
+    console.log(`[STUB] deleteWorkerVolume: ${volumePath} → true`);
+    return true;
+  }
+
+  public async nextVolumeDeviceTarget(vmName: string): Promise<string> {
+    console.log(`[STUB] nextVolumeDeviceTarget: vm=${vmName} → vdb`);
+    return 'vdb';
+  }
+
+  public async attachWorkerVolume(vmName: string, volumePath: string, deviceTarget: string, mountPoint: string): Promise<void> {
+    console.log(`[STUB] attachWorkerVolume: vm=${vmName} volume=${volumePath} target=${deviceTarget} mount=${mountPoint}`);
+  }
+
+  public async detachWorkerVolume(vmName: string, volumePath: string, deviceTarget: string, mountPoint: string): Promise<void> {
+    console.log(`[STUB] detachWorkerVolume: vm=${vmName} volume=${volumePath} target=${deviceTarget} mount=${mountPoint}`);
+  }
+
   public async isBridgeInUse(bridgeName: string): Promise<boolean> {
     console.log(`[STUB] isBridgeInUse: ${bridgeName} → false`);
     return false;

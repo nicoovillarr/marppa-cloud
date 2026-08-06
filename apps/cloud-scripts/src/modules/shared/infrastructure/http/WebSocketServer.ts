@@ -651,6 +651,20 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  public sendWorkerDiskMessage(
+    disk: { id: number; ownerId?: string },
+    type: string,
+    data: unknown,
+  ): void {
+    this.sendMessage(`hive:disk:${disk.id}`, type, data);
+    if (disk.ownerId) {
+      this.sendMessage(`company:${disk.ownerId}:hive`, type, {
+        diskId: disk.id,
+        data,
+      });
+    }
+  }
+
   public sendAtomMessage(
     atom: { id: string; ownerId?: string },
     type: string,

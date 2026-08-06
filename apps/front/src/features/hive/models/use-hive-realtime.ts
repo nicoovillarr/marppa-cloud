@@ -22,6 +22,10 @@ export function useHiveRealtime() {
       const workerId: string | undefined = payload.workerId;
       const status: ResourceStatus | undefined = payload.data?.status;
 
+      if (payload.diskId != null) {
+        return;
+      }
+
       const workers = useWorkerStore.getState().workers;
       const knownWorker = workerId && workers.some((w) => w.id === workerId);
 

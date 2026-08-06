@@ -4,6 +4,7 @@ import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { WorkerDiskPrismaMapper } from '../mappers/worker-disk.prisma-mapper';
 import { Injectable } from '@nestjs/common';
 import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
+import { ResourceStatus } from '@prisma/client';
 
 @Injectable()
 export class WorkerDiskPrismaRepository implements WorkerDiskRepository {
@@ -23,10 +24,24 @@ export class WorkerDiskPrismaRepository implements WorkerDiskRepository {
     return WorkerDiskPrismaMapper.toEntity(workerDisk);
   }
 
-  async findByOwnerId(ownerId: string): Promise<WorkerDiskEntity[]> {
+  async findByOwnerIds(ownerIds: string[]): Promise<WorkerDiskEntity[]> {
     const workerDisks = await this.prisma.workerDisk.findMany({
       where: {
-        ownerId,
+        ownerId: { in: ownerIds },
+        status: { not: ResourceStatus.DELETED },
+      },
+    });
+
+    return workerDisks.map((workerDisk) =>
+      WorkerDiskPrismaMapper.toEntity(workerDisk),
+    );
+  }
+
+  async findByWorkerId(workerId: string): Promise<WorkerDiskEntity[]> {
+    const workerDisks = await this.prisma.workerDisk.findMany({
+      where: {
+        workerId,
+        status: { not: ResourceStatus.DELETED },
       },
     });
 

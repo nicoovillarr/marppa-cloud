@@ -1,3 +1,4 @@
+import { ResourceStatus } from './enums';
 import { NodeResponse } from './mesh';
 
 // --- Catalog constraints ---
@@ -24,18 +25,41 @@ export interface UpdateWorkerRequest {
   name: string;
 }
 
+export const MIN_WORKER_VOLUME_GB = 1;
+export const MAX_WORKER_VOLUME_GB = 2048;
+
+export const WORKER_VOLUME_MOUNT_POINT = /^\/[a-zA-Z0-9._-]+(\/[a-zA-Z0-9._-]+)*$/;
+
+export const WORKER_VOLUME_DEVICE_TARGETS = Array.from(
+  { length: 25 },
+  (_, i) => `vd${String.fromCharCode('b'.charCodeAt(0) + i)}`,
+);
+
+const RESERVED_MOUNT_ROOTS = [
+  'bin', 'boot', 'dev', 'etc', 'lib', 'lib32', 'lib64', 'proc',
+  'root', 'run', 'sbin', 'sys', 'usr', 'var',
+];
+
+export function isReservedMountPoint(mountPoint: string): boolean {
+  const root = mountPoint.split('/')[1];
+  return RESERVED_MOUNT_ROOTS.includes(root);
+}
+
 export interface CreateWorkerDiskRequest {
   name: string;
   sizeGiB: number;
-  hostPath: string;
-  ownerId: string;
+  ownerId?: string;
   storageTypeId: number;
-  mountPoint?: string;
-  isBoot: boolean;
-  workerId?: string | null;
+  mountPoint: string;
 }
 
-export type UpdateWorkerDiskRequest = CreateWorkerDiskRequest;
+export interface UpdateWorkerDiskRequest {
+  name: string;
+}
+
+export interface AttachWorkerDiskRequest {
+  workerId: string;
+}
 
 export interface CreateWorkerFamilyRequest {
   name: string;
@@ -124,11 +148,13 @@ export interface WorkerWithRelationsResponse extends WorkerResponse {
 export interface WorkerDiskResponse {
   id: string;
   name: string;
+  status: ResourceStatus;
   sizeGiB: number;
-  hostPath: string;
+  hostPath: string | null;
   ownerId: string;
   storageTypeId: string;
   mountPoint: string | null;
+  deviceTarget: string | null;
   isBoot: boolean;
   workerId: string | null;
   createdAt: Date;
