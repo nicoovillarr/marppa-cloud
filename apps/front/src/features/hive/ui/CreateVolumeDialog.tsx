@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/core/ui/Button";
 import { InlineCode } from "@/core/ui/InlineCode";
 import { Input } from "@/core/ui/inputs/Input";
@@ -38,18 +39,34 @@ export function CreateVolumeDialog({ onCreated }: CreateVolumeDialogProps) {
   const [storageTypes, setStorageTypes] = useState<
     WorkerStorageTypeResponseDto[]
   >([]);
+  const [loadingTypes, setLoadingTypes] = useState(true);
   const [storageTypeId, setStorageTypeId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [sizeGiB, setSizeGiB] = useState(String(MIN_WORKER_VOLUME_GB * 10));
   const [mountPoint, setMountPoint] = useState("/mnt/data");
 
   useEffect(() => {
-    workerStorageTypeApi.findAll().then((types) => {
-      const attachable = types.filter((type) => type.attachable);
-      setStorageTypes(attachable);
-      setStorageTypeId(attachable[0]?.id ?? null);
-    });
+    workerStorageTypeApi
+      .findAll()
+      .then((types) => {
+        const attachable = types.filter((type) => type.attachable);
+        setStorageTypes(attachable);
+        setStorageTypeId(attachable[0]?.id ?? null);
+      })
+      .catch(() => toast.error("Failed to load storage types"))
+      .finally(() => setLoadingTypes(false));
   }, []);
+
+  const options = useMemo(
+    () =>
+      storageTypes.map((type) => ({
+        value: type.id,
+        displayText: type.name,
+      })),
+    [storageTypes],
+  );
+
+  const hasNoStorageType = !loadingTypes && storageTypes.length === 0;
 
   const size = Number(sizeGiB);
   const sizeIsValid =
@@ -117,14 +134,22 @@ export function CreateVolumeDialog({ onCreated }: CreateVolumeDialogProps) {
       <div className="space-y-1">
         <label className="text-sm text-ink-muted">Storage type</label>
         <Select
-          options={storageTypes.map((type) => ({
-            value: type.id,
-            displayText: type.name,
-          }))}
+          options={options}
           defaultValue={storageTypeId ?? undefined}
-          isLoading={storageTypes.length === 0}
+          isLoading={loadingTypes}
+          disabled={hasNoStorageType}
+          placeholder={
+            hasNoStorageType ? "No attachable storage type" : undefined
+          }
           onChangedValue={(value) => setStorageTypeId(Number(value))}
         />
+        {hasNoStorageType && (
+          <p className="text-xs text-status-danger">
+            No storage type is marked attachable. Create one under{" "}
+            <InlineCode code="Admin → Hive → Storage type" /> before adding a
+            volume.
+          </p>
+        )}
       </div>
 
       <p className="text-xs text-ink-muted">
