@@ -557,3 +557,85 @@ test('a rejected update restores the previous Caddy config', async () => {
 
   assert.equal(writes[writes.length - 1], previous, 'the last write restores the old site');
 });
+
+const UBUNTU_FSTAB = [
+  'LABEL=cloudimg-rootfs\t/\text4\tdiscard,commit=30,errors=remount-ro\t0 1',
+  'LABEL=BOOT\t/boot\text4\tdefaults\t0 2',
+  'LABEL=UEFI\t/boot/efi\tvfat\tumask=0077\t0 1',
+  '',
+].join('\n');
+
+test('fstab volume entry is keyed by LABEL and never a device node', () => {
+  const line = LinuxHiveService.fstabLine('vol-1', '/mnt/data');
+
+  const [source, mountPoint, type, options] = line.split(/\s+/);
+
+  assert.equal(source, 'LABEL=vol-1');
+  assert.equal(mountPoint, '/mnt/data');
+  assert.equal(type, 'ext4');
+  assert.ok(!/\/dev\//.test(line), 'must not reference a device node');
+  assert.ok(options.split(',').includes('nofail'), 'nofail keeps a missing volume from blocking boot');
+  assert.ok(
+    options.split(',').includes('x-systemd.device-timeout=30s'),
+    'systemd must wait for the labelled device instead of silently skipping the mount',
+  );
+});
+
+test('fstab rewrite leaves the base image entries untouched', () => {
+  const kept = LinuxHiveService.fstabWithoutVolume(
+    UBUNTU_FSTAB,
+    '/mnt/data',
+    'vol-1',
+  );
+
+  assert.equal(kept, UBUNTU_FSTAB);
+});
+
+test('fstab rewrite is idempotent for a repeated attach', () => {
+  const attach = (fstab: string) =>
+    `${LinuxHiveService.fstabWithoutVolume(fstab, '/mnt/data', 'vol-1')}${LinuxHiveService.fstabLine('vol-1', '/mnt/data')}\n`;
+
+  const once = attach(UBUNTU_FSTAB);
+  const twice = attach(once);
+
+  assert.equal(twice, once, 'a re-run must replace the entry, never append a second one');
+  assert.equal(once.split('\n').filter((l) => l.includes('/mnt/data')).length, 1);
+});
+
+test('fstab rewrite drops a hand-written entry for the same mount point', () => {
+  const handEdited = `${UBUNTU_FSTAB}UUID=1234-abcd\t/mnt/data\text4\tdefaults\t0 2\n`;
+
+  const kept = LinuxHiveService.fstabWithoutVolume(
+    handEdited,
+    '/mnt/data',
+    'vol-1',
+  );
+
+  assert.ok(!kept.includes('UUID=1234-abcd'), 'the duplicate mount point must go');
+  assert.equal(kept, UBUNTU_FSTAB);
+});
+
+test('fstab rewrite drops a stale entry for the same volume at another mount point', () => {
+  const moved = `${UBUNTU_FSTAB}LABEL=vol-1\t/mnt/old\text4\tdefaults,nofail\t0 2\n`;
+
+  const kept = LinuxHiveService.fstabWithoutVolume(
+    moved,
+    '/mnt/data',
+    'vol-1',
+  );
+
+  assert.ok(!kept.includes('/mnt/old'), 'the volume must not stay mounted at its previous path');
+  assert.equal(kept, UBUNTU_FSTAB);
+});
+
+test('fstab rewrite keeps another volume mounted elsewhere', () => {
+  const withSibling = `${UBUNTU_FSTAB}LABEL=vol-2\t/mnt/other\text4\tdefaults,nofail\t0 2\n`;
+
+  const kept = LinuxHiveService.fstabWithoutVolume(
+    withSibling,
+    '/mnt/data',
+    'vol-1',
+  );
+
+  assert.ok(kept.includes('LABEL=vol-2'), 'an unrelated volume must survive the rewrite');
+});

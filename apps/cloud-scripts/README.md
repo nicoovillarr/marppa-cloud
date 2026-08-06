@@ -119,11 +119,27 @@ Attach is cold, and works on the domain definition plus the stopped boot image:
 - `virsh attach-device --config` adds the disk at the first free `vdb`…`vdz` slot, which
   is persisted on the row so a retry lands on the same target;
 - the mount is written offline into the boot image's `/etc/fstab` with `guestfish`, using
-  `LABEL=vol-<id> <mount> ext4 defaults,nofail 0 2`.
+  `LABEL=vol-<id> <mount> ext4 defaults,nofail,x-systemd.device-timeout=30s 0 2`.
 
 `nofail` is not optional: without it, a volume that is missing at boot — detached out of
 band, host restored from a partial backup — drops the guest into emergency mode instead of
 booting without its data disk.
+
+**`x-systemd.device-timeout` is what makes `nofail` safe to use.** On its own, `nofail`
+tells systemd the mount may fail *and* stops it from waiting on the device unit: if the
+virtio disk has not settled by the time `local-fs.target` is reached, the mount is skipped
+silently and the guest boots without its volume, with nothing in `df` and no error anywhere
+obvious. The explicit timeout restores a bounded wait for the labelled device, so the mount
+either happens or fails loudly, instead of being quietly dropped.
+
+The rewrite copies the previous `/etc/fstab` to `/etc/fstab.marppa.bak` first. Editing the
+boot image's fstab is the highest-blast-radius step in the whole feature — a mangled file
+is an unbootable worker — and a single overwritten backup is enough to recover by hand.
+
+Entries are matched for removal by **both** the mount point and `LABEL=vol-<id>`, so a
+re-run replaces its own entry rather than appending a second one, and a volume that once
+lived at another mount point does not leave an orphan behind. The flip side: the rewrite is
+whole-file, so a hand-added entry for the same mount point is dropped without asking.
 
 `deleteWorker` undefines the domain **without** `--remove-all-storage` and removes the
 boot image and cloud-init directory by path instead. The flag would delete every attached

@@ -21,7 +21,9 @@ const CLOUD_INIT_DIR_BASE = '/var/lib/libvirt/cloud-init';
 const VOLUME_DIR = '/var/lib/libvirt/images/volumes';
 
 const BOOT_DEVICE_TARGET = 'vda';
-const VOLUME_FSTAB_OPTIONS = 'defaults,nofail';
+const VOLUME_FSTAB_OPTIONS = 'defaults,nofail,x-systemd.device-timeout=30s';
+const FSTAB_PATH = '/etc/fstab';
+const FSTAB_BACKUP_PATH = '/etc/fstab.marppa.bak';
 
 // Packages baked into the base image at prep time so the first boot needs no Internet.
 const BASE_IMAGE_PACKAGES = [
@@ -1049,6 +1051,7 @@ local-hostname: ${name}
       vmName,
       mountPoint,
       this.volumeLabelFromPath(volumePath),
+      true,
     );
   }
 
@@ -1074,7 +1077,12 @@ local-hostname: ${name}
       ]);
     }
 
-    await this.writeGuestMount(vmName, mountPoint, null);
+    await this.writeGuestMount(
+      vmName,
+      mountPoint,
+      this.volumeLabelFromPath(volumePath),
+      false,
+    );
   }
 
   private async assertWorkerStoppedForVolumeChange(
@@ -1091,7 +1099,8 @@ local-hostname: ${name}
   private async writeGuestMount(
     vmName: string,
     mountPoint: string,
-    label: string | null,
+    label: string,
+    mounted: boolean,
   ): Promise<void> {
     const imgPath = path.join(IMAGE_DIR, `${vmName}.img`);
 
@@ -1107,35 +1116,55 @@ local-hostname: ${name}
       imgPath,
       '-i',
       'read-file',
-      '/etc/fstab',
+      FSTAB_PATH,
     ]);
 
-    const withoutEntry = this.fstabWithoutMountPoint(current, mountPoint);
-    const updated =
-      label == null
-        ? withoutEntry
-        : `${withoutEntry}${this.fstabLine(label, mountPoint)}\n`;
+    const withoutEntry = LinuxHiveService.fstabWithoutVolume(
+      current,
+      mountPoint,
+      label,
+    );
+    const updated = mounted
+      ? `${withoutEntry}${LinuxHiveService.fstabLine(label, mountPoint)}\n`
+      : withoutEntry;
 
-    const guestfishArgs = ['guestfish', '--rw', '-a', imgPath, '-i'];
-    if (label != null) {
+    const guestfishArgs = [
+      'guestfish',
+      '--rw',
+      '-a',
+      imgPath,
+      '-i',
+      'cp',
+      FSTAB_PATH,
+      FSTAB_BACKUP_PATH,
+      ':',
+    ];
+    if (mounted) {
       guestfishArgs.push('mkdir-p', mountPoint, ':');
     }
-    guestfishArgs.push('write', '/etc/fstab', updated);
+    guestfishArgs.push('write', FSTAB_PATH, updated);
 
     await Command.runCommand('sudo', guestfishArgs);
   }
 
-  private fstabWithoutMountPoint(fstab: string, mountPoint: string): string {
+  public static fstabWithoutVolume(
+    fstab: string,
+    mountPoint: string,
+    label: string,
+  ): string {
     const kept = fstab
       .split('\n')
-      .filter((line) => line.trim().split(/\s+/)[1] !== mountPoint)
+      .filter((line) => {
+        const fields = line.trim().split(/\s+/);
+        return fields[1] !== mountPoint && fields[0] !== `LABEL=${label}`;
+      })
       .join('\n')
       .replace(/\n+$/, '');
 
     return kept.length > 0 ? `${kept}\n` : '';
   }
 
-  private fstabLine(label: string, mountPoint: string): string {
+  public static fstabLine(label: string, mountPoint: string): string {
     return `LABEL=${label}\t${mountPoint}\text4\t${VOLUME_FSTAB_OPTIONS}\t0\t2`;
   }
 
