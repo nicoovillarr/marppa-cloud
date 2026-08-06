@@ -639,3 +639,48 @@ test('fstab rewrite keeps another volume mounted elsewhere', () => {
 
   assert.ok(kept.includes('LABEL=vol-2'), 'an unrelated volume must survive the rewrite');
 });
+
+test('a legacy .prepared marker forces exactly one re-prep', () => {
+  const legacy = new Date().toISOString();
+
+  assert.equal(
+    LinuxHiveService.markedFingerprint(legacy),
+    null,
+    'a bare timestamp carries no recipe, so it cannot count as prepared',
+  );
+
+  const fresh = JSON.stringify({
+    fingerprint: LinuxHiveService.baseImageFingerprint(),
+    preparedAt: legacy,
+  });
+
+  assert.equal(
+    LinuxHiveService.markedFingerprint(fresh),
+    LinuxHiveService.baseImageFingerprint(),
+    'the marker written after that re-prep must match and stop re-preparing',
+  );
+});
+
+test('a marker for a different recipe does not count as prepared', () => {
+  const stale = JSON.stringify({ fingerprint: 'a'.repeat(64) });
+
+  assert.notEqual(
+    LinuxHiveService.markedFingerprint(stale),
+    LinuxHiveService.baseImageFingerprint(),
+  );
+});
+
+test('an unreadable or corrupt marker re-preps instead of skipping', () => {
+  assert.equal(LinuxHiveService.markedFingerprint(null), null);
+  assert.equal(LinuxHiveService.markedFingerprint('{not json'), null);
+  assert.equal(LinuxHiveService.markedFingerprint('{}'), null);
+  assert.equal(LinuxHiveService.markedFingerprint('{"fingerprint":42}'), null);
+});
+
+test('the base image fingerprint is stable across runs', () => {
+  assert.equal(
+    LinuxHiveService.baseImageFingerprint(),
+    LinuxHiveService.baseImageFingerprint(),
+  );
+  assert.match(LinuxHiveService.baseImageFingerprint(), /^[0-9a-f]{64}$/);
+});

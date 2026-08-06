@@ -658,6 +658,26 @@ step (`GET` the resource, or watch the WebSocket).
 Step 2 is the slow one: the first worker downloads the Ubuntu cloud image and runs
 `virt-customize` on it (minutes). Later workers reuse the prepared image.
 
+**The `.prepared` marker records *what* was baked, not just *that* something was.** It
+holds `{"fingerprint": "<sha256>", "preparedAt": "<iso>"}`, hashed over the sorted
+`BASE_IMAGE_PACKAGES` plus `BASE_IMAGE_RUN_COMMANDS`, and the prep is skipped only when the
+stored hash matches the current recipe.
+
+It used to be a plain boolean — the file existing meant "done". That silently froze the
+image against every later change to the package list: `qemu-guest-agent` was added the day
+after this host's image was prepped and therefore never got installed, which is why
+`applySshKeys` on a *running* worker could never reach the agent. Any future package would
+have been dropped the same way, with no error.
+
+The hash deliberately covers only the inputs we control. `--update` makes the actual result
+non-deterministic over time, and trying to capture apt's state would force a re-prep on
+every run.
+
+A marker from before this change does not parse as JSON, so it reads as "not prepared" and
+triggers exactly one re-prep — no manual cleanup. Note that re-preparing the base image
+does **not** retrofit workers already cloned from it: those are full copies, and need the
+package installed into each (stopped) disk separately.
+
 The API validates the preconditions of each step, so a call out of order fails
 immediately with a clear message instead of retrying inside a processor.
 
