@@ -265,6 +265,30 @@ const createWorkerImages = async () => {
   console.log('Worker images created successfully!');
 }
 
+const createWorkerStorageTypes = async () => {
+  console.log('Creating worker storage types...');
+
+  const storageTypes = [
+    {
+      name: 'standard',
+      description: 'qcow2 volume on the host, attachable to one worker at a time',
+      persistent: true,
+      attachable: true,
+      shared: false,
+    },
+  ];
+
+  for (const storageType of storageTypes) {
+    await prisma.workerStorageType.upsert({
+      where: { name: storageType.name },
+      create: storageType,
+      update: storageType,
+    });
+  }
+
+  console.log('Worker storage types created successfully!');
+}
+
 const createAtomSizes = async () => {
   console.log('Creating atom sizes...');
 
@@ -450,6 +474,7 @@ const main = async () => {
     createUsers,
     createWorkerFamilies,
     createWorkerImages,
+    createWorkerStorageTypes,
     createAtomSizes,
     createAtomImages,
   ];
