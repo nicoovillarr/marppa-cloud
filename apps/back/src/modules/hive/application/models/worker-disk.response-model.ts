@@ -1,20 +1,22 @@
-import { Expose } from 'class-transformer';
+import { Expose, Transform } from 'class-transformer';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+
+const nullable = () => Transform(({ value }) => value ?? null);
 
 export class WorkerDiskResponseModel {
   @Expose() id: string;
   @Expose() name: string;
   @Expose() status: ResourceStatus;
   @Expose() sizeGiB: number;
-  @Expose() hostPath: string | null;
+  @Expose() @nullable() hostPath: string | null;
   @Expose() ownerId: string;
   @Expose() storageTypeId: string;
-  @Expose() mountPoint: string | null;
-  @Expose() deviceTarget: string | null;
+  @Expose() @nullable() mountPoint: string | null;
+  @Expose() @nullable() deviceTarget: string | null;
   @Expose() isBoot: boolean;
-  @Expose() workerId: string | null;
+  @Expose() @nullable() workerId: string | null;
   @Expose() createdAt: Date;
   @Expose() createdBy: string;
-  @Expose() updatedAt: Date | null;
-  @Expose() updatedBy: string | null;
+  @Expose() @nullable() updatedAt: Date | null;
+  @Expose() @nullable() updatedBy: string | null;
 }

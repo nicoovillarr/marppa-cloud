@@ -30,8 +30,7 @@ export function WorkerVolumesSection({
     const all = await workerDiskApi.list();
     setAvailable(
       all.filter(
-        (disk) =>
-          disk.workerId === null && disk.status === ResourceStatus.INACTIVE,
+        (disk) => !disk.workerId && disk.status === ResourceStatus.INACTIVE,
       ),
     );
   }, [load, workerId]);
