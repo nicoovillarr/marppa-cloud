@@ -2,13 +2,16 @@
 -- property, never stored as a WorkerSshKey row. Since WORKER_UPDATE_SSH_KEYS
 -- rewrites authorized_keys from those rows, the first key added through the UI
 -- wiped the bootstrap key. Recover it from the WORKER_CREATE event that carried it.
-INSERT INTO "WorkerSshKey" ("name", "publicKey", "workerId", "createdAt", "createdBy")
+-- "updatedAt" is @updatedAt, which Prisma fills from the client and never as a
+-- database default, so raw SQL has to supply it or the NOT NULL rejects the row.
+INSERT INTO "WorkerSshKey" ("name", "publicKey", "workerId", "createdAt", "createdBy", "updatedAt")
 SELECT
     'bootstrap',
     btrim(property."value"),
     worker."id",
     worker."createdAt",
-    worker."createdBy"
+    worker."createdBy",
+    worker."createdAt"
 FROM "Worker" worker
 JOIN "EventResource" resource
     ON resource."resourceId" = worker."id"
