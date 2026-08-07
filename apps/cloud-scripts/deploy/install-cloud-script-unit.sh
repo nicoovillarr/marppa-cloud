@@ -10,6 +10,7 @@ readonly ALLOWED_DIRECTIVES=(
   Description After Wants
   Type User Group WorkingDirectory Environment ExecStart
   Restart RestartSec TimeoutStopSec KillMode
+  ProtectHome ProtectSystem
   WantedBy
 )
 
@@ -57,6 +58,10 @@ validate_unit() {
         [[ $value == "$REQUIRED_EXEC_PREFIX"* ]] \
           || reject "ExecStart must start with '$REQUIRED_EXEC_PREFIX', got '$value'"
         has_exec_start=1
+        ;;
+      ProtectSystem)
+        [[ $value == yes ]] \
+          || reject "ProtectSystem must be 'yes' ('$value' makes /etc read-only and breaks the nftables writes)"
         ;;
     esac
   done < "$unit"
