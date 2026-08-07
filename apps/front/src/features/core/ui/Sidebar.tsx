@@ -29,6 +29,23 @@ export function isModuleActive(pathname: string | null, href: string): boolean {
   return !!pathname?.startsWith(href.split("/").slice(0, 3).join("/"));
 }
 
+function SidebarUser() {
+  const { user } = useUser();
+
+  if (!user) return null;
+
+  return (
+    <div className="mt-auto border-t border-sidebar-hover px-4 py-3">
+      <p className="text-sm text-sidebar-ink-active truncate" title={user.name}>
+        {user.name}
+      </p>
+      <p className="text-xs text-sidebar-ink truncate" title={user.email}>
+        {user.email}
+      </p>
+    </div>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const links = useModuleLinks();
@@ -55,6 +72,8 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      <SidebarUser />
     </aside>
   );
 }

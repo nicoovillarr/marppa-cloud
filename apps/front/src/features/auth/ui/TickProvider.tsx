@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { useAuth } from "../models/useAuth";
 import { useUser } from "src/features/users/model/useUser";
 
@@ -22,57 +22,32 @@ export function TickProvider({
         clear: clearUser,
     } = useUser();
 
-    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const initializedRef = useRef(false);
-
     const clear = useCallback(() => {
         clearUser();
         clearAuth();
     }, [clearAuth, clearUser]);
 
     useEffect(() => {
-        const bootstrap = async () => {
-            try {
-                await tick();
-            } catch (e) {
-                clear();
-            } finally {
-                initializedRef.current = true;
-            }
-        };
-
-        bootstrap();
+        tick().catch(() => clear());
     }, [tick, clear]);
 
     useEffect(() => {
-        if (!initializedRef.current) return;
+        if (!isLoggedIn) return;
 
-        if (isLoggedIn) {
-            me().catch((e) =>
-                console.error("[TickProvider]: Failed to load the current user", e),
-            );
+        me().catch((e) =>
+            console.error("[TickProvider]: Failed to load the current user", e),
+        );
+    }, [isLoggedIn, me]);
 
-            if (!intervalRef.current) {
-                intervalRef.current = setInterval(() => {
-                    tick().catch(() => {
-                        clear();
-                    });
-                }, INTERVAL_MS);
-            }
-        } else {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-        }
+    useEffect(() => {
+        if (!isLoggedIn) return;
 
-        return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-        };
-    }, [isLoggedIn, tick, me, clear]);
+        const interval = setInterval(() => {
+            tick().catch(() => clear());
+        }, INTERVAL_MS);
+
+        return () => clearInterval(interval);
+    }, [isLoggedIn, tick, clear]);
 
     return <>{children}</>;
 }
