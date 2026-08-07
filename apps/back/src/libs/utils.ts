@@ -31,9 +31,8 @@ export class Utils {
             : 'Desktop';
       }
 
-      const forwardedFor = req.headers['x-forwarded-for'];
-      if (forwardedFor) {
-        ipAddress = (forwardedFor as string).split(',')[0];
+      if (req.ip) {
+        ipAddress = req.ip;
       }
     }
 

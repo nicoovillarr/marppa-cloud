@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AllExceptionsFilter } from './modules/shared/infrastructure/http/all-exceptions.filter';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -10,9 +11,12 @@ async function bootstrap() {
   const {
     CORS_URL,
     PORT,
+    TRUSTED_PROXY_HOPS,
   } = process.env;
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.set('trust proxy', Number(TRUSTED_PROXY_HOPS ?? 2));
 
   // Without this the class-validator decorators on every DTO are inert: bad
   // input reaches the domain (and the cloud-scripts processors) unchecked.

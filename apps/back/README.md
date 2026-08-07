@@ -507,3 +507,24 @@ publishing a port publishes it to everyone who can route to the host.
 ## TypeScript
 - Prefer explicit types over inference in public APIs
 - No `any`
+## Client IP behind the proxies
+
+`Utils.parseRequestData` reads `req.ip`, and `main.ts` sets
+`trust proxy` to `TRUSTED_PROXY_HOPS` (default `2`).
+
+It used to take `x-forwarded-for.split(',')[0]` with no `trust proxy` at all.
+That value is the leftmost entry, which is whatever the caller sent — proxies
+append, they do not overwrite — and `api.cloud.marppa.com` is reachable
+directly, so any client could claim any IP. That was only an audit smell while
+the IP merely labelled sessions; it becomes a hole the moment the IP grants
+something, which is what the SSH auto-ban reprieve does.
+
+The hop count must match the deployment. Today the chain is
+
+```
+browser -> Vercel (rewrites /api/*) -> Render -> Nest
+```
+
+so two hops are ours. Change `TRUSTED_PROXY_HOPS` if that chain changes; too
+high and the caller can spoof again, too low and every request looks like it
+came from the proxy.
