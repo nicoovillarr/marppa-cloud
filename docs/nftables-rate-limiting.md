@@ -1,6 +1,39 @@
 # Pending: nftables rate limiting (DoS defense)
 
-**Status:** not implemented. Noted on 2026-07-24 to tackle later.
+**Status:** measuring. Noted on 2026-07-24; counters deployed on 2026-08-07, no rule
+enforces anything yet.
+
+This file tracks pending work. **Delete it once the rules below are enforcing** — what
+survives is the ruleset itself plus whatever needs explaining in the host runbook.
+
+## Deployed so far
+
+Counters only. They match and count; they do not drop. They live in
+`/etc/nftables-base.conf` (backed up as `nftables-base.conf.bak-2026-08-07`, validated
+with `nft -c -f`) and were also applied live, since nothing else reloads nftables.
+
+```
+input:   iifname "enp5s0" tcp dport 20000-30000 counter
+         iifname "enp5s0" udp dport 20000-30000 counter
+forward: ct state new iifname "enp5s0" ip daddr 10.0.0.0/29 tcp dport 22 counter
+         ct state new iifname "enp5s0" ip daddr 10.0.0.8/29 tcp dport 22 counter
+```
+
+The `forward` ones were **inserted at the head** of the chain, not appended: the app
+emits `ct state new iifname "enp5s0" ip daddr 10.0.0.10 tcp dport 22 accept` per fiber,
+and an `accept` is terminal, so an appended counter would never match.
+
+Read them with:
+
+```bash
+sudo nft list chain inet filter input
+sudo nft list chain inet filter forward
+```
+
+The `input` counters are expected to stay at zero — see "Close unallocated fiber ports".
+A non-zero value there means the reasoning in that section is wrong and the `drop` must
+not be applied as written. The `forward` counters are expected to grow, and their rate
+is what calibrates the auto-ban threshold below.
 
 ## The need
 
@@ -114,9 +147,9 @@ iifname "enp5s0" udp dport 20000-30000 drop
 Read `MIN_PORT`/`MAX_PORT` rather than hardcoding, so the rule cannot drift from the
 allocator in `LinuxMeshService.findAvailablePort`.
 
-Before enforcing, land it as `counter` instead of `drop` and let it run: a non-zero
-counter would mean the reasoning above is wrong and some legitimate traffic does reach
-`input` on that range.
+The measuring half of this is already deployed — see "Deployed so far". Convert to
+`drop` only once those counters have sat at zero long enough to trust the reasoning
+above; a non-zero value means some legitimate traffic does reach `input` on that range.
 
 Narrowing the forwarded range at the router was considered as an alternative. It is
 worse: allocated ports are spread across the range (`22526`, `23668`, `27162`), so
