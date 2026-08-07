@@ -9,6 +9,18 @@ on:
   workflow_dispatch:
 
 jobs:
+  self-hosted-exposure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Check self-hosted runner is unreachable from forks
+        run: python .github/scripts/check-self-hosted-triggers.py
+
   npm-audit:
     runs-on: ubuntu-latest
     steps:
