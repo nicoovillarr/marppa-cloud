@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useNodeStore } from "./node.store";
 import { nodeApi } from "../api/node.api";
 import { zoneApi } from "../api/zone.api";
-import { CreateNodeDto, NodeWithFibers } from "../api/node.api.types";
+import { CreateNodeDto, NodeResponseDto } from "../api/node.api.types";
 
 export const useNode = () => {
     const {
@@ -16,7 +16,7 @@ export const useNode = () => {
         setNodes,
     } = useNodeStore();
 
-    const addNode = useCallback(async (node: NodeWithFibers) => {
+    const addNode = useCallback(async (node: NodeResponseDto) => {
         const idx = nodes.findIndex(n => n.id === node.id);
         if (idx === -1) {
             setNodes([node, ...nodes]);
@@ -32,9 +32,7 @@ export const useNode = () => {
 
         try {
             const zones = await zoneApi.fetchAll();
-            const nodes = zones.flatMap((zone) =>
-                zone.nodes.map((node) => ({ ...node, fibers: [], attached: null })),
-            );
+            const nodes = zones.flatMap((zone) => zone.nodes);
             setNodes(nodes);
             return nodes;
         } catch (error) {

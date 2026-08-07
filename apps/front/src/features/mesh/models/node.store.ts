@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { NodeWithFibers } from "../api/node.api.types";
+import { NodeResponseDto } from "../api/node.api.types";
 
 interface INodeStore {
     isLoading: boolean;
@@ -8,8 +8,8 @@ interface INodeStore {
     error: string | null;
     setError: (error: string | null) => void;
 
-    nodes: NodeWithFibers[];
-    setNodes: (nodes: NodeWithFibers[]) => void;
+    nodes: NodeResponseDto[];
+    setNodes: (nodes: NodeResponseDto[]) => void;
 }
 
 export const useNodeStore = create<INodeStore>((set) => ({
@@ -20,5 +20,5 @@ export const useNodeStore = create<INodeStore>((set) => ({
     setError: (error: string | null) => set({ error }),
 
     nodes: [],
-    setNodes: (nodes: NodeWithFibers[]) => set({ nodes }),
+    setNodes: (nodes: NodeResponseDto[]) => set({ nodes }),
 }));
