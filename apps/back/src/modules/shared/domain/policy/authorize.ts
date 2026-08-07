@@ -1,4 +1,7 @@
-import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
+import {
+  getCurrentUser,
+  getManageableCompanyIds,
+} from '@/auth/infrastructure/als/session.context';
 import { NotFoundError } from '../errors/not-found.error';
 import { UnauthorizedError } from '../errors/unauthorized.error';
 import { defineAbilityFor, policySubject, PolicyAction, PolicySubjectType } from './ability';
@@ -29,6 +32,11 @@ export function can(
     return false;
   }
 
-  const ability = defineAbilityFor(user);
+  const manageable = getManageableCompanyIds();
+  const ability = defineAbilityFor(
+    user,
+    manageable.length > 0 ? manageable : [user.companyId],
+  );
+
   return ability.can(action, policySubject(subjectType, ownerId));
 }
