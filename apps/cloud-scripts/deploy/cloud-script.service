@@ -11,6 +11,8 @@ WorkingDirectory=/opt/cloud-script/marppa-cloud/apps/cloud-scripts
 Environment=HOME=/opt/cloud-script
 Environment=PATH=/usr/local/sbin:/usr/sbin:/sbin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/node -r ./scripts/register-aliases.js dist/index.js
+ProtectHome=yes
+ProtectSystem=full
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30

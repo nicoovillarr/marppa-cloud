@@ -251,6 +251,25 @@ self-hosted runner on the same machine this is the safer choice — secrets neve
 leave the host. Only render env from a secret in CI if you move to a runner that
 does not already hold the file; you don't need it here.
 
+## Service hardening
+
+The unit sets `ProtectHome=yes` and `ProtectSystem=full`. The service holds a
+broad sudo grant, so these narrow what a compromised worker reaches: `/home` is
+invisible, and `/usr` and `/boot` are read-only while `/etc` stays writable —
+the app rewrites `/etc/nftables.conf`, the dnsmasq configs and the systemd
+network units, so `ProtectSystem=strict` would break it.
+
+Two options are deliberately absent:
+
+- **`NoNewPrivileges`** — the worker shells out through `sudo`, which is exactly
+  what this flag blocks.
+- **`PrivateTmp`** — `/tmp` is shared with other services. `LinuxMeshService`
+  clears `/tmp/dnsmasq.leases`, a file **dnsmasq** owns; with a private `/tmp`
+  that `rm` would hit an empty namespace and report success while the real lease
+  file survived. The VM XML files under `/tmp` would be fine (they are read by
+  `virsh` inside the same namespace), but the lease case makes the whole option
+  a silent-failure risk.
+
 ## Notes
 
 - `runs-on: [self-hosted]` matches any self-hosted runner. Add a label (e.g.
