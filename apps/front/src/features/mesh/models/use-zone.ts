@@ -3,6 +3,9 @@ import { useZoneStore } from "./zone.store"
 import { zoneApi } from "../api/zone.api";
 import { ZoneWithNodes, ZoneWithNodesAndFibers } from "../api/zone.api.types";
 
+const toErrorMessage = (error: unknown): string =>
+    error instanceof Error ? error.message : String(error);
+
 export const useZone = () => {
     const {
         isLoading,
@@ -25,7 +28,7 @@ export const useZone = () => {
 
             return zones;
         } catch (error) {
-            setError(error as string);
+            setError(toErrorMessage(error));
         } finally {
             setIsLoading(false);
         }
@@ -40,7 +43,7 @@ export const useZone = () => {
             const zone = await zoneApi.fetchById(id);
             return zone;
         } catch (error) {
-            setError(error as string);
+            setError(toErrorMessage(error));
             return null;
         } finally {
             setIsLoading(false);
@@ -86,7 +89,7 @@ export const useZone = () => {
 
             return zone;
         } catch (error) {
-            setError(error as string);
+            setError(toErrorMessage(error));
         } finally {
             setIsLoading(false);
         }
@@ -106,7 +109,7 @@ export const useZone = () => {
 
             return zone;
         } catch (error) {
-            setError(error as string);
+            setError(toErrorMessage(error));
         } finally {
             setIsLoading(false);
         }
@@ -120,7 +123,7 @@ export const useZone = () => {
             await zoneApi.stop(id);
             return true;
         } catch (error) {
-            setError(error as string);
+            setError(toErrorMessage(error));
             return false;
         } finally {
             setIsLoading(false);
@@ -135,7 +138,7 @@ export const useZone = () => {
             await zoneApi.start(id);
             return true;
         } catch (error) {
-            setError(error as string);
+            setError(toErrorMessage(error));
             return false;
         } finally {
             setIsLoading(false);

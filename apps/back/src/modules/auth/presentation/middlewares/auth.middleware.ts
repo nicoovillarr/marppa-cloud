@@ -8,10 +8,25 @@ import { AuthService } from '@/auth/domain/services/auth.service';
 import { sessionStorage } from '@/auth/infrastructure/als/session.context';
 import { Request } from 'express';
 import { Utils } from '../../../../libs/utils';
+import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
+import { JwtEntity } from '@/auth/domain/entities/jwt.entity';
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly companyHierarchyService: CompanyHierarchyService,
+  ) {}
+
+  private async manageableCompanyIdsFor(user: JwtEntity): Promise<string[]> {
+    try {
+      return await this.companyHierarchyService.selfAndDescendants(
+        user.companyId,
+      );
+    } catch {
+      return [user.companyId];
+    }
+  }
 
   async use(req: Request, _: any, next: () => void) {
     const token = req.cookies?.access_token;
@@ -32,10 +47,14 @@ export class AuthMiddleware implements NestMiddleware {
       }
 
       const { ipAddress } = Utils.parseRequestData(req);
+      const manageableCompanyIds = await this.manageableCompanyIdsFor(payload);
 
-      return sessionStorage.run({ user: payload, ipAddress }, () => {
-        next();
-      });
+      return sessionStorage.run(
+        { user: payload, ipAddress, manageableCompanyIds },
+        () => {
+          next();
+        },
+      );
     } catch {
       next();
     }

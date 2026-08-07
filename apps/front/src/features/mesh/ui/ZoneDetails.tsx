@@ -6,6 +6,8 @@ import { FormProvider, useForm } from "react-hook-form";
 import { Button } from "@/core/ui/Button";
 import { useParams } from "next/navigation";
 import { TableSkeleton } from "@/core/ui/AsyncTable";
+import { Callout } from "@/core/ui/Callout";
+import { LuTriangleAlert } from "react-icons/lu";
 import { useZone } from "../models/use-zone";
 import { toast } from "sonner";
 import { NodesList } from "./NodesList";
@@ -39,6 +41,7 @@ export function ZoneDetails() {
   const [zone, setZone] = useState<ZoneWithNodesAndFibers | null>(null);
 
   const {
+    error,
     fetchZone,
     validateZone,
     updateZone,
@@ -88,6 +91,10 @@ export function ZoneDetails() {
   }, [zone, reset]);
 
   if (!zone) {
+    if (error) {
+      return <Callout icon={<LuTriangleAlert />} text={error} />;
+    }
+
     return <ZoneDetailsSkeleton />;
   }
 

@@ -30,10 +30,15 @@ const OPERATIONAL_SUBJECTS: PolicySubjectType[] = [
   'User',
 ];
 
-export function defineAbilityFor(user: JwtEntity): AppAbility {
+export function defineAbilityFor(
+  user: JwtEntity,
+  manageableCompanyIds: string[] = [user.companyId],
+): AppAbility {
   const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
 
-  can('manage', OPERATIONAL_SUBJECTS, { companyId: user.companyId });
+  can('manage', OPERATIONAL_SUBJECTS, {
+    companyId: { $in: manageableCompanyIds },
+  });
   can('read', 'Company', { companyId: user.companyId });
 
   if (user.role === UserRole.OWNER) {

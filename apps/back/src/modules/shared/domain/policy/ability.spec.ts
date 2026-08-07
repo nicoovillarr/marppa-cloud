@@ -29,6 +29,21 @@ describe('defineAbilityFor', () => {
     }
   });
 
+  it('lets a parent company manage operational resources of its descendants', () => {
+    const ability = defineAbilityFor(owner, ['c-1', 'c-child']);
+
+    expect(ability.can('manage', policySubject('Zone', 'c-child'))).toBe(true);
+    expect(ability.can('manage', policySubject('Worker', 'c-child'))).toBe(true);
+    expect(ability.can('manage', policySubject('Zone', 'c-unrelated'))).toBe(false);
+  });
+
+  it('keeps Company scoped to the user own company even with descendants', () => {
+    const ability = defineAbilityFor(owner, ['c-1', 'c-child']);
+
+    expect(ability.can('manage', policySubject('Company', 'c-child'))).toBe(false);
+    expect(ability.can('read', policySubject('Company', 'c-child'))).toBe(false);
+  });
+
   it('lets only OWNER manage their own Company', () => {
     expect(owner.role).toBe(UserRole.OWNER);
     const ownerAbility = defineAbilityFor(owner);
