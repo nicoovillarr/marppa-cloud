@@ -7,7 +7,7 @@ import { ColumnMapping, Table } from "@/core/ui/Table";
 import { redirect } from "next/navigation";
 import { LuRefreshCcw } from "react-icons/lu";
 import { Button } from "@/core/ui/Button";
-import { NodeWithFibers } from "../api/node.api.types";
+import { AttachedWorkload, NodeWithFibers } from "../api/node.api.types";
 import { useZone } from "../models/use-zone";
 import { useNode } from "../models/use-node";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
@@ -19,19 +19,22 @@ import { FiberCreateDialog } from "./FiberCreateDialog";
 import { FibersDialog } from "./FibersDialog";
 import { StatusBadge } from "@/core/ui/StatusBadge";
 
-const getPointsToInfo = (node: NodeWithFibers) => {
-  let pointsTo = "N/A";
-  let link = null;
+const WORKLOAD_LINKS: Record<AttachedWorkload["kind"], string> = {
+  worker: "/dashboard/hive/workers",
+  atom: "/dashboard/nucleus/atoms",
+};
 
-  if (!!node.workerId) {
-    pointsTo = `${node.workerId}`;
-    link = `/dashboard/hive/workers`;
-  } else if (!!node.atomId) {
-    pointsTo = `Atom ${node.atomId}`;
-    link = `/dashboard/nucleus/atoms`;
+const getPointsToInfo = (node: NodeWithFibers) => {
+  const { attached } = node;
+
+  if (!attached) {
+    return { pointsTo: "N/A", link: null };
   }
 
-  return { pointsTo, link };
+  return {
+    pointsTo: `${attached.name} (${attached.id})`,
+    link: WORKLOAD_LINKS[attached.kind],
+  };
 };
 
 export function NodesList({ zoneId }: { zoneId: string }) {
@@ -107,7 +110,7 @@ export function NodesList({ zoneId }: { zoneId: string }) {
     showDialog({
       type: "confirm",
       title: "Unassign Node",
-      description: node.atomId
+      description: node.attached?.kind === "atom"
         ? "Release this IP reservation. The atom must be stopped (INACTIVE), or its container would still be holding the address."
         : "Release this IP reservation and detach the worker's NIC from the zone. The worker must be stopped (INACTIVE).",
       confirmText: "Unassign",
@@ -141,8 +144,11 @@ export function NodesList({ zoneId }: { zoneId: string }) {
         const { pointsTo, link } = getPointsToInfo(node);
 
         return (
-          <span className={link ? "text-accent-ink underline" : ""}>
-            {pointsTo}
+          <span className="flex items-center gap-2">
+            <span className={link ? "text-accent-ink underline truncate" : "truncate"}>
+              {pointsTo}
+            </span>
+            {node.attached && <StatusBadge status={node.attached.status} />}
           </span>
         );
       },
@@ -161,7 +167,7 @@ export function NodesList({ zoneId }: { zoneId: string }) {
       },
     },
     status: {
-      label: "Status",
+      label: "Placement",
       minWidth: 100,
       renderFn: (node: NodeWithFibers) => <StatusBadge status={node.status} />,
     },
@@ -171,7 +177,7 @@ export function NodesList({ zoneId }: { zoneId: string }) {
     // Start/stop materialise a worker's NIC on the bridge. An atom-backed node
     // is only an IP reservation until its container starts, so the backend
     // rejects both for it.
-    const isWorkerNode = !!node.workerId;
+    const isWorkerNode = node.attached?.kind === "worker";
     const canStart =
       isWorkerNode &&
       (node.status === ResourceStatus.INACTIVE ||

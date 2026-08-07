@@ -33,7 +33,7 @@ export const useNode = () => {
         try {
             const zones = await zoneApi.fetchAll();
             const nodes = zones.flatMap((zone) =>
-                zone.nodes.map((node) => ({ ...node, fibers: [] })),
+                zone.nodes.map((node) => ({ ...node, fibers: [], attached: null })),
             );
             setNodes(nodes);
             return nodes;

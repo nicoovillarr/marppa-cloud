@@ -19,6 +19,14 @@ export type NodeResponseDto = {
     atomId: string | null;
 }
 
+export type AttachedWorkload = {
+    kind: "atom" | "worker";
+    id: string;
+    name: string;
+    status: ResourceStatus;
+}
+
 export type NodeWithFibers = NodeResponseDto & {
     fibers: FiberResponseDto[];
+    attached: AttachedWorkload | null;
 }

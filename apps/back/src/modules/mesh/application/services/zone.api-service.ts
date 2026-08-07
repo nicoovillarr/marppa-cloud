@@ -12,6 +12,7 @@ import { ZoneWithNodesResponseModel } from '../models/zone-with-nodes.response.m
 import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
 import { NodeResponseModel } from '../models/node.response-model';
 import { FiberResponseModel } from '../models/fiber.response-model';
+import { AttachedWorkloadResponseModel } from '../models/attached-workload.response-model';
 import { NodeWithFibersResponseModel } from '../models/node-with-fibers.response-model';
 
 @Injectable()
@@ -29,8 +30,11 @@ export class ZoneApiService {
     const nodes = data.nodes.map(data => {
       const node = plainToInstance(NodeResponseModel, data.node, { excludeExtraneousValues: true });
       const fibers = data.fibers.map(fiber => plainToInstance(FiberResponseModel, fiber, { excludeExtraneousValues: true }));
+      const attached = data.attached
+        ? plainToInstance(AttachedWorkloadResponseModel, data.attached, { excludeExtraneousValues: true })
+        : null;
 
-      return mergeDto(NodeWithFibersResponseModel, node, { fibers });
+      return mergeDto(NodeWithFibersResponseModel, node, { fibers, attached });
     });
 
     return mergeDto(ZoneWithNodesAndFibersResponseModel, zone, { nodes });

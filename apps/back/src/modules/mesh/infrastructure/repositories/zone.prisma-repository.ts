@@ -9,6 +9,8 @@ import { NodePrismaMapper } from '../mappers/node.prisma-mapper';
 import { ZoneWithNodesAndFibersModel } from '@/mesh/domain/models/zone-with-nodes-and-fibers.model';
 import { NodeWithFibersModel } from '@/mesh/domain/models/node-with-fibers.model';
 import { FiberPrismaMapper } from '../mappers/fiber.prisma-mapper';
+import { AttachedWorkloadModel } from '@/mesh/domain/models/attached-workload.model';
+import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 @Injectable()
 export class ZonePrismaRepository implements ZoneRepository {
@@ -51,6 +53,8 @@ export class ZonePrismaRepository implements ZoneRepository {
         nodes: {
           include: {
             fibers: { where: { status: { not: 'DELETED' } } },
+            atom: { select: { id: true, name: true, status: true } },
+            worker: { select: { id: true, name: true, status: true } },
           },
         },
       },
@@ -64,9 +68,37 @@ export class ZonePrismaRepository implements ZoneRepository {
       ZonePrismaMapper.toEntity(model),
       model.nodes.map(node => new NodeWithFibersModel(
         NodePrismaMapper.toEntity(node),
-        node.fibers.map(FiberPrismaMapper.toEntity)
+        node.fibers.map(FiberPrismaMapper.toEntity),
+        this.toAttachedWorkload(node),
       )),
     );
+  }
+
+  private toAttachedWorkload(node: {
+    atom: { id: string; name: string; status: string } | null;
+    worker: { id: string; name: string; status: string } | null;
+  }): AttachedWorkloadModel | null {
+    const { atom, worker } = node;
+
+    if (worker != null) {
+      return new AttachedWorkloadModel(
+        'worker',
+        worker.id,
+        worker.name,
+        ResourceStatus[worker.status],
+      );
+    }
+
+    if (atom != null) {
+      return new AttachedWorkloadModel(
+        'atom',
+        atom.id,
+        atom.name,
+        ResourceStatus[atom.status],
+      );
+    }
+
+    return null;
   }
 
   async findByOwnerIds(
