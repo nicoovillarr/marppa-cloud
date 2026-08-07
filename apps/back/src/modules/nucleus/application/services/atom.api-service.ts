@@ -12,8 +12,6 @@ import { NodeResponseModel } from '@/mesh/application/models/node.response-model
 import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
-import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
-import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 @Injectable()
@@ -32,15 +30,6 @@ export class AtomApiService {
   public async findByOwnerId(
     ownerId?: string,
   ): Promise<AtomWithRelationsResponseModel[]> {
-    if (!ownerId) {
-      const user = getCurrentUser();
-      if (!user) {
-        throw new UnauthorizedError();
-      }
-
-      ownerId = user.companyId;
-    }
-
     const list = await this.service.findByOwnerId(ownerId);
     return list.map((data) => this.toResponse(data));
   }

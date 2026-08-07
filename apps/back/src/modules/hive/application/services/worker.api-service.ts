@@ -58,15 +58,6 @@ export class WorkerApiService {
   public async findByOwnerId(
     ownerId?: string,
   ): Promise<WorkerWithRelationsResponseModel[]> {
-    if (!ownerId) {
-      const user = getCurrentUser();
-      if (!user) {
-        throw new UnauthorizedError();
-      }
-
-      ownerId = user.companyId;
-    }
-
     const list = await this.service.findByOwnerId(ownerId);
     return list.map(data => {
       const worker = plainToInstance(WorkerResponseModel, data.worker, { excludeExtraneousValues: true });
