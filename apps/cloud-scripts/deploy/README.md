@@ -253,13 +253,25 @@ does not already hold the file; you don't need it here.
 
 ## Service hardening
 
-The unit sets `ProtectHome=yes` and `ProtectSystem=full`. The service holds a
-broad sudo grant, so these narrow what a compromised worker reaches: `/home` is
-invisible, and `/usr` and `/boot` are read-only while `/etc` stays writable —
-the app rewrites `/etc/nftables.conf`, the dnsmasq configs and the systemd
-network units, so `ProtectSystem=strict` would break it.
+The unit sets `ProtectHome=yes` and `ProtectSystem=yes`. The service holds a
+broad sudo grant, so these narrow what a compromised worker reaches: `/home`
+becomes invisible and `/usr` and `/boot` become read-only.
 
-Two options are deliberately absent:
+**`ProtectSystem` must stay at `yes`.** The worker rewrites `/etc/nftables.conf`,
+the dnsmasq configs and the systemd network units, and only `yes` leaves `/etc`
+writable — `full` adds `/etc` to the read-only set, and `strict` covers the whole
+filesystem. Setting it to `full` on 2026-08-07 broke every nftables write with
+
+```
+Command "sudo install -m 600 /tmp/nftables-<ts>.conf /etc/nftables.conf" failed with code 1
+```
+
+and each failing event left the live ruleset and the database out of step: an
+`nft add rule` had already landed while the row stayed `FAILED`. The orphan DNAT
+then blocked its own replacement, because the port allocator reads the live
+ruleset to decide whether a target is free.
+
+Two more options are deliberately absent:
 
 - **`NoNewPrivileges`** — the worker shells out through `sudo`, which is exactly
   what this flag blocks.
