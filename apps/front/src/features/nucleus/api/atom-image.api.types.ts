@@ -11,6 +11,7 @@ export type AtomImageResponseDto = {
     sysctls: Record<string, string> | null;
     command: string[];
     requiredEnvVars: string[];
+    dataPaths: string[];
     defaultSizeId: number;
     ownerId: string | null;
 }
@@ -28,5 +29,6 @@ export type CreateAtomImageDto = {
     sysctls?: Record<string, string>;
     command?: string[];
     requiredEnvVars?: string[];
+    dataPaths?: string[];
     ownerId?: string;
 }

@@ -1,4 +1,5 @@
 import { forbiddenCapabilities } from '@marppa-cloud/shared';
+import path from 'path';
 import { Command } from '@/libs/Command';
 import { Injectable } from '@/decorators/Injectable';
 import {
@@ -7,6 +8,7 @@ import {
   type AtomImageSource,
   type AtomNetworkConfig,
   type AtomResourceSpecs,
+  type AtomVolumeMount,
 } from '../domain/services/NucleusService';
 
 const ATOM_LABEL = 'marppa.atom';
@@ -26,6 +28,12 @@ const SAFE_SYSCTL_KEY = /^[a-z0-9._]+$/;
 const SAFE_SYSCTL_VALUE = /^[A-Za-z0-9._\-]+$/;
 const SAFE_LIMIT = /^[0-9]+(\.[0-9]+)?[a-z]?$/;
 const SAFE_COMMAND_TOKEN = /^[^\r\n\0]+$/;
+const SAFE_MOUNT_POINT = /^\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
+const SAFE_VOLUME_GROUP = /^[A-Za-z0-9._+-]+$/;
+
+const ATOM_VOLUME_ROOT = '/var/lib/marppa/atom-volumes';
+const ATOM_VOLUME_DATA_DIR = 'data';
+const DEFAULT_VOLUME_GROUP = 'vg_data';
 
 /**
  * What is added back after dropping everything: the set an image needs to run
@@ -100,6 +108,7 @@ export class DockerNucleusService extends NucleusService {
     net: AtomNetworkConfig,
     env: AtomEnvironment,
     specs: AtomResourceSpecs,
+    volumes: AtomVolumeMount[],
   ): Promise<void> {
     const atomId = this.assertAtomId(id);
     const zoneId = this.assertZoneId(net.zoneId);
@@ -119,6 +128,7 @@ export class DockerNucleusService extends NucleusService {
       '--network-alias', alias,
       '--restart', 'unless-stopped',
       ...this.hardeningArgs(specs),
+      ...(await this.mountArgs(volumes)),
       ...this.envArgs(env),
       ...this.capabilityArgs(image),
       ...this.sysctlArgs(image),
@@ -265,6 +275,171 @@ export class DockerNucleusService extends NucleusService {
 
     const tag = this.assertMatches(image.tag, SAFE_TAG, 'image tag');
     return `${registry}/${repository}:${tag}`;
+  }
+
+  // --- Volumes ---
+
+  public async createAtomVolume(
+    volumeId: number,
+    sizeGiB: number,
+  ): Promise<string> {
+    const id = this.assertVolumeId(volumeId);
+
+    if (!Number.isInteger(sizeGiB) || sizeGiB <= 0) {
+      throw new TypeError(`Invalid volume size: ${sizeGiB}`);
+    }
+
+    const name = this.volumeName(id);
+    const mountPath = this.volumeMountPath(id);
+
+    if (await this.volumeExists(id)) {
+      throw new Error(
+        `Volume ${name} already exists on ${this.volumeGroup()}: remove it before recreating it`,
+      );
+    }
+
+    console.log(`Creating ${sizeGiB}GiB volume ${name} at ${mountPath}`);
+
+    await Command.runCommand('sudo', [
+      'lvcreate', '--yes', '--size', `${sizeGiB}G`, '--name', name, this.volumeGroup(),
+    ]);
+    await Command.runCommand('sudo', ['mkfs.ext4', '-q', '-L', name, this.volumeDevice(id)]);
+
+    await this.mountVolume(id);
+    await Command.runCommand('sudo', ['mkdir', '-p', this.volumeDataPath(mountPath)]);
+
+    return mountPath;
+  }
+
+  public async deleteAtomVolume(hostPath: string): Promise<boolean> {
+    const id = this.assertVolumeHostPath(hostPath);
+
+    if (await this.isMounted(this.volumeMountPath(id))) {
+      await Command.runCommand('sudo', ['umount', this.volumeMountPath(id)]);
+    }
+
+    if (!(await this.volumeExists(id))) {
+      console.log(`Volume ${this.volumeName(id)} is already gone`);
+      return false;
+    }
+
+    await Command.runCommand('sudo', [
+      'lvremove', '--yes', this.volumeDevice(id),
+    ]);
+
+    return true;
+  }
+
+  public async ensureAtomVolumeMounted(hostPath: string): Promise<void> {
+    const id = this.assertVolumeHostPath(hostPath);
+
+    if (await this.isMounted(this.volumeMountPath(id))) {
+      return;
+    }
+
+    if (!(await this.volumeExists(id))) {
+      throw new Error(
+        `Volume ${this.volumeName(id)} does not exist on ${this.volumeGroup()}`,
+      );
+    }
+
+    await this.mountVolume(id);
+  }
+
+  private async mountVolume(id: number): Promise<void> {
+    const mountPath = this.volumeMountPath(id);
+
+    await Command.runCommand('sudo', ['mkdir', '-p', mountPath]);
+    await Command.runCommand('sudo', ['mount', this.volumeDevice(id), mountPath]);
+  }
+
+  private async isMounted(mountPath: string): Promise<boolean> {
+    try {
+      await Command.runCommand('sudo', [
+        'findmnt', '--mountpoint', mountPath, '--noheadings',
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async volumeExists(id: number): Promise<boolean> {
+    try {
+      await Command.runCommand('sudo', [
+        'lvs', '--noheadings', this.volumeDevice(id),
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async mountArgs(volumes: AtomVolumeMount[]): Promise<string[]> {
+    const args: string[] = [];
+
+    for (const volume of volumes) {
+      if (!volume.hostPath) {
+        throw new Error(`Volume ${volume.id} has no host path yet`);
+      }
+
+      const id = this.assertVolumeHostPath(volume.hostPath);
+      const destination = this.assertMatches(
+        volume.mountPoint, SAFE_MOUNT_POINT, 'volume mount point',
+      );
+
+      await this.ensureAtomVolumeMounted(volume.hostPath);
+
+      args.push(
+        '--mount',
+        `type=bind,source=${this.volumeDataPath(this.volumeMountPath(id))},destination=${destination}`,
+      );
+    }
+
+    return args;
+  }
+
+  private volumeGroup(): string {
+    const configured = process.env.ATOM_VOLUME_GROUP?.trim();
+    if (!configured) {
+      return DEFAULT_VOLUME_GROUP;
+    }
+
+    return this.assertMatches(configured, SAFE_VOLUME_GROUP, 'volume group');
+  }
+
+  private volumeName(id: number): string {
+    return `atomvol-${id}`;
+  }
+
+  private volumeDevice(id: number): string {
+    return `/dev/${this.volumeGroup()}/${this.volumeName(id)}`;
+  }
+
+  private volumeMountPath(id: number): string {
+    return `${ATOM_VOLUME_ROOT}/${id}`;
+  }
+
+  private volumeDataPath(mountPath: string): string {
+    return `${mountPath}/${ATOM_VOLUME_DATA_DIR}`;
+  }
+
+  private assertVolumeId(volumeId: number): number {
+    if (!Number.isInteger(volumeId) || volumeId <= 0) {
+      throw new TypeError(`Invalid volume id: ${volumeId}`);
+    }
+
+    return volumeId;
+  }
+
+  private assertVolumeHostPath(hostPath: string): number {
+    const id = Number(path.posix.basename(hostPath));
+
+    if (path.posix.normalize(hostPath) !== this.volumeMountPath(id)) {
+      throw new Error(`Invalid volume host path: ${hostPath}`);
+    }
+
+    return this.assertVolumeId(id);
   }
 
   private envArgs(env: AtomEnvironment): string[] {

@@ -9,6 +9,7 @@ interface AtomImageOptionalProps {
   sysctls?: Record<string, string>;
   command?: string[];
   requiredEnvVars?: string[];
+  dataPaths?: string[];
   ownerId?: string;
 }
 
@@ -22,6 +23,7 @@ export class AtomImageEntity extends PatchableEntity {
   public readonly sysctls?: Record<string, string>;
   public readonly command: string[];
   public readonly requiredEnvVars: string[];
+  public readonly dataPaths: string[];
   public readonly ownerId?: string;
 
   constructor(
@@ -42,6 +44,7 @@ export class AtomImageEntity extends PatchableEntity {
     this.sysctls = optionals.sysctls ?? undefined;
     this.command = optionals.command ?? [];
     this.requiredEnvVars = optionals.requiredEnvVars ?? [];
+    this.dataPaths = optionals.dataPaths ?? [];
     this.ownerId = optionals.ownerId ?? undefined;
   }
 
@@ -68,6 +71,7 @@ export class AtomImageEntity extends PatchableEntity {
       sysctls: this.sysctls,
       command: this.command,
       requiredEnvVars: this.requiredEnvVars,
+      dataPaths: this.dataPaths,
       ownerId: this.ownerId,
     };
   }
@@ -88,6 +92,7 @@ export class AtomImageEntity extends PatchableEntity {
         sysctls: data.sysctls,
         command: data.command,
         requiredEnvVars: data.requiredEnvVars,
+        dataPaths: data.dataPaths,
         ownerId: data.ownerId,
       },
     );

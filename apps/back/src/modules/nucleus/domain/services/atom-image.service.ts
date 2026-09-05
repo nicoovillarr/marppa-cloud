@@ -67,6 +67,7 @@ export class AtomImageService {
         sysctls: data.sysctls,
         command: data.command,
         requiredEnvVars: data.requiredEnvVars,
+        dataPaths: data.dataPaths,
         ownerId: data.ownerId,
       },
     );
@@ -97,6 +98,7 @@ export class AtomImageService {
         sysctls: data.sysctls,
         command: data.command,
         requiredEnvVars: data.requiredEnvVars,
+        dataPaths: data.dataPaths,
         ownerId: data.ownerId,
       }),
     );

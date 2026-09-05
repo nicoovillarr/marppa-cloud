@@ -149,6 +149,13 @@ export function NucleusCatalogAdmin() {
       placeholder: "POSTGRES_PASSWORD",
       tooltip: "One variable name per line",
     },
+    {
+      name: "dataPaths",
+      label: "Data paths",
+      type: "stringList",
+      placeholder: "/var/lib/postgresql/data",
+      tooltip: "Container paths this image keeps its state in, one per line",
+    },
   ];
 
   return (

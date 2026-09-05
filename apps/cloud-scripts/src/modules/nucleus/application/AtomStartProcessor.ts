@@ -18,7 +18,12 @@ import { getEventStates } from '@/shared/domain/EventStateMachine';
 import { rootOnlyCapabilities } from '@marppa-cloud/shared';
 
 type AtomWithRelations = Prisma.AtomGetPayload<{
-  include: { image: true; envVars: true; node: { include: { zone: true } } };
+  include: {
+    image: true;
+    envVars: true;
+    volumes: { where: { status: { not: 'DELETED' } } };
+    node: { include: { zone: true } };
+  };
 }>;
 
 const STATES = getEventStates(EventType.ATOM_START);
@@ -62,7 +67,12 @@ export class AtomStartProcessor implements IEventProcessor {
           id: resourceAtom.resourceId,
           status: { not: ResourceStatus.DELETED },
         },
-        include: { image: true, envVars: true, node: { include: { zone: true } } },
+        include: {
+          image: true,
+          envVars: true,
+          volumes: { where: { status: { not: ResourceStatus.DELETED } } },
+          node: { include: { zone: true } },
+        },
       });
 
       if (!atom) {
@@ -136,6 +146,11 @@ export class AtomStartProcessor implements IEventProcessor {
         },
         Object.fromEntries(atom.envVars.map((envVar) => [envVar.key, envVar.value])),
         atom,
+        atom.volumes.map((volume) => ({
+          id: volume.id,
+          mountPoint: volume.mountPoint,
+          hostPath: volume.hostPath,
+        })),
       );
 
       await updateAtomStatus(STATES.ok);

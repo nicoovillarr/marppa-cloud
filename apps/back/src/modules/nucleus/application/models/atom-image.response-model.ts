@@ -13,6 +13,7 @@ export class AtomImageResponseModel {
   @Expose() sysctls: Record<string, string> | null;
   @Expose() command: string[];
   @Expose() requiredEnvVars: string[];
+  @Expose() dataPaths: string[];
   @Expose() defaultSizeId: number;
   @Expose() ownerId: string | null;
 }

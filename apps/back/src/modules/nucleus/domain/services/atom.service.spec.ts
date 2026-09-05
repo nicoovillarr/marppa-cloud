@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AtomService } from './atom.service';
 import { AtomSizeService } from './atom-size.service';
 import { AtomImageService } from './atom-image.service';
+import { ATOM_VOLUME_REPOSITORY_SYMBOL } from '../repositories/atom-volume.repository';
 import {
   ATOM_REPOSITORY_SYMBOL,
   AtomRepository,
@@ -54,6 +55,11 @@ describe('AtomService', () => {
     update: jest.fn(),
   };
 
+  const mockAtomVolumeRepository = {
+    findByAtomId: jest.fn(async () => []),
+    update: jest.fn(),
+  };
+
   const mockAtomImageService = { findById: jest.fn() };
   const mockAtomSizeService = { findById: jest.fn() };
   const mockHostCapacityService = {
@@ -77,6 +83,10 @@ describe('AtomService', () => {
         },
         AtomService,
         { provide: ATOM_REPOSITORY_SYMBOL, useValue: mockAtomRepository },
+        {
+          provide: ATOM_VOLUME_REPOSITORY_SYMBOL,
+          useValue: mockAtomVolumeRepository,
+        },
         { provide: AtomImageService, useValue: mockAtomImageService },
         { provide: AtomSizeService, useValue: mockAtomSizeService },
         { provide: HostCapacityService, useValue: mockHostCapacityService },

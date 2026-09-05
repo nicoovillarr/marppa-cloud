@@ -3,6 +3,10 @@ import {
   ATOM_REPOSITORY_SYMBOL,
   AtomRepository,
 } from '../repositories/atom.repository';
+import {
+  ATOM_VOLUME_REPOSITORY_SYMBOL,
+  AtomVolumeRepository,
+} from '../repositories/atom-volume.repository';
 import { AtomEntity } from '../entities/atom.entity';
 import { AtomWithRelationsModel } from '../models/atom-with-relations.model';
 import { AtomInvalidStatusError } from '../errors/atom-invalid-status.error';
@@ -30,6 +34,9 @@ export class AtomService {
   constructor(
     @Inject(ATOM_REPOSITORY_SYMBOL)
     private readonly atomRepository: AtomRepository,
+
+    @Inject(ATOM_VOLUME_REPOSITORY_SYMBOL)
+    private readonly atomVolumeRepository: AtomVolumeRepository,
 
     private readonly atomImageService: AtomImageService,
 
@@ -226,6 +233,7 @@ export class AtomService {
     });
 
     await this.save(updated);
+    await this.releaseVolumes(id, user.userId);
   }
 
   /**
@@ -236,6 +244,16 @@ export class AtomService {
    * `SYSTEM_RESET` uses. Grading here rather than reading a flag off the row
    * means a capability nobody reviewed is restricted instead of overlooked.
    */
+  private async releaseVolumes(atomId: string, userId: string): Promise<void> {
+    const volumes = await this.atomVolumeRepository.findByAtomId(atomId);
+
+    for (const volume of volumes) {
+      await this.atomVolumeRepository.update(
+        volume.clone({ atomId: null, updatedBy: userId }),
+      );
+    }
+  }
+
   private async assertImageAllowed(image: AtomImageEntity): Promise<void> {
     const forbidden = forbiddenCapabilities(image.capabilities);
     if (forbidden.length) {

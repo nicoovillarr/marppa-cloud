@@ -59,6 +59,11 @@ export class CreateAtomImageDto {
   @IsOptional()
   requiredEnvVars?: string[];
 
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  dataPaths?: string[];
+
   @IsString()
   @IsOptional()
   ownerId?: string;
