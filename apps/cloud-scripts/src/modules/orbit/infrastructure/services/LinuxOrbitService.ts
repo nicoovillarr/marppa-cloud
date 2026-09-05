@@ -17,6 +17,7 @@ const PUBLIC_IP_URL = 'https://api.ipify.org';
 const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
 const DDCLIENT_TTL_SECONDS = 120;
 const DDCLIENT_TIMEOUT_MS = 30_000;
+const HTTPS_PORT = 443;
 
 
 interface PortalConfig {
@@ -334,7 +335,9 @@ export class LinuxOrbitService extends OrbitService {
       );
     }
 
-    const target = `http://${this.sanitizeProxyTarget(ip)}:${this.sanitizePort(t.port)}`;
+    const port = this.sanitizePort(t.port);
+    const scheme = port === HTTPS_PORT ? 'https' : 'http';
+    const target = `${scheme}://${this.sanitizeProxyTarget(ip)}:${port}`;
     const proxyBody: string[] = [];
 
     if (t.allowCookies === false) {
@@ -342,9 +345,16 @@ export class LinuxOrbitService extends OrbitService {
       proxyBody.push('\t\t\theader_down -Set-Cookie');
     }
 
+    const transportBody: string[] = [];
+
+    if (scheme === 'https') transportBody.push('\t\t\t\ttls_insecure_skip_verify');
     if (t.proxyReadTimeout) {
+      transportBody.push(`\t\t\t\tread_timeout ${Number(t.proxyReadTimeout)}s`);
+    }
+
+    if (transportBody.length) {
       proxyBody.push('\t\t\ttransport http {');
-      proxyBody.push(`\t\t\t\tread_timeout ${Number(t.proxyReadTimeout)}s`);
+      proxyBody.push(...transportBody);
       proxyBody.push('\t\t\t}');
     }
 
