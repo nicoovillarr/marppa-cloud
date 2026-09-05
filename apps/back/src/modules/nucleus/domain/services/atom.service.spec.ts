@@ -4,6 +4,7 @@ import { AtomService } from './atom.service';
 import { AtomSizeService } from './atom-size.service';
 import { AtomImageService } from './atom-image.service';
 import { ATOM_VOLUME_REPOSITORY_SYMBOL } from '../repositories/atom-volume.repository';
+import { AtomVolumeEntity } from '../entities/atom-volume.entity';
 import {
   ATOM_REPOSITORY_SYMBOL,
   AtomRepository,
@@ -56,7 +57,7 @@ describe('AtomService', () => {
   };
 
   const mockAtomVolumeRepository = {
-    findByAtomId: jest.fn(async () => []),
+    findByAtomId: jest.fn(),
     update: jest.fn(),
   };
 
@@ -102,6 +103,7 @@ describe('AtomService', () => {
       companyId: 'c-000001',
     } as any);
 
+    mockAtomVolumeRepository.findByAtomId.mockResolvedValue([]);
     mockAtomImageService.findById.mockResolvedValue(mockImage);
     mockAtomSizeService.findById.mockResolvedValue(mockSize);
     mockAtomRepository.create.mockResolvedValue(mockAtom);
@@ -200,6 +202,43 @@ describe('AtomService', () => {
         HostCapacityExceededError,
       );
       expect(repository.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteAtom', () => {
+    const inactiveAtom = mockAtom.clone({ status: ResourceStatus.INACTIVE });
+
+    beforeEach(() => {
+      mockAtomRepository.findById.mockResolvedValue(inactiveAtom);
+      mockAtomRepository.update.mockImplementation((e) => e);
+      mockAtomVolumeRepository.update.mockImplementation((e) => e);
+    });
+
+    it('releases every volume the atom held', async () => {
+      const attached = new AtomVolumeEntity(
+        'cache data',
+        ResourceStatus.INACTIVE,
+        1,
+        '/data',
+        'c-000001',
+        'u-000001',
+        { id: 7, atomId: 'a-000001' },
+      );
+      mockAtomVolumeRepository.findByAtomId.mockResolvedValue([attached]);
+
+      await service.deleteAtom('a-000001');
+
+      const released = mockAtomVolumeRepository.update.mock.calls[0][0];
+      expect(released.id).toBe(7);
+      expect(released.atomId).toBeNull();
+    });
+
+    it('leaves the volume repository alone when the atom had none', async () => {
+      mockAtomVolumeRepository.findByAtomId.mockResolvedValue([]);
+
+      await service.deleteAtom('a-000001');
+
+      expect(mockAtomVolumeRepository.update).not.toHaveBeenCalled();
     });
   });
 });
