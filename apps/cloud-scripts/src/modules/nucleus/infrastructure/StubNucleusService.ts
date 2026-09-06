@@ -63,7 +63,7 @@ export class StubNucleusService extends NucleusService {
     sizeGiB: number,
   ): Promise<string> {
     console.log(`[STUB] createAtomVolume: id=${volumeId} size=${sizeGiB}GiB`);
-    return `/var/lib/marppa/atom-volumes/${volumeId}`;
+    return `/dev/vg_data/atomvol-${volumeId}`;
   }
 
   public async deleteAtomVolume(hostPath: string): Promise<boolean> {
@@ -71,8 +71,8 @@ export class StubNucleusService extends NucleusService {
     return true;
   }
 
-  public async ensureAtomVolumeMounted(hostPath: string): Promise<void> {
-    console.log(`[STUB] ensureAtomVolumeMounted: ${hostPath}`);
+  public async ensureAtomVolumeRegistered(hostPath: string): Promise<void> {
+    console.log(`[STUB] ensureAtomVolumeRegistered: ${hostPath}`);
   }
 
   public async reconcileAtoms(expectedIds: string[]): Promise<string[]> {

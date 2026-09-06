@@ -152,32 +152,41 @@ An atom's container is rebuilt from its row on every `ATOM_START`, so anything t
 writes outside a volume is gone on the next start. `AtomVolume` is the persistent piece.
 
 One volume is one **LVM logical volume**, `atomvol-<id>` on the volume group named by
-`ATOM_VOLUME_GROUP` (default `vg_data`), formatted ext4 and mounted at
-`/var/lib/marppa/atom-volumes/<id>`. LVM rather than a directory because `sizeGiB` has to
-be a real cap: a bind mount with no quota lets one atom fill the host filesystem and take
-the workers and every other zone's atoms down with it.
+`ATOM_VOLUME_GROUP` (default `vg_data`), formatted ext4. LVM rather than a directory
+because `sizeGiB` has to be a real cap: a bind mount with no quota lets one atom fill the
+host filesystem and take the workers and every other zone's atoms down with it.
 
-**The container is bound to the `data/` subdirectory of the mount, not to the mount root.**
-A freshly formatted ext4 filesystem contains `lost+found`, and images that insist on an
-empty data directory — Postgres' `initdb` is the one that bites first — refuse to start on
-it. Binding one level down makes every image see an empty directory on first use, with no
-per-image special cases in the catalog.
+**The worker never mounts it — Docker does.** Volume creation registers a local Docker
+volume (`--driver local --opt type=ext4 --opt device=/dev/<vg>/atomvol-<id>`) and the
+container gets `--mount type=volume,source=atomvol-<id>,volume-subpath=data`. Docker
+mounts the device itself, at container start, in the host's mount namespace.
 
-The host directory stays root-owned. Official images (redis, postgres) run their entrypoint
+That indirection is not a preference, it is the only thing that works. `cloud-script.service`
+runs with `ProtectSystem=` and `ProtectHome=`, which give the unit its own mount namespace
+with **slave** propagation. A `mount` issued by the worker is therefore visible only inside
+that namespace: `/proc/1/mountinfo` never sees it, and Docker — which lives in the host
+namespace — would bind the empty directory underneath and let the atom write to the root
+filesystem believing it had persisted. A `findmnt` check from the worker cannot catch this,
+because inside the worker's own namespace the mount is genuinely there.
+
+**The container is given the `data` subdirectory of the filesystem, not its root.** A freshly
+formatted ext4 filesystem contains `lost+found`, and images that insist on an empty data
+directory — Postgres' `initdb` is the one that bites first — refuse to start on it. Since
+nothing may mount the filesystem to create that directory, `mkfs.ext4 -d <seed>` populates
+it at format time from a throwaway seed directory.
+
+The filesystem is created root-owned. Official images (redis, postgres) run their entrypoint
 as root and `chown` their data directory before dropping privilege, which is exactly what
 `BASELINE_CAPABILITIES` keeps `CHOWN`, `SETUID`, `SETGID` and `DAC_OVERRIDE` for.
 
-`startAtom` mounts each volume with
-`--mount type=bind,source=<mount>/data,destination=<mountPoint>` and derives `source`
-from the volume id alone. The `hostPath` on the row is never trusted as a path: an atom
-that could pick its own source would mount `/etc` or the Docker socket and walk out of the
-zone isolation the whole design rests on.
+`AtomStartProcessor` calls `ensureAtomVolumeRegistered` for every volume before the
+`docker run`, which recreates the Docker volume record if it is missing — after a host
+rebuild, or a `docker volume prune` — and fails the start when the logical volume itself is
+gone, rather than starting an atom whose data is not there.
 
-Before the `docker run`, the processor calls `ensureAtomVolumeMounted` for every volume,
-which checks `findmnt` and mounts the LV if it is missing. This is not a convenience: a
-bind mount whose source is an unmounted directory succeeds silently, and the atom would
-write into the root filesystem believing it had persisted. The same call is what remounts
-volumes after a host reboot.
+An atom with no volume attached is not neutral: images that declare `VOLUME` in their
+Dockerfile (redis, postgres and minecraft all do) make Docker invent an anonymous volume
+per container, so the data survives nothing and the discarded volumes pile up on the host.
 
 **Attach and detach have no events**, unlike `WorkerDisk`. A VM disk is attached hot
 through libvirt; an atom is rebuilt whole on every start, so attaching is a row change
@@ -243,9 +252,6 @@ $USER ALL=(ALL) NOPASSWD: \
   /usr/sbin/lvremove, \
   /usr/sbin/lvs, \
   /usr/sbin/mkfs.ext4, \
-  /usr/bin/mount, \
-  /usr/bin/umount, \
-  /usr/bin/findmnt, \
   /usr/local/sbin/reset-dnsmasq.sh
 EOF
 
@@ -256,10 +262,11 @@ rm /tmp/cloud-scripts.sudoers
 sudo -n true && echo "passwordless sudo OK"      # preflight checks this
 ```
 
-The last seven entries are what the atom volume lifecycle needs. `mount` and `lvcreate`
-under sudo are root in practice — whoever holds them can mount anything anywhere — so this
-grant is wider than it looks. It buys a real per-volume quota; the alternative, plain bind
-directories, has no cap at all and lets one atom take the host's filesystem down.
+The last four entries are what the atom volume lifecycle needs. `lvcreate` under sudo is
+root in practice, so this grant is wider than it looks. It buys a real per-volume quota;
+the alternative, plain bind directories, has no cap at all and lets one atom take the
+host's filesystem down. Mounting is deliberately absent: Docker performs it, for the
+reason in *Atom volumes* above.
 
 Paths are host-specific, and `which` is the wrong way to resolve them: sudo walks its
 own `secure_path` (`/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`) and
@@ -803,7 +810,7 @@ abort when any transponder still pointed at its node, which left the worker stuc
 | `/var/lib/libvirt/images/<os>-<family>-<version>.img` | worker create | shared base image (`.prepared` marker next to it) |
 | `/var/lib/libvirt/images/w-*.img` | worker create | per-worker disk |
 | `/var/lib/libvirt/cloud-init/w-*/` | worker create / node assign | `user-data`, `meta-data`, `network-config`, `seed-*.iso` |
-| `/var/lib/marppa/atom-volumes/<id>` | atom volume create | ext4 mount of `atomvol-<id>`; the container binds its `data/` subdirectory |
+| `/dev/<vg>/atomvol-<id>` | atom volume create | ext4 logical volume; Docker mounts it and the container gets its `data/` subdirectory |
 | `/etc/sysctl.d/99-cloud-scripts.conf` | startup | `net.ipv4.ip_forward=1` |
 
 ---

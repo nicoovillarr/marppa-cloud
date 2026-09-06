@@ -1,5 +1,9 @@
 import { forbiddenCapabilities } from '@marppa-cloud/shared';
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
+
+const fsPromises = fs.promises;
 import { Command } from '@/libs/Command';
 import { Injectable } from '@/decorators/Injectable';
 import {
@@ -31,7 +35,6 @@ const SAFE_COMMAND_TOKEN = /^[^\r\n\0]+$/;
 const SAFE_MOUNT_POINT = /^\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
 const SAFE_VOLUME_GROUP = /^[A-Za-z0-9._+-]+$/;
 
-const ATOM_VOLUME_ROOT = '/var/lib/marppa/atom-volumes';
 const ATOM_VOLUME_DATA_DIR = 'data';
 const DEFAULT_VOLUME_GROUP = 'vg_data';
 
@@ -148,7 +151,7 @@ export class DockerNucleusService extends NucleusService {
       return false;
     }
 
-    await this.docker(['rm', '--force', atomId]);
+    await this.docker(['rm', '--force', '--volumes', atomId]);
 
     return true;
   }
@@ -290,35 +293,31 @@ export class DockerNucleusService extends NucleusService {
     }
 
     const name = this.volumeName(id);
-    const mountPath = this.volumeMountPath(id);
 
-    if (await this.volumeExists(id)) {
+    if (await this.logicalVolumeExists(id)) {
       throw new Error(
         `Volume ${name} already exists on ${this.volumeGroup()}: remove it before recreating it`,
       );
     }
 
-    console.log(`Creating ${sizeGiB}GiB volume ${name} at ${mountPath}`);
+    console.log(`Creating ${sizeGiB}GiB volume ${name}`);
 
     await Command.runCommand('sudo', [
       'lvcreate', '--yes', '--size', `${sizeGiB}G`, '--name', name, this.volumeGroup(),
     ]);
-    await Command.runCommand('sudo', ['mkfs.ext4', '-q', '-L', name, this.volumeDevice(id)]);
 
-    await this.mountVolume(id);
-    await Command.runCommand('sudo', ['mkdir', '-p', this.volumeDataPath(mountPath)]);
+    await this.formatWithDataDirectory(id);
+    await this.registerDockerVolume(id);
 
-    return mountPath;
+    return this.volumeDevice(id);
   }
 
   public async deleteAtomVolume(hostPath: string): Promise<boolean> {
     const id = this.assertVolumeHostPath(hostPath);
 
-    if (await this.isMounted(this.volumeMountPath(id))) {
-      await Command.runCommand('sudo', ['umount', this.volumeMountPath(id)]);
-    }
+    await this.docker(['volume', 'rm', '--force', this.volumeName(id)]);
 
-    if (!(await this.volumeExists(id))) {
+    if (!(await this.logicalVolumeExists(id))) {
       console.log(`Volume ${this.volumeName(id)} is already gone`);
       return false;
     }
@@ -330,41 +329,58 @@ export class DockerNucleusService extends NucleusService {
     return true;
   }
 
-  public async ensureAtomVolumeMounted(hostPath: string): Promise<void> {
+  public async ensureAtomVolumeRegistered(hostPath: string): Promise<void> {
     const id = this.assertVolumeHostPath(hostPath);
 
-    if (await this.isMounted(this.volumeMountPath(id))) {
-      return;
-    }
-
-    if (!(await this.volumeExists(id))) {
+    if (!(await this.logicalVolumeExists(id))) {
       throw new Error(
         `Volume ${this.volumeName(id)} does not exist on ${this.volumeGroup()}`,
       );
     }
 
-    await this.mountVolume(id);
+    await this.registerDockerVolume(id);
   }
 
-  private async mountVolume(id: number): Promise<void> {
-    const mountPath = this.volumeMountPath(id);
+  private async formatWithDataDirectory(id: number): Promise<void> {
+    const seed = await fsPromises.mkdtemp(
+      path.join(os.tmpdir(), `atomvol-${id}-`),
+    );
 
-    await Command.runCommand('sudo', ['mkdir', '-p', mountPath]);
-    await Command.runCommand('sudo', ['mount', this.volumeDevice(id), mountPath]);
-  }
-
-  private async isMounted(mountPath: string): Promise<boolean> {
     try {
+      await fsPromises.mkdir(path.join(seed, ATOM_VOLUME_DATA_DIR));
+
       await Command.runCommand('sudo', [
-        'findmnt', '--mountpoint', mountPath, '--noheadings',
+        'mkfs.ext4', '-q', '-L', this.volumeName(id),
+        '-d', seed, this.volumeDevice(id),
       ]);
-      return true;
-    } catch {
-      return false;
+    } finally {
+      await fsPromises.rm(seed, { recursive: true, force: true });
     }
   }
 
-  private async volumeExists(id: number): Promise<boolean> {
+  private async registerDockerVolume(id: number): Promise<void> {
+    if (await this.dockerVolumeExists(id)) {
+      return;
+    }
+
+    await this.docker([
+      'volume', 'create',
+      '--driver', 'local',
+      '--opt', 'type=ext4',
+      '--opt', `device=${this.volumeDevice(id)}`,
+      this.volumeName(id),
+    ]);
+  }
+
+  private async dockerVolumeExists(id: number): Promise<boolean> {
+    const output = await this.docker([
+      'volume', 'ls', '--quiet', '--filter', `name=^${this.volumeName(id)}$`,
+    ]);
+
+    return output.trim().length > 0;
+  }
+
+  private async logicalVolumeExists(id: number): Promise<boolean> {
     try {
       await Command.runCommand('sudo', [
         'lvs', '--noheadings', this.volumeDevice(id),
@@ -388,11 +404,12 @@ export class DockerNucleusService extends NucleusService {
         volume.mountPoint, SAFE_MOUNT_POINT, 'volume mount point',
       );
 
-      await this.ensureAtomVolumeMounted(volume.hostPath);
+      await this.ensureAtomVolumeRegistered(volume.hostPath);
 
       args.push(
         '--mount',
-        `type=bind,source=${this.volumeDataPath(this.volumeMountPath(id))},destination=${destination}`,
+        `type=volume,source=${this.volumeName(id)},destination=${destination}` +
+        `,volume-subpath=${ATOM_VOLUME_DATA_DIR}`,
       );
     }
 
@@ -416,14 +433,6 @@ export class DockerNucleusService extends NucleusService {
     return `/dev/${this.volumeGroup()}/${this.volumeName(id)}`;
   }
 
-  private volumeMountPath(id: number): string {
-    return `${ATOM_VOLUME_ROOT}/${id}`;
-  }
-
-  private volumeDataPath(mountPath: string): string {
-    return `${mountPath}/${ATOM_VOLUME_DATA_DIR}`;
-  }
-
   private assertVolumeId(volumeId: number): number {
     if (!Number.isInteger(volumeId) || volumeId <= 0) {
       throw new TypeError(`Invalid volume id: ${volumeId}`);
@@ -433,9 +442,9 @@ export class DockerNucleusService extends NucleusService {
   }
 
   private assertVolumeHostPath(hostPath: string): number {
-    const id = Number(path.posix.basename(hostPath));
+    const id = Number(path.posix.basename(hostPath).replace('atomvol-', ''));
 
-    if (path.posix.normalize(hostPath) !== this.volumeMountPath(id)) {
+    if (path.posix.normalize(hostPath) !== this.volumeDevice(id)) {
       throw new Error(`Invalid volume host path: ${hostPath}`);
     }
 

@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuTrash2 } from "react-icons/lu";
 import { Button } from "@/core/ui/Button";
 import { StatusBadge } from "@/core/ui/StatusBadge";
-import { ResourceStatus } from "@/core/models/resource-status.enum";
+import { ResourceStatus, STATUS_KIND } from "@/core/models/resource-status.enum";
 import { AtomVolumeResponseDto } from "../api/atom-volume.api.types";
 import { useAtomVolume } from "../models/use-atom-volume";
 
@@ -15,6 +15,7 @@ interface AtomVolumesSectionProps {
 }
 
 const DEFAULT_SIZE_GIB = 1;
+const SETTLE_POLL_MS = 3000;
 
 export function AtomVolumesSection({
   atomId,
@@ -46,14 +47,26 @@ export function AtomVolumesSection({
     [volumes, atomId],
   );
 
-  const attachable = useMemo(
-    () =>
-      volumes.filter(
-        (volume) =>
-          volume.atomId == null && volume.status === ResourceStatus.INACTIVE,
-      ),
+  const unattached = useMemo(
+    () => volumes.filter((volume) => volume.atomId == null),
     [volumes],
   );
+
+  const settling = useMemo(
+    () => volumes.some((volume) => STATUS_KIND[volume.status] === "transition"),
+    [volumes],
+  );
+
+  const poll = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!settling) return;
+
+    poll.current = setInterval(reload, SETTLE_POLL_MS);
+    return () => {
+      if (poll.current) clearInterval(poll.current);
+    };
+  }, [settling, reload]);
 
   const runAndReload = async (action: Promise<boolean>) => {
     if (await action) await reload();
@@ -115,10 +128,10 @@ export function AtomVolumesSection({
         </ul>
       )}
 
-      {editable && attachable.length > 0 && (
+      {editable && unattached.length > 0 && (
         <div className="space-y-1">
-          <p className="text-xs text-ink-muted">Available volumes</p>
-          {attachable.map((volume: AtomVolumeResponseDto) => (
+          <p className="text-xs text-ink-muted">Unattached volumes</p>
+          {unattached.map((volume: AtomVolumeResponseDto) => (
             <div
               key={volume.id}
               className="flex items-center justify-between gap-2 text-sm border border-border dark: rounded px-2 py-1"
@@ -130,15 +143,16 @@ export function AtomVolumesSection({
                 </span>
               </span>
               <span className="flex items-center gap-2 shrink-0">
+                <StatusBadge status={volume.status} />
                 <Button
                   text="Attach"
-                  disabled={busy}
+                  disabled={busy || volume.status !== ResourceStatus.INACTIVE}
                   onClick={() => runAndReload(attachVolume(volume, atomId))}
                 />
                 <Button
                   icon={<LuTrash2 />}
                   style="danger"
-                  disabled={busy}
+                  disabled={busy || volume.status !== ResourceStatus.INACTIVE}
                   onClick={() => runAndReload(deleteVolume(volume))}
                 />
               </span>
