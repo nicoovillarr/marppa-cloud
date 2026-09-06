@@ -308,6 +308,150 @@ Only workers created **after** this feature shipped have a console password on
 record; earlier workers have `consolePassword = NULL` and the console stays
 unavailable for them.
 
+## Certificate distribution
+
+Caddy owns every certificate on this host: it issues them, renews them, and keeps them
+under `/var/lib/caddy/.local/share/caddy/certificates/<acme-directory>/<domain>/` as
+`<domain>.crt` (fullchain) and `<domain>.key`, mode `0600` `caddy:caddy`. Processes that
+are not Caddy — an atom that wants TLS on its own port, a service on a VM — cannot read
+that directory and have no way to learn that a renewal happened.
+
+`sync-marppa-certs.sh` is the distributor. It reads a manifest of destinations, copies
+each certificate to each one, and runs that destination's reload command **only when the
+file's content actually changed**. It is not about Redis and knows nothing about atoms:
+a destination is a path on a machine plus the permissions the consumer needs.
+
+### The manifest
+
+`deploy/cert-targets.json`, installed on the host as `/etc/marppa/cert-targets.json`:
+
+```json
+{
+  "store": "/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory",
+  "sshKey": "/root/.ssh/marppa-cert-sync",
+  "targets": [
+    {
+      "domain": "host.cloud.marppa.com",
+      "host": "local",
+      "path": "/etc/marppa/certs/host.cloud.marppa.com",
+      "owner": "999:999",
+      "dirMode": "0750",
+      "certMode": "0644",
+      "keyMode": "0640",
+      "reload": "/usr/bin/docker restart a-cfeb4c"
+    },
+    {
+      "domain": "api.stg.enlagondola.com",
+      "host": "10.0.0.2",
+      "path": "/srv/elg/certs",
+      "owner": "1000:1000",
+      "reload": "cd /srv/elg && docker compose restart api"
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `store` | Caddy's certificate directory. Resolve it per host — the layout differs between a package install and a container. `find /var/lib/caddy /home/caddy -type d -name "<domain>"` |
+| `sshKey` | Private key root uses to reach every remote destination. Defaults to `/root/.ssh/marppa-cert-sync` |
+| `domain` | Subdirectory in the store, and the basename of both files at the destination |
+| `host` | `local` for a path on the home-server itself (no ssh at all), otherwise the address the sync connects to as `root` |
+| `path` | Destination directory, created if absent |
+| `owner` | `uid:gid` the destination files get. Required, no default |
+| `dirMode` / `certMode` / `keyMode` | Octal. Default `0750` / `0644` / `0640` |
+| `reload` | Shell command run on the destination when a file changed. Empty means nothing to reload |
+
+### Permissions are the part that bites
+
+Caddy writes `0600 caddy:caddy`. Most containers run as a non-root user — `redis:7-alpine`
+is uid/gid 999 — so a key copied verbatim is unreadable inside the container and the
+process dies at startup. The answer is **not** `0644` on a private key. Each destination
+declares the `owner` its consumer actually runs as, and the key lands `0640` owned by
+that uid, group-readable only. The `.crt` is public and stays `0644`.
+
+`owner` is deliberately required. A default would be a default private-key owner, which
+is exactly the value nobody should get wrong silently.
+
+### Why the reload is conditional
+
+The destinations are live services. Redis in particular does not reload certificates in
+place, so the reload command has to restart the container — which means a sync that
+reloaded unconditionally would bounce every TLS consumer on the host once a day for no
+reason.
+
+Change detection is `rsync --checksum --itemize-changes`: content is compared by hash, and
+only an itemized line starting with `>f` (a file actually transferred) counts as a change.
+An owner or mode correction itemizes as `.f...og...` and deliberately does **not** fire the
+reload.
+
+### SSH requirement for remote destinations
+
+Every remote destination needs root-to-root SSH from the home-server, because only root at
+the far end can `chown` the key to an arbitrary uid:
+
+```bash
+sudo ssh-keygen -t ed25519 -N '' -f /root/.ssh/marppa-cert-sync -C marppa-cert-sync
+sudo cat /root/.ssh/marppa-cert-sync.pub
+# append to /root/.ssh/authorized_keys on each destination
+```
+
+A missing key, an unreachable host or a certificate Caddy has not issued yet are reported
+on stderr and make the run exit non-zero, so a broken destination shows up as a failed
+unit in `systemctl status` instead of a certificate that quietly stopped being delivered.
+One failing destination does not stop the others.
+
+Restrict the key at the far end (`command=`, `from=`) if the destination is not fully
+trusted — the grant as written is unrestricted root.
+
+### Schedule
+
+`marppa-cert-sync.timer` runs the sync daily with a 30-minute jitter and `Persistent=true`,
+so a host that was off at the scheduled time catches up on boot. Daily is far more often
+than Let's Encrypt's 60-day renewal, which is the point: the run is a cheap no-op on every
+day but the one that matters.
+
+### Install
+
+```bash
+sudo install -m 0755 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/sync-marppa-certs.sh \
+  /usr/local/sbin/sync-marppa-certs.sh
+
+sudo install -d -m 0755 -o root -g root /etc/marppa
+sudo install -m 0640 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cert-targets.json \
+  /etc/marppa/cert-targets.json
+
+sudo install -m 0644 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/marppa-cert-sync.service \
+  /etc/systemd/system/marppa-cert-sync.service
+sudo install -m 0644 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/marppa-cert-sync.timer \
+  /etc/systemd/system/marppa-cert-sync.timer
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now marppa-cert-sync.timer
+sudo systemctl start marppa-cert-sync.service   # first run, watch the output
+```
+
+The script and the manifest are installed by hand and **not** by the deploy pipeline, unlike
+the unit, the sudoers file and the Caddyfile. Those three go through validating wrappers
+precisely because `cloud-deploy` controls the deploy tree; the manifest has no equivalent
+validation, and it holds a `reload` command that root executes. Syncing it from `/opt`
+would hand `cloud-deploy` a root shell. Changing a destination is therefore a reviewed
+commit plus one `install` run as `nvillar`.
+
+### Consumers inside atoms
+
+An atom cannot see `/etc/marppa/certs` today. `DockerNucleusService.mountArgs` only emits
+`--mount type=volume,source=atomvol-<n>,…` for LVM-backed `AtomVolume` rows; there is no
+bind-mount path from a host directory into a container, and adding one needs a schema
+field on `AtomImage` so an image can declare which certificate it wants and where.
+
+Until that exists, the useful destinations for this sync are the home-server's own services
+and remote machines — not atoms.
+
 ## Secrets / `.env`
 
 Nothing goes into GitHub secrets. The host keeps its own

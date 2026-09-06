@@ -1,0 +1,16 @@
+{
+  "store": "/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory",
+  "sshKey": "/root/.ssh/marppa-cert-sync",
+  "targets": [
+    {
+      "domain": "host.cloud.marppa.com",
+      "host": "local",
+      "path": "/etc/marppa/certs/host.cloud.marppa.com",
+      "owner": "999:999",
+      "dirMode": "0750",
+      "certMode": "0644",
+      "keyMode": "0640",
+      "reload": ""
+    }
+  ]
+}
