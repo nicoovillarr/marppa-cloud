@@ -183,7 +183,7 @@ export class AtomService {
     }
 
     const entity = await this.findById(id);
-    this.assertStatus(entity, ResourceStatus.ACTIVE);
+    this.assertStatus(entity, [ResourceStatus.ACTIVE, ResourceStatus.FAILED]);
 
     const updated = entity.clone({
       status: getEventStateTransition(EventTypeKey.ATOM_TERMINATE).entry,
