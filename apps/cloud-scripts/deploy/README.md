@@ -5,6 +5,32 @@ lives on the host, syncs the result to `/opt/cloud-script/marppa-cloud` and
 restarts the `cloud-script` service. It replaces the manual "pull + restart"
 loop.
 
+## Deployment topology
+
+One repo, three deployables, two pipelines that do not know about each other:
+
+| What | Where | Configured in |
+| --- | --- | --- |
+| `apps/cloud-scripts` | the home-server, via the self-hosted runner | this workflow |
+| `apps/back` | Render | Render's dashboard |
+| `apps/front` | Render | Render's dashboard |
+
+Nothing in this repository describes the Render side — no `render.yaml`, no build command,
+no environment. Read that in the dashboard, and expect to be surprised by it.
+
+**Render owns the database migrations.** It runs `prisma migrate deploy` as part of its own
+deploy; this workflow deliberately does not, so the schema has exactly one writer.
+
+Both pipelines fire on the same push to `master` and reach the same database, with no
+ordering between them. That matters for any commit that changes the schema: if the
+self-hosted runner finishes first, `cloud-script` restarts with a Prisma client that selects
+a column Render has not created yet, and every query on that model fails until Render
+catches up. It heals on its own, but the events that failed in between stay failed.
+
+The safe direction is old code against a new schema, which is why schema changes want the
+expand/contract shape — add the column in one commit, stop reading it in a later one, drop
+it in a third.
+
 ## Pipeline
 
 Triggered on push to `master` (paths under `apps/cloud-scripts/**`,
