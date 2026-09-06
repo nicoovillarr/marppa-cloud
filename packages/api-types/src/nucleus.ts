@@ -86,6 +86,7 @@ export interface AtomImageResponse {
   architecture: string;
   capabilities: string[];
   dataPaths: string[];
+  certMountPoint: string | null;
   defaultSizeId: number;
 }
 

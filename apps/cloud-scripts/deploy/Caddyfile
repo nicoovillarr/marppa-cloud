@@ -11,4 +11,8 @@ ws.cloud.marppa.com {
 	}
 }
 
+host.cloud.marppa.com {
+	redir https://cloud.marppa.com{uri}
+}
+
 import sites/*.caddy

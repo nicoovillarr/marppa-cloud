@@ -19,13 +19,15 @@ Triggered on push to `master` (paths under `apps/cloud-scripts/**`,
 6. `rsync` the tree into `/opt/cloud-script/marppa-cloud`, preserving `.env*`
    and `.logs`
 7. write `DEPLOYED_SHA` (commit, ref, timestamp) at the root of the deploy tree
-8. `sudo /usr/local/sbin/install-cloud-script-sudoers.sh` — installs the runtime
+8. `sudo /usr/local/sbin/run-cloud-script-migrations.sh` — applies pending Prisma
+   migrations against the runtime database
+9. `sudo /usr/local/sbin/install-cloud-script-sudoers.sh` — installs the runtime
    sudo grant only when it changed, before the new code can need it
-9. `sudo /usr/local/sbin/install-cloud-script-unit.sh` — installs the unit only
-   when it changed
-10. `sudo /usr/local/sbin/install-cloud-script-caddyfile.sh` — installs the
+10. `sudo /usr/local/sbin/install-cloud-script-unit.sh` — installs the unit only
+    when it changed
+11. `sudo /usr/local/sbin/install-cloud-script-caddyfile.sh` — installs the
     hand-written Caddy config only when it changed, and reloads Caddy
-11. `sudo systemctl restart cloud-script`
+12. `sudo systemctl restart cloud-script`
 
 The runner runs **as the `cloud-deploy` user**, which owns the deploy tree but
 is *not* the user the service runs as. That split matters: `npm ci` executes
@@ -34,8 +36,8 @@ holds passwordless sudo for `nft`, `ip`, `virsh`, `install` and `systemctl`. A
 shared user would hand every one of those to a compromised dependency, plus read
 access to `.env.local`.
 
-`cloud-deploy` gets exactly five privileged actions: the unit, sudoers and
-Caddyfile installers, and `restart`/`is-active` on `cloud-script`.
+`cloud-deploy` gets exactly six privileged actions: the unit, sudoers, Caddyfile
+and migration wrappers, and `restart`/`is-active` on `cloud-script`.
 
 ### Why the unit is installed through a wrapper
 
@@ -83,6 +85,39 @@ mode is always `0777`, which says nothing about the binary behind it.
 
 Widening the grant still takes a reviewed commit. The installer only decides whether what
 was committed is *shaped* safely, never whether it should have been asked for.
+
+### Why migrations run through a wrapper
+
+Until this shipped the pipeline never touched the database: `prisma migrate deploy` was a
+manual step nobody was reminded to run. A commit that adds a column therefore deployed code
+whose Prisma client selects a column the database does not have, and *every* query on that
+model starts failing — not only the feature that added it.
+
+The obstacle was the credential. `DATABASE_URL` lives in
+`apps/cloud-scripts/.env.local`, mode `0600` owned by `cloud-script`; `cloud-deploy` is in
+the `cloud-script` group but the file is not group-readable, so the runner cannot read it.
+Putting the URL in a GitHub secret was the other option and is the one this repo rejects
+everywhere else — see *Secrets / `.env`*.
+
+`run-cloud-script-migrations.sh` runs as root only long enough to read that one variable,
+then hands it to `runuser -u cloud-deploy` with a scrubbed environment (`env -i`, explicit
+`HOME` and `PATH`). The migration itself therefore runs as the unprivileged deploy user,
+which is the point: `npx prisma` executes JavaScript out of the deploy tree, and the deploy
+tree is exactly what `cloud-deploy` controls. Running that as root would hand it a root
+shell, the same hazard the unit and sudoers wrappers exist to close.
+
+What this does widen is `cloud-deploy`'s reach: it now sees `DATABASE_URL`. In practice that
+is not a new boundary — `cloud-deploy` already writes the code `cloud-script` executes, so it
+could always have shipped code that reads the file itself. The wrapper makes the access
+explicit and auditable instead of latent.
+
+Migrations run **after** the rsync, because that is when the new migration files are in the
+tree, and **before** the restart, so the new process never meets an unmigrated database. The
+window in between has new code on disk and an old process in memory: additive migrations are
+invisible to it, destructive ones are not. Expand/contract still applies — a column the old
+code reads should be dropped in a later commit, not the one that stops using it.
+
+A failed migration fails the step and stops the deploy with the old process still serving.
 
 ### Why the Caddyfile is installed through a wrapper
 
@@ -160,13 +195,17 @@ sudo install -m 0755 -o root -g root \
   /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/install-cloud-script-caddyfile.sh \
   /usr/local/sbin/install-cloud-script-caddyfile.sh
 
+sudo install -m 0755 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/run-cloud-script-migrations.sh \
+  /usr/local/sbin/run-cloud-script-migrations.sh
+
 sudo visudo -cf /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cloud-script-deploy.sudoers
 sudo install -m 0440 -o root -g root \
   /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cloud-script-deploy.sudoers \
   /etc/sudoers.d/cloud-script-deploy
 ```
 
-Both installers must live outside the deploy tree. Under `/opt` they would be
+Every wrapper must live outside the deploy tree. Under `/opt` they would be
 writable by `cloud-deploy`, which defeats the point.
 
 The service runs the compiled build:
@@ -307,6 +346,196 @@ existing workers keep running, they just lose console access until recreated.
 Only workers created **after** this feature shipped have a console password on
 record; earlier workers have `consolePassword = NULL` and the console stays
 unavailable for them.
+
+## Certificate distribution
+
+Caddy owns every certificate on this host: it issues them, renews them, and keeps them
+under `/var/lib/caddy/.local/share/caddy/certificates/<acme-directory>/<domain>/` as
+`<domain>.crt` (fullchain) and `<domain>.key`, mode `0600` `caddy:caddy`. Processes that
+are not Caddy — an atom that wants TLS on its own port, a service on a VM — cannot read
+that directory and have no way to learn that a renewal happened.
+
+`sync-marppa-certs.sh` is the distributor. It reads a manifest of destinations, copies
+each certificate to each one, and runs that destination's reload command **only when the
+file's content actually changed**. It is not about Redis and knows nothing about atoms:
+a destination is a path on a machine plus the permissions the consumer needs.
+
+### The manifest
+
+`deploy/cert-targets.json`, installed on the host as `/etc/marppa/cert-targets.json`:
+
+```json
+{
+  "store": "/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory",
+  "sshKey": "/root/.ssh/marppa-cert-sync",
+  "targets": [
+    {
+      "domain": "host.cloud.marppa.com",
+      "host": "local",
+      "path": "/etc/marppa/certs/host.cloud.marppa.com",
+      "owner": "999:999",
+      "dirMode": "0750",
+      "certMode": "0644",
+      "keyMode": "0640",
+      "reload": "/usr/bin/docker restart a-cfeb4c"
+    },
+    {
+      "domain": "api.stg.enlagondola.com",
+      "host": "10.0.0.2",
+      "path": "/srv/elg/certs",
+      "owner": "1000:1000",
+      "reload": "cd /srv/elg && docker compose restart api"
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `store` | Caddy's certificate directory. Resolve it per host — the layout differs between a package install and a container. `find /var/lib/caddy /home/caddy -type d -name "<domain>"` |
+| `sshKey` | Private key root uses to reach every remote destination. Defaults to `/root/.ssh/marppa-cert-sync` |
+| `domain` | Subdirectory in the store, and the basename of both files at the destination |
+| `host` | `local` for a path on the home-server itself (no ssh at all), otherwise the address the sync connects to as `root` |
+| `path` | Destination directory, created if absent |
+| `owner` | `uid:gid` the destination files get. Required, no default |
+| `dirMode` / `certMode` / `keyMode` | Octal. Default `0750` / `0644` / `0640` |
+| `reload` | Shell command run on the destination when a file changed. Empty means nothing to reload |
+
+### Permissions are the part that bites
+
+Caddy writes `0600 caddy:caddy`. Most containers run as a non-root user — `redis:7-alpine`
+is uid/gid 999 — so a key copied verbatim is unreadable inside the container and the
+process dies at startup. The answer is **not** `0644` on a private key. Each destination
+declares the `owner` its consumer actually runs as, and the key lands `0640` owned by
+that uid, group-readable only. The `.crt` is public and stays `0644`.
+
+`owner` is deliberately required. A default would be a default private-key owner, which
+is exactly the value nobody should get wrong silently.
+
+### Why the reload is conditional
+
+The destinations are live services. Redis in particular does not reload certificates in
+place, so the reload command has to restart the container — which means a sync that
+reloaded unconditionally would bounce every TLS consumer on the host once a day for no
+reason.
+
+Change detection is `rsync --checksum --itemize-changes`: content is compared by hash, and
+only an itemized line starting with `>f` (a file actually transferred) counts as a change.
+An owner or mode correction itemizes as `.f...og...` and deliberately does **not** fire the
+reload.
+
+### SSH requirement for remote destinations
+
+Every remote destination needs root-to-root SSH from the home-server, because only root at
+the far end can `chown` the key to an arbitrary uid:
+
+```bash
+sudo ssh-keygen -t ed25519 -N '' -f /root/.ssh/marppa-cert-sync -C marppa-cert-sync
+sudo cat /root/.ssh/marppa-cert-sync.pub
+# append to /root/.ssh/authorized_keys on each destination
+```
+
+A missing key, an unreachable host or a certificate Caddy has not issued yet are reported
+on stderr and make the run exit non-zero, so a broken destination shows up as a failed
+unit in `systemctl status` instead of a certificate that quietly stopped being delivered.
+One failing destination does not stop the others.
+
+Restrict the key at the far end (`command=`, `from=`) if the destination is not fully
+trusted — the grant as written is unrestricted root.
+
+### Schedule
+
+`marppa-cert-sync.timer` runs the sync daily with a 30-minute jitter and `Persistent=true`,
+so a host that was off at the scheduled time catches up on boot. Daily is far more often
+than Let's Encrypt's 60-day renewal, which is the point: the run is a cheap no-op on every
+day but the one that matters.
+
+### Install
+
+```bash
+sudo install -m 0755 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/sync-marppa-certs.sh \
+  /usr/local/sbin/sync-marppa-certs.sh
+
+sudo install -d -m 0755 -o root -g root /etc/marppa
+sudo install -m 0640 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cert-targets.json \
+  /etc/marppa/cert-targets.json
+
+sudo install -m 0644 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/marppa-cert-sync.service \
+  /etc/systemd/system/marppa-cert-sync.service
+sudo install -m 0644 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/marppa-cert-sync.timer \
+  /etc/systemd/system/marppa-cert-sync.timer
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now marppa-cert-sync.timer
+sudo systemctl start marppa-cert-sync.service   # first run, watch the output
+```
+
+The script and the manifest are installed by hand and **not** by the deploy pipeline, unlike
+the unit, the sudoers file and the Caddyfile. Those three go through validating wrappers
+precisely because `cloud-deploy` controls the deploy tree; the manifest has no equivalent
+validation, and it holds a `reload` command that root executes. Syncing it from `/opt`
+would hand `cloud-deploy` a root shell. Changing a destination is therefore a reviewed
+commit plus one `install` run as `nvillar`.
+
+### Consumers inside atoms
+
+An `AtomImage` declares `certMountPoint`, the container path where it expects TLS material.
+When it is set, `startAtom` adds
+
+```
+--mount type=bind,source=$ATOM_CERT_ROOT/$ATOM_CERT_DOMAIN,destination=<certMountPoint>,readonly
+```
+
+so the image finds `<domain>.crt` and `<domain>.key` under that path. An image that does not
+serve TLS leaves the field empty and gets no mount. This is the one bind mount atoms have:
+everything else is an LVM-backed `AtomVolume`.
+
+`ATOM_CERT_DOMAIN` is a host-wide setting rather than a per-atom field because an atom is
+reached from outside through a fiber, i.e. a DNAT rule on the host's own public name — so
+the certificate that validates is the host's, not the tenant's. A per-atom override belongs
+here the day an atom is published under a name of its own.
+
+Starting an atom whose image declares `certMountPoint` fails with a named error if
+`ATOM_CERT_DOMAIN` is unset or the directory has not been delivered yet, rather than starting
+a container whose TLS listener will not bind.
+
+The manifest's `reload` for such a target has to **restart the container**, not signal it:
+Redis in particular reads its certificate once at startup and never again. Atom ids are
+generated per host, so that reload line is host-specific — it belongs in the installed
+`/etc/marppa/cert-targets.json`, not necessarily in the version committed here.
+
+### Turning TLS on for an atom
+
+Worth adding a **separate** catalog entry rather than editing the shared image: the flags
+below take the plaintext listener away, and every atom on that image inherits them.
+
+1. In the catalog admin, add an image (e.g. `redis-tls`, `redis:7-alpine`) with
+   **Certificate mount point** `/certs` and a command of
+
+   ```
+   redis-server
+   --port 0
+   --tls-port 6379
+   --tls-cert-file /certs/<domain>.crt
+   --tls-key-file /certs/<domain>.key
+   --tls-auth-clients no
+   ```
+
+   `--port 0` is what closes the plaintext listener; without it the atom answers both and
+   the exercise bought nothing. `--tls-auth-clients no` avoids issuing client certificates.
+   Some Redis builds also want `--tls-ca-cert-file` pointing at the same `.crt`.
+
+2. Set `ATOM_CERT_DOMAIN` in the host's `.env.local` and add a destination to
+   `/etc/marppa/cert-targets.json` with `owner` `999:999` (the uid `redis:7-alpine` runs as)
+   and a `reload` that restarts the atom.
+
+3. `--tls-port` is the port **inside** the container. The public port comes from the fiber's
+   DNAT rule and is unrelated; the rewrite happens at the IP layer, below TLS, so a client
+   dialing the host by name still validates the certificate.
 
 ## Secrets / `.env`
 

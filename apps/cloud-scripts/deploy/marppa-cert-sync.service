@@ -1,0 +1,9 @@
+[Unit]
+Description=Distribute Caddy-issued certificates to their declared consumers
+Documentation=file:///opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/README.md
+After=network-online.target caddy.service docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sync-marppa-certs.sh

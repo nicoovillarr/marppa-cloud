@@ -12,6 +12,7 @@ export type AtomImageResponseDto = {
     command: string[];
     requiredEnvVars: string[];
     dataPaths: string[];
+    certMountPoint: string | null;
     defaultSizeId: number;
     ownerId: string | null;
 }
@@ -30,5 +31,6 @@ export type CreateAtomImageDto = {
     command?: string[];
     requiredEnvVars?: string[];
     dataPaths?: string[];
+    certMountPoint?: string;
     ownerId?: string;
 }

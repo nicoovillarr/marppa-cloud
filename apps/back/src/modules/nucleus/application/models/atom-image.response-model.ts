@@ -14,6 +14,7 @@ export class AtomImageResponseModel {
   @Expose() command: string[];
   @Expose() requiredEnvVars: string[];
   @Expose() dataPaths: string[];
+  @Expose() certMountPoint: string | null;
   @Expose() defaultSizeId: number;
   @Expose() ownerId: string | null;
 }

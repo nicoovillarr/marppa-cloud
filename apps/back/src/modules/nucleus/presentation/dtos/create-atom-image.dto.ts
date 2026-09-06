@@ -65,6 +65,13 @@ export class CreateAtomImageDto {
   dataPaths?: string[];
 
   @IsString()
+  @Matches(/^\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/, {
+    message: 'certMountPoint must be an absolute container path',
+  })
+  @IsOptional()
+  certMountPoint?: string;
+
+  @IsString()
   @IsOptional()
   ownerId?: string;
 }

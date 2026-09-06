@@ -11,6 +11,7 @@ export type AtomImageSource = Pick<
   | 'capabilities'
   | 'sysctls'
   | 'command'
+  | 'certMountPoint'
 > & {
   // Resolved pull tag — usually Atom.tag, not AtomImage.defaultTag.
   tag: string;

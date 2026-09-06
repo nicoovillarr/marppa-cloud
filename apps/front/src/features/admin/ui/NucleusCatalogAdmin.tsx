@@ -156,6 +156,14 @@ export function NucleusCatalogAdmin() {
       placeholder: "/var/lib/postgresql/data",
       tooltip: "Container paths this image keeps its state in, one per line",
     },
+    {
+      name: "certMountPoint",
+      label: "Certificate mount point",
+      placeholder: "/certs",
+      tooltip:
+        "Container path the host's TLS certificate is mounted read-only on. " +
+        "Leave empty for images that do not serve TLS",
+    },
   ];
 
   return (
