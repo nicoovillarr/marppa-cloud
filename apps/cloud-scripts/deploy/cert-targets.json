@@ -10,7 +10,7 @@
       "dirMode": "0750",
       "certMode": "0644",
       "keyMode": "0640",
-      "reload": ""
+      "reload": "/usr/local/sbin/restart-marppa-cert-consumers.sh /etc/marppa/certs/host.cloud.marppa.com"
     }
   ]
 }
