@@ -42,6 +42,12 @@ export function AtomVolumesSection({
     reload();
   }, [reload]);
 
+  useEffect(() => {
+    setMountPoint((current) =>
+      dataPaths.includes(current) ? current : dataPaths[0] ?? "",
+    );
+  }, [dataPaths]);
+
   const attached = useMemo(
     () => volumes.filter((volume) => volume.atomId === atomId),
     [volumes, atomId],
@@ -169,18 +175,19 @@ export function AtomVolumesSection({
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
-          <input
-            className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent font-mono"
-            list="atom-volume-data-paths"
-            placeholder="/data"
-            value={mountPoint}
-            onChange={(event) => setMountPoint(event.target.value)}
-          />
-          <datalist id="atom-volume-data-paths">
-            {dataPaths.map((path) => (
-              <option key={path} value={path} />
-            ))}
-          </datalist>
+          {dataPaths.length > 1 && (
+            <select
+              className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent font-mono"
+              value={mountPoint}
+              onChange={(event) => setMountPoint(event.target.value)}
+            >
+              {dataPaths.map((path) => (
+                <option key={path} value={path}>
+                  {path}
+                </option>
+              ))}
+            </select>
+          )}
           <input
             className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent"
             type="number"

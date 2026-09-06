@@ -19,6 +19,7 @@ import { authorize } from '@/shared/domain/policy/authorize';
 import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { AtomService } from './atom.service';
+import { AtomImageService } from './atom-image.service';
 import { AtomEntity } from '../entities/atom.entity';
 import { AtomInvalidStatusError } from '../errors/atom-invalid-status.error';
 import { AtomVolumeInvalidStatusError } from '../errors/atom-volume-invalid-status.error';
@@ -29,6 +30,7 @@ import {
 } from '../errors/atom-volume-attachment.error';
 import { AtomVolumeForbiddenMountPointError } from '../errors/atom-volume-forbidden-mount-point.error';
 import { AtomVolumeMountPointTakenError } from '../errors/atom-volume-mount-point-taken.error';
+import { AtomVolumeUndeclaredMountPointError } from '../errors/atom-volume-undeclared-mount-point.error';
 
 const DELETABLE_STATUSES = [ResourceStatus.INACTIVE, ResourceStatus.FAILED];
 
@@ -39,6 +41,7 @@ export class AtomVolumeService {
     private readonly atomVolumeRepository: AtomVolumeRepository,
 
     private readonly atomService: AtomService,
+    private readonly atomImageService: AtomImageService,
     private readonly companyHierarchyService: CompanyHierarchyService,
     private readonly hostCapacityService: HostCapacityService,
   ) { }
@@ -126,6 +129,7 @@ export class AtomVolumeService {
     }
 
     this.assertAtomIsStopped(atom);
+    await this.assertMountPointIsDeclared(atom, volume.mountPoint);
     await this.assertMountPointIsFree(atomId, volume.mountPoint);
 
     await this.save(volume.clone({ atomId, updatedBy: user.userId }));
@@ -169,6 +173,21 @@ export class AtomVolumeService {
   private assertAtomIsStopped(atom: AtomEntity): void {
     if (atom.status !== ResourceStatus.INACTIVE) {
       throw new AtomInvalidStatusError(ResourceStatus.INACTIVE, atom.status);
+    }
+  }
+
+  private async assertMountPointIsDeclared(
+    atom: AtomEntity,
+    mountPoint: string,
+  ): Promise<void> {
+    const image = await this.atomImageService.findById(atom.imageId);
+
+    if (!image.dataPaths.includes(mountPoint)) {
+      throw new AtomVolumeUndeclaredMountPointError(
+        mountPoint,
+        image.name,
+        image.dataPaths,
+      );
     }
   }
 
