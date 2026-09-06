@@ -19,13 +19,15 @@ Triggered on push to `master` (paths under `apps/cloud-scripts/**`,
 6. `rsync` the tree into `/opt/cloud-script/marppa-cloud`, preserving `.env*`
    and `.logs`
 7. write `DEPLOYED_SHA` (commit, ref, timestamp) at the root of the deploy tree
-8. `sudo /usr/local/sbin/install-cloud-script-sudoers.sh` — installs the runtime
+8. `sudo /usr/local/sbin/run-cloud-script-migrations.sh` — applies pending Prisma
+   migrations against the runtime database
+9. `sudo /usr/local/sbin/install-cloud-script-sudoers.sh` — installs the runtime
    sudo grant only when it changed, before the new code can need it
-9. `sudo /usr/local/sbin/install-cloud-script-unit.sh` — installs the unit only
-   when it changed
-10. `sudo /usr/local/sbin/install-cloud-script-caddyfile.sh` — installs the
+10. `sudo /usr/local/sbin/install-cloud-script-unit.sh` — installs the unit only
+    when it changed
+11. `sudo /usr/local/sbin/install-cloud-script-caddyfile.sh` — installs the
     hand-written Caddy config only when it changed, and reloads Caddy
-11. `sudo systemctl restart cloud-script`
+12. `sudo systemctl restart cloud-script`
 
 The runner runs **as the `cloud-deploy` user**, which owns the deploy tree but
 is *not* the user the service runs as. That split matters: `npm ci` executes
@@ -34,8 +36,8 @@ holds passwordless sudo for `nft`, `ip`, `virsh`, `install` and `systemctl`. A
 shared user would hand every one of those to a compromised dependency, plus read
 access to `.env.local`.
 
-`cloud-deploy` gets exactly five privileged actions: the unit, sudoers and
-Caddyfile installers, and `restart`/`is-active` on `cloud-script`.
+`cloud-deploy` gets exactly six privileged actions: the unit, sudoers, Caddyfile
+and migration wrappers, and `restart`/`is-active` on `cloud-script`.
 
 ### Why the unit is installed through a wrapper
 
@@ -83,6 +85,39 @@ mode is always `0777`, which says nothing about the binary behind it.
 
 Widening the grant still takes a reviewed commit. The installer only decides whether what
 was committed is *shaped* safely, never whether it should have been asked for.
+
+### Why migrations run through a wrapper
+
+Until this shipped the pipeline never touched the database: `prisma migrate deploy` was a
+manual step nobody was reminded to run. A commit that adds a column therefore deployed code
+whose Prisma client selects a column the database does not have, and *every* query on that
+model starts failing — not only the feature that added it.
+
+The obstacle was the credential. `DATABASE_URL` lives in
+`apps/cloud-scripts/.env.local`, mode `0600` owned by `cloud-script`; `cloud-deploy` is in
+the `cloud-script` group but the file is not group-readable, so the runner cannot read it.
+Putting the URL in a GitHub secret was the other option and is the one this repo rejects
+everywhere else — see *Secrets / `.env`*.
+
+`run-cloud-script-migrations.sh` runs as root only long enough to read that one variable,
+then hands it to `runuser -u cloud-deploy` with a scrubbed environment (`env -i`, explicit
+`HOME` and `PATH`). The migration itself therefore runs as the unprivileged deploy user,
+which is the point: `npx prisma` executes JavaScript out of the deploy tree, and the deploy
+tree is exactly what `cloud-deploy` controls. Running that as root would hand it a root
+shell, the same hazard the unit and sudoers wrappers exist to close.
+
+What this does widen is `cloud-deploy`'s reach: it now sees `DATABASE_URL`. In practice that
+is not a new boundary — `cloud-deploy` already writes the code `cloud-script` executes, so it
+could always have shipped code that reads the file itself. The wrapper makes the access
+explicit and auditable instead of latent.
+
+Migrations run **after** the rsync, because that is when the new migration files are in the
+tree, and **before** the restart, so the new process never meets an unmigrated database. The
+window in between has new code on disk and an old process in memory: additive migrations are
+invisible to it, destructive ones are not. Expand/contract still applies — a column the old
+code reads should be dropped in a later commit, not the one that stops using it.
+
+A failed migration fails the step and stops the deploy with the old process still serving.
 
 ### Why the Caddyfile is installed through a wrapper
 
@@ -160,13 +195,17 @@ sudo install -m 0755 -o root -g root \
   /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/install-cloud-script-caddyfile.sh \
   /usr/local/sbin/install-cloud-script-caddyfile.sh
 
+sudo install -m 0755 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/run-cloud-script-migrations.sh \
+  /usr/local/sbin/run-cloud-script-migrations.sh
+
 sudo visudo -cf /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cloud-script-deploy.sudoers
 sudo install -m 0440 -o root -g root \
   /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cloud-script-deploy.sudoers \
   /etc/sudoers.d/cloud-script-deploy
 ```
 
-Both installers must live outside the deploy tree. Under `/opt` they would be
+Every wrapper must live outside the deploy tree. Under `/opt` they would be
 writable by `cloud-deploy`, which defeats the point.
 
 The service runs the compiled build:
