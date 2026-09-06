@@ -176,18 +176,30 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
     resourceType: string,
     liveKeys: Set<string>,
     rows: T[],
-    markFailed: (row: T) => Promise<unknown>,
-    broadcast?: (row: T) => void,
+    release: (row: T, status: ResourceStatus) => Promise<unknown>,
+    broadcast?: (row: T, status: ResourceStatus) => void,
+    settle: (row: T) => Promise<ResourceStatus> = async () => ResourceStatus.FAILED,
   ): Promise<void> {
     for (const row of rows) {
       if (liveKeys.has(`${resourceType}:${row.id}`)) continue;
 
+      const status = await settle(row);
+
       this.logger.warn(
-        `[DriftReconciler] ${resourceType} ${row.id} stuck in ${row.status} with no live event — marking FAILED`,
+        `[DriftReconciler] ${resourceType} ${row.id} stuck in ${row.status} ` +
+        `with no live event — releasing to ${status}`,
       );
 
-      await markFailed(row);
-      broadcast?.(row);
+      await release(row, status);
+      broadcast?.(row, status);
+    }
+  }
+
+  private async settledStatus(running: Promise<boolean>): Promise<ResourceStatus> {
+    try {
+      return (await running) ? ResourceStatus.ACTIVE : ResourceStatus.FAILED;
+    } catch {
+      return ResourceStatus.FAILED;
     }
   }
 
@@ -198,11 +210,10 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
       status: { in: STUCK_STATES },
       updatedAt: { lt: stuckBefore },
     };
-    const failed = { status: ResourceStatus.FAILED };
-    const broadcastData = {
-      status: ResourceStatus.FAILED,
+    const released = (status: ResourceStatus) => ({
+      status,
       reason: 'STUCK_RELEASED',
-    };
+    });
 
     await this.releaseStuck(
       'Worker',
@@ -217,8 +228,11 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         },
         select: { id: true, status: true, ownerId: true },
       }),
-      (row) => this.prisma.worker.update({ where: { id: row.id }, data: failed }),
-      (row) => this.wsServer.sendWorkerMessage(row, 'UPDATED', broadcastData),
+      (row, status) =>
+        this.prisma.worker.update({ where: { id: row.id }, data: { status } }),
+      (row, status) =>
+        this.wsServer.sendWorkerMessage(row, 'UPDATED', released(status)),
+      (row) => this.settledStatus(this.hiveService.isWorkerRunning(String(row.id))),
     );
 
     await this.releaseStuck(
@@ -228,9 +242,10 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         where: stuckWhere,
         select: { id: true, status: true, ownerId: true },
       }),
-      (row) =>
-        this.prisma.workerDisk.update({ where: { id: row.id }, data: failed }),
-      (row) => this.wsServer.sendWorkerDiskMessage(row, 'UPDATED', broadcastData),
+      (row, status) =>
+        this.prisma.workerDisk.update({ where: { id: row.id }, data: { status } }),
+      (row, status) =>
+        this.wsServer.sendWorkerDiskMessage(row, 'UPDATED', released(status)),
     );
 
     await this.releaseStuck(
@@ -240,8 +255,11 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         where: stuckWhere,
         select: { id: true, status: true, ownerId: true },
       }),
-      (row) => this.prisma.atom.update({ where: { id: row.id }, data: failed }),
-      (row) => this.wsServer.sendAtomMessage(row, 'UPDATED', broadcastData),
+      (row, status) =>
+        this.prisma.atom.update({ where: { id: row.id }, data: { status } }),
+      (row, status) =>
+        this.wsServer.sendAtomMessage(row, 'UPDATED', released(status)),
+      (row) => this.settledStatus(this.nucleusService.isAtomRunning(String(row.id))),
     );
 
     await this.releaseStuck(
@@ -251,9 +269,10 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         where: stuckWhere,
         select: { id: true, status: true, ownerId: true },
       }),
-      (row) =>
-        this.prisma.atomVolume.update({ where: { id: row.id }, data: failed }),
-      (row) => this.wsServer.sendAtomVolumeMessage(row, 'UPDATED', broadcastData),
+      (row, status) =>
+        this.prisma.atomVolume.update({ where: { id: row.id }, data: { status } }),
+      (row, status) =>
+        this.wsServer.sendAtomVolumeMessage(row, 'UPDATED', released(status)),
     );
 
     await this.releaseStuck(
@@ -263,8 +282,10 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         where: stuckWhere,
         select: { id: true, status: true, ownerId: true },
       }),
-      (row) => this.prisma.zone.update({ where: { id: row.id }, data: failed }),
-      (row) => this.wsServer.sendZoneMessage(row, 'UPDATED', broadcastData),
+      (row, status) =>
+        this.prisma.zone.update({ where: { id: row.id }, data: { status } }),
+      (row, status) =>
+        this.wsServer.sendZoneMessage(row, 'UPDATED', released(status)),
     );
 
     await this.releaseStuck(
@@ -274,12 +295,13 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         where: stuckWhere,
         select: { id: true, status: true, zone: { select: { ownerId: true } } },
       }),
-      (row) => this.prisma.node.update({ where: { id: row.id }, data: failed }),
-      (row) =>
+      (row, status) =>
+        this.prisma.node.update({ where: { id: row.id }, data: { status } }),
+      (row, status) =>
         this.wsServer.sendNodeMessage(
           { id: row.id, ownerId: row.zone.ownerId },
           'UPDATED',
-          broadcastData,
+          released(status),
         ),
     );
 
@@ -290,8 +312,10 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         where: stuckWhere,
         select: { id: true, status: true, ownerId: true },
       }),
-      (row) => this.prisma.portal.update({ where: { id: row.id }, data: failed }),
-      (row) => this.wsServer.sendPortalMessage(row, 'UPDATED', broadcastData),
+      (row, status) =>
+        this.prisma.portal.update({ where: { id: row.id }, data: { status } }),
+      (row, status) =>
+        this.wsServer.sendPortalMessage(row, 'UPDATED', released(status)),
     );
 
     await this.releaseStuck(
@@ -306,13 +330,13 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
           portal: { select: { ownerId: true } },
         },
       }),
-      (row) =>
-        this.prisma.transponder.update({ where: { id: row.id }, data: failed }),
-      (row) =>
+      (row, status) =>
+        this.prisma.transponder.update({ where: { id: row.id }, data: { status } }),
+      (row, status) =>
         this.wsServer.sendTransponderMessage(
           { id: row.id, portalId: row.portalId, ownerId: row.portal.ownerId },
           'UPDATED',
-          broadcastData,
+          released(status),
         ),
     );
 
@@ -323,7 +347,8 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         where: stuckWhere,
         select: { id: true, status: true },
       }),
-      (row) => this.prisma.fiber.update({ where: { id: row.id }, data: failed }),
+      (row, status) =>
+        this.prisma.fiber.update({ where: { id: row.id }, data: { status } }),
     );
   }
 
