@@ -41,7 +41,10 @@ cloud-script ALL=(ALL) NOPASSWD: /usr/bin/true, \
   /usr/bin/chown, \
   /usr/bin/chmod, \
   /usr/sbin/lvcreate, \
+  /usr/sbin/lvextend, \
   /usr/sbin/lvremove, \
+  /usr/sbin/e2fsck, \
+  /usr/sbin/resize2fs, \
   /usr/sbin/lvs, \
   /usr/sbin/mkfs.ext4, \
   /usr/local/sbin/reset-dnsmasq.sh

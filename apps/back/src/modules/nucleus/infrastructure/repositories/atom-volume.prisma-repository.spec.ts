@@ -28,10 +28,9 @@ describe('AtomVolumePrismaRepository', () => {
       'cache data',
       ResourceStatus.INACTIVE,
       1,
-      '/data',
       'c-000001',
       'u-000001',
-      { id: 1, atomId },
+      { id: 1, mountPoint: '/data', atomId },
     );
 
   afterEach(() => {

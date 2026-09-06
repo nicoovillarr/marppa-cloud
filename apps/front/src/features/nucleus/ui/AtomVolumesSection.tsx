@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuTrash2 } from "react-icons/lu";
+import Link from "next/link";
 import { Button } from "@/core/ui/Button";
 import { StatusBadge } from "@/core/ui/StatusBadge";
 import { ResourceStatus, STATUS_KIND } from "@/core/models/resource-status.enum";
@@ -14,7 +14,6 @@ interface AtomVolumesSectionProps {
   editable: boolean;
 }
 
-const DEFAULT_SIZE_GIB = 1;
 const SETTLE_POLL_MS = 3000;
 
 export function AtomVolumesSection({
@@ -22,18 +21,8 @@ export function AtomVolumesSection({
   dataPaths,
   editable,
 }: AtomVolumesSectionProps) {
-  const {
-    volumes,
-    busy,
-    load,
-    createVolume,
-    attachVolume,
-    detachVolume,
-    deleteVolume,
-  } = useAtomVolume();
+  const { volumes, busy, load, attachVolume, detachVolume } = useAtomVolume();
 
-  const [name, setName] = useState("");
-  const [sizeGiB, setSizeGiB] = useState(DEFAULT_SIZE_GIB);
   const [mountPoint, setMountPoint] = useState(dataPaths[0] ?? "");
 
   const reload = useCallback(() => load(), [load]);
@@ -41,6 +30,12 @@ export function AtomVolumesSection({
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useEffect(() => {
+    setMountPoint((current) =>
+      dataPaths.includes(current) ? current : dataPaths[0] ?? "",
+    );
+  }, [dataPaths]);
 
   const attached = useMemo(
     () => volumes.filter((volume) => volume.atomId === atomId),
@@ -50,6 +45,14 @@ export function AtomVolumesSection({
   const unattached = useMemo(
     () => volumes.filter((volume) => volume.atomId == null),
     [volumes],
+  );
+
+  const freePaths = useMemo(
+    () =>
+      dataPaths.filter(
+        (path) => !attached.some((volume) => volume.mountPoint === path),
+      ),
+    [dataPaths, attached],
   );
 
   const settling = useMemo(
@@ -72,18 +75,7 @@ export function AtomVolumesSection({
     if (await action) await reload();
   };
 
-  const create = async () => {
-    const created = await createVolume({
-      name: name.trim(),
-      sizeGiB,
-      mountPoint: mountPoint.trim(),
-    });
-
-    if (created) {
-      setName("");
-      await reload();
-    }
-  };
+  const target = freePaths.includes(mountPoint) ? mountPoint : freePaths[0];
 
   return (
     <section className="space-y-3">
@@ -92,7 +84,10 @@ export function AtomVolumesSection({
       <p className="text-xs text-ink-muted">
         {editable
           ? "Everything outside a volume is discarded when the container is rebuilt on the next start."
-          : "Stop the atom to attach or detach volumes."}
+          : "Stop the atom to attach or detach volumes."}{" "}
+        <Link className="underline" href="/dashboard/nucleus/volumes">
+          Manage volumes
+        </Link>
       </p>
 
       {attached.length === 0 ? (
@@ -128,7 +123,21 @@ export function AtomVolumesSection({
         </ul>
       )}
 
-      {editable && unattached.length > 0 && (
+      {editable && freePaths.length > 1 && (
+        <select
+          className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent font-mono"
+          value={target}
+          onChange={(event) => setMountPoint(event.target.value)}
+        >
+          {freePaths.map((path) => (
+            <option key={path} value={path}>
+              {path}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {editable && freePaths.length > 0 && unattached.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs text-ink-muted">Unattached volumes</p>
           {unattached.map((volume: AtomVolumeResponseDto) => (
@@ -139,60 +148,21 @@ export function AtomVolumesSection({
               <span className="flex flex-col min-w-0">
                 <span className="font-medium">{volume.name}</span>
                 <span className="text-xs text-ink-muted font-mono truncate">
-                  {volume.mountPoint} · {volume.sizeGiB} GiB
+                  {volume.sizeGiB} GiB
                 </span>
               </span>
               <span className="flex items-center gap-2 shrink-0">
                 <StatusBadge status={volume.status} />
                 <Button
-                  text="Attach"
+                  text={`Attach on ${target}`}
                   disabled={busy || volume.status !== ResourceStatus.INACTIVE}
-                  onClick={() => runAndReload(attachVolume(volume, atomId))}
-                />
-                <Button
-                  icon={<LuTrash2 />}
-                  style="danger"
-                  disabled={busy || volume.status !== ResourceStatus.INACTIVE}
-                  onClick={() => runAndReload(deleteVolume(volume))}
+                  onClick={() =>
+                    runAndReload(attachVolume(volume, atomId, target))
+                  }
                 />
               </span>
             </div>
           ))}
-        </div>
-      )}
-
-      {editable && (
-        <div className="space-y-2">
-          <input
-            className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent"
-            placeholder="Volume name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-          <input
-            className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent font-mono"
-            list="atom-volume-data-paths"
-            placeholder="/data"
-            value={mountPoint}
-            onChange={(event) => setMountPoint(event.target.value)}
-          />
-          <datalist id="atom-volume-data-paths">
-            {dataPaths.map((path) => (
-              <option key={path} value={path} />
-            ))}
-          </datalist>
-          <input
-            className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent"
-            type="number"
-            min={1}
-            value={sizeGiB}
-            onChange={(event) => setSizeGiB(Number(event.target.value))}
-          />
-          <Button
-            text="Create volume"
-            disabled={busy || !name.trim() || !mountPoint.trim() || sizeGiB < 1}
-            onClick={create}
-          />
         </div>
       )}
     </section>

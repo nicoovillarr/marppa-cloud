@@ -65,6 +65,8 @@ export abstract class NucleusService {
 
   abstract createAtomVolume(volumeId: number, sizeGiB: number): Promise<string>;
 
+  abstract resizeAtomVolume(hostPath: string, sizeGiB: number): Promise<void>;
+
   abstract deleteAtomVolume(hostPath: string): Promise<boolean>;
 
   abstract ensureAtomVolumeRegistered(hostPath: string): Promise<void>;

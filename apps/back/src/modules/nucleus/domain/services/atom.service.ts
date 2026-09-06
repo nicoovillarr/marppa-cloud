@@ -14,6 +14,7 @@ import { AtomImageService } from './atom-image.service';
 import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { AtomSizeService } from './atom-size.service';
 import { AtomSizeDeprecatedError } from '../errors/atom-size-deprecated.error';
+import { AtomVolumeRequiredError } from '../errors/atom-volume-required.error';
 import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { CreateAtomDto } from '@/nucleus/presentation/dtos/create-atom.dto';
 import { UpdateAtomDto } from '@/nucleus/presentation/dtos/update-atom.dto';
@@ -123,6 +124,10 @@ export class AtomService {
     const image = await this.atomImageService.findById(data.imageId);
     await this.assertImageAllowed(image);
     this.assertRequiredEnvVars(image, data.envVars);
+
+    if (image.dataPaths.length && data.volumeId == null) {
+      throw new AtomVolumeRequiredError(image.name, image.dataPaths[0]);
+    }
 
     const size = await this.atomSizeService.findById(
       data.sizeId ?? image.defaultSizeId,

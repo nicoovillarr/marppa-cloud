@@ -66,6 +66,10 @@ export class StubNucleusService extends NucleusService {
     return `/dev/vg_data/atomvol-${volumeId}`;
   }
 
+  public async resizeAtomVolume(hostPath: string, sizeGiB: number): Promise<void> {
+    console.log(`[STUB] resizeAtomVolume: ${hostPath} to ${sizeGiB}GiB`);
+  }
+
   public async deleteAtomVolume(hostPath: string): Promise<boolean> {
     console.log(`[STUB] deleteAtomVolume: ${hostPath}`);
     return true;

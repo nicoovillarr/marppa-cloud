@@ -115,6 +115,19 @@ export class AtomStartProcessor implements IEventProcessor {
         );
       }
 
+      const unbackedPaths = atom.image.dataPaths.filter(
+        (path) => !atom!.volumes.some((volume) => volume.mountPoint === path),
+      );
+
+      if (unbackedPaths.length) {
+        throw new AbortError(
+          `Atom ${atom.id} has no volume for ${unbackedPaths.join(', ')}, where ` +
+          `image "${atom.image.name}" keeps its state — starting it would write ` +
+          'into the container layer and lose the data on the next start',
+          EventType.ATOM_START_FAILED,
+        );
+      }
+
       const rootOnly = rootOnlyCapabilities(atom.image.capabilities);
       if (rootOnly.length) {
         const owner = await this.prisma.company.findUnique({
@@ -146,11 +159,15 @@ export class AtomStartProcessor implements IEventProcessor {
         },
         Object.fromEntries(atom.envVars.map((envVar) => [envVar.key, envVar.value])),
         atom,
-        atom.volumes.map((volume) => ({
-          id: volume.id,
-          mountPoint: volume.mountPoint,
-          hostPath: volume.hostPath,
-        })),
+        atom.volumes.flatMap((volume) =>
+          volume.mountPoint == null
+            ? []
+            : [{
+              id: volume.id,
+              mountPoint: volume.mountPoint,
+              hostPath: volume.hostPath,
+            }],
+        ),
       );
 
       await updateAtomStatus(STATES.ok);

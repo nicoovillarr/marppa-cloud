@@ -11,12 +11,14 @@ import { CreateAtomVolumeDto } from '@/nucleus/presentation/dtos/create-atom-vol
 import * as sessionContext from '@/auth/infrastructure/als/session.context';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import { AtomService } from './atom.service';
+import { AtomImageService } from './atom-image.service';
 import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
 import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { AtomInvalidStatusError } from '../errors/atom-invalid-status.error';
 import { AtomVolumeInvalidStatusError } from '../errors/atom-volume-invalid-status.error';
 import { AtomVolumeForbiddenMountPointError } from '../errors/atom-volume-forbidden-mount-point.error';
 import { AtomVolumeMountPointTakenError } from '../errors/atom-volume-mount-point-taken.error';
+import { AtomVolumeUndeclaredMountPointError } from '../errors/atom-volume-undeclared-mount-point.error';
 import {
   AtomVolumeAlreadyAttachedError,
   AtomVolumeNotAttachedError,
@@ -38,11 +40,11 @@ describe('AtomVolumeService', () => {
       'Test Volume',
       overrides.status ?? ResourceStatus.INACTIVE,
       1,
-      overrides.mountPoint ?? '/data',
       'c-000001',
       'u-000001',
       {
         id: 1,
+        mountPoint: overrides.mountPoint ?? null,
         hostPath: '/var/lib/marppa/atom-volumes/1',
         atomId: overrides.atomId,
       },
@@ -61,6 +63,7 @@ describe('AtomVolumeService', () => {
   };
 
   const mockAtomService = { findById: jest.fn() };
+  const mockAtomImageService = { findById: jest.fn() };
   const mockCompanyHierarchyService = { selfAndDescendants: jest.fn() };
   const mockHostCapacityService = { assertFitsOnCreate: jest.fn() };
 
@@ -76,6 +79,7 @@ describe('AtomVolumeService', () => {
           useValue: mockAtomVolumeRepository,
         },
         { provide: AtomService, useValue: mockAtomService },
+        { provide: AtomImageService, useValue: mockAtomImageService },
         {
           provide: CompanyHierarchyService,
           useValue: mockCompanyHierarchyService,
@@ -101,6 +105,10 @@ describe('AtomVolumeService', () => {
     mockHostCapacityService.assertFitsOnCreate.mockResolvedValue(undefined);
     mockAtomVolumeRepository.findByAtomId.mockResolvedValue([]);
     mockAtomVolumeRepository.update.mockImplementation((e) => e);
+    mockAtomImageService.findById.mockResolvedValue({
+      name: 'redis-7',
+      dataPaths: ['/data', '/etc/wireguard'],
+    });
   });
 
   afterEach(() => {
@@ -143,7 +151,6 @@ describe('AtomVolumeService', () => {
     const dto: CreateAtomVolumeDto = {
       name: 'New Volume',
       sizeGiB: 2,
-      mountPoint: '/var/lib/postgresql/data',
       ownerId: 'c-000001',
     };
 
@@ -162,24 +169,12 @@ describe('AtomVolumeService', () => {
       expect(result.hostPath).toBeUndefined();
     });
 
-    it('accepts the container paths a catalog image keeps its state in', async () => {
+    it('leaves the mount point unset until the volume is attached', async () => {
       mockAtomVolumeRepository.create.mockImplementation((e) => e);
 
-      await expect(
-        service.create({ ...dto, mountPoint: '/etc/wireguard' }),
-      ).resolves.toBeDefined();
-    });
+      const result = await service.create(dto);
 
-    it('rejects a mount point that would shadow a kernel filesystem', async () => {
-      await expect(
-        service.create({ ...dto, mountPoint: '/proc/self' }),
-      ).rejects.toThrow(AtomVolumeForbiddenMountPointError);
-    });
-
-    it('rejects a mount point that escapes through a parent segment', async () => {
-      await expect(
-        service.create({ ...dto, mountPoint: '/data/../etc' }),
-      ).rejects.toThrow(AtomVolumeForbiddenMountPointError);
+      expect(result.mountPoint).toBeNull();
     });
   });
 
@@ -190,7 +185,7 @@ describe('AtomVolumeService', () => {
         atomWith(ResourceStatus.INACTIVE),
       );
 
-      await service.attach(1, 'a-000001');
+      await service.attach(1, 'a-000001', '/data');
 
       expect(savedVolume().atomId).toBe('a-000001');
       expect(savedVolume().status).toBe(ResourceStatus.INACTIVE);
@@ -204,7 +199,7 @@ describe('AtomVolumeService', () => {
         atomWith(ResourceStatus.INACTIVE),
       );
 
-      await expect(service.attach(1, 'a-000001')).rejects.toThrow(
+      await expect(service.attach(1, 'a-000001', '/data')).rejects.toThrow(
         AtomVolumeAlreadyAttachedError,
       );
     });
@@ -215,7 +210,7 @@ describe('AtomVolumeService', () => {
         atomWith(ResourceStatus.ACTIVE),
       );
 
-      await expect(service.attach(1, 'a-000001')).rejects.toThrow(
+      await expect(service.attach(1, 'a-000001', '/data')).rejects.toThrow(
         AtomInvalidStatusError,
       );
     });
@@ -228,7 +223,7 @@ describe('AtomVolumeService', () => {
         atomWith(ResourceStatus.INACTIVE),
       );
 
-      await expect(service.attach(1, 'a-000001')).rejects.toThrow(
+      await expect(service.attach(1, 'a-000001', '/data')).rejects.toThrow(
         AtomVolumeInvalidStatusError,
       );
     });
@@ -239,12 +234,56 @@ describe('AtomVolumeService', () => {
         atomWith(ResourceStatus.INACTIVE),
       );
       mockAtomVolumeRepository.findByAtomId.mockResolvedValue([
-        volumeWith({ atomId: 'a-000001' }),
+        volumeWith({ atomId: 'a-000001', mountPoint: '/data' }),
       ]);
 
-      await expect(service.attach(1, 'a-000001')).rejects.toThrow(
+      await expect(service.attach(1, 'a-000001', '/data')).rejects.toThrow(
         AtomVolumeMountPointTakenError,
       );
+    });
+
+    it('accepts any path the image declares as a data path', async () => {
+      mockAtomVolumeRepository.findById.mockResolvedValue(volumeWith());
+      mockAtomService.findById.mockResolvedValue(
+        atomWith(ResourceStatus.INACTIVE),
+      );
+
+      await service.attach(1, 'a-000001', '/etc/wireguard');
+
+      expect(savedVolume().mountPoint).toBe('/etc/wireguard');
+    });
+
+    it('refuses a path the image does not keep state in', async () => {
+      mockAtomVolumeRepository.findById.mockResolvedValue(volumeWith());
+      mockAtomService.findById.mockResolvedValue(
+        atomWith(ResourceStatus.INACTIVE),
+      );
+
+      await expect(
+        service.attach(1, 'a-000001', '/var/lib/postgresql/data'),
+      ).rejects.toThrow(AtomVolumeUndeclaredMountPointError);
+    });
+
+    it('refuses a mount point that would shadow a kernel filesystem', async () => {
+      mockAtomVolumeRepository.findById.mockResolvedValue(volumeWith());
+      mockAtomService.findById.mockResolvedValue(
+        atomWith(ResourceStatus.INACTIVE),
+      );
+
+      await expect(service.attach(1, 'a-000001', '/proc/self')).rejects.toThrow(
+        AtomVolumeForbiddenMountPointError,
+      );
+    });
+
+    it('refuses a mount point that escapes through a parent segment', async () => {
+      mockAtomVolumeRepository.findById.mockResolvedValue(volumeWith());
+      mockAtomService.findById.mockResolvedValue(
+        atomWith(ResourceStatus.INACTIVE),
+      );
+
+      await expect(
+        service.attach(1, 'a-000001', '/data/../etc'),
+      ).rejects.toThrow(AtomVolumeForbiddenMountPointError);
     });
   });
 

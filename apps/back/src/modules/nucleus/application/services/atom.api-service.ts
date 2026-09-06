@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { AtomService } from '@/nucleus/domain/services/atom.service';
+import { AtomVolumeService } from '@/nucleus/domain/services/atom-volume.service';
 import { AtomEnvVarApiService } from './atom-env-var.api-service';
 import { CreateAtomDto } from '@/nucleus/presentation/dtos/create-atom.dto';
 import { UpdateAtomDto } from '@/nucleus/presentation/dtos/update-atom.dto';
@@ -19,6 +20,7 @@ export class AtomApiService {
   constructor(
     private readonly service: AtomService,
     private readonly envVarService: AtomEnvVarApiService,
+    private readonly volumeService: AtomVolumeService,
     private readonly eventDispatch: EventDispatchService,
   ) { }
 
@@ -36,6 +38,10 @@ export class AtomApiService {
 
   public async create(data: CreateAtomDto): Promise<AtomResponseModel> {
     const entity = await this.service.createAtom(data);
+
+    if (data.volumeId != null) {
+      await this.volumeService.attachToNewAtom(data.volumeId, entity);
+    }
 
     for (const envVar of data.envVars ?? []) {
       await this.envVarService.upsert(entity.id!, envVar);

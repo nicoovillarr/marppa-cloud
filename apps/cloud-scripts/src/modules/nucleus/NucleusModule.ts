@@ -7,6 +7,7 @@ import { AtomTerminateProcessor } from './application/AtomTerminateProcessor';
 import { AtomDeleteProcessor } from './application/AtomDeleteProcessor';
 import { AtomVolumeCreateProcessor } from './application/AtomVolumeCreateProcessor';
 import { AtomVolumeDeleteProcessor } from './application/AtomVolumeDeleteProcessor';
+import { AtomVolumeResizeProcessor } from './application/AtomVolumeResizeProcessor';
 import { AtomVolumeTransitionService } from './application/AtomVolumeTransitionService';
 import { NUCLEUS_SERVICE_TOKEN } from './domain/services/NucleusService';
 import { DockerNucleusService } from './infrastructure/DockerNucleusService';
@@ -31,6 +32,7 @@ const useStubs = process.env.USE_STUBS === 'true';
     AtomDeleteProcessor,
     AtomVolumeCreateProcessor,
     AtomVolumeDeleteProcessor,
+    AtomVolumeResizeProcessor,
   ],
   exports: [NUCLEUS_SERVICE_TOKEN],
 })

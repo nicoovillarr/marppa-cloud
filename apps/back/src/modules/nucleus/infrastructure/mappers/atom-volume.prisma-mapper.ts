@@ -8,11 +8,11 @@ export class AtomVolumePrismaMapper {
       raw.name,
       ResourceStatus[raw.status as string],
       raw.sizeGiB,
-      raw.mountPoint,
       raw.ownerId,
       raw.createdBy,
       {
         id: raw.id,
+        mountPoint: raw.mountPoint,
         hostPath: raw.hostPath ?? undefined,
         atomId: raw.atomId ?? undefined,
         createdAt: raw.createdAt,

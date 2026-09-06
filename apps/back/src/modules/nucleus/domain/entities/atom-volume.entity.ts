@@ -4,6 +4,7 @@ import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 
 interface AtomVolumeOptionalProps {
   id?: number;
+  mountPoint?: string | null;
   hostPath?: string;
   atomId?: string | null;
   createdAt?: Date;
@@ -16,6 +17,7 @@ export class AtomVolumeEntity extends PatchableEntity {
   public readonly id?: number;
 
   public readonly hostPath?: string;
+  public readonly mountPoint?: string | null;
   public readonly atomId?: string | null;
   public readonly createdAt?: Date;
   public readonly updatedAt?: Date;
@@ -25,7 +27,6 @@ export class AtomVolumeEntity extends PatchableEntity {
     public readonly name: string,
     public readonly status: ResourceStatus,
     public readonly sizeGiB: number,
-    public readonly mountPoint: string,
     public readonly ownerId: string,
     public readonly createdBy: string,
 
@@ -35,6 +36,7 @@ export class AtomVolumeEntity extends PatchableEntity {
 
     this.id = optionals.id;
     this.hostPath = optionals.hostPath;
+    this.mountPoint = optionals.mountPoint ?? null;
     this.atomId = optionals.atomId;
     this.createdAt = optionals.createdAt;
     this.updatedAt = optionals.updatedAt;
@@ -63,11 +65,11 @@ export class AtomVolumeEntity extends PatchableEntity {
       data.name,
       data.status,
       data.sizeGiB,
-      data.mountPoint,
       data.ownerId,
       data.createdBy,
       {
         id: data.id,
+        mountPoint: data.mountPoint,
         hostPath: data.hostPath,
         atomId: data.atomId,
         createdAt: data.createdAt,
