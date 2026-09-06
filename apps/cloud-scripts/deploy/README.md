@@ -444,6 +444,10 @@ sudo install -m 0755 -o root -g root \
   /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/sync-marppa-certs.sh \
   /usr/local/sbin/sync-marppa-certs.sh
 
+sudo install -m 0755 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/restart-marppa-cert-consumers.sh \
+  /usr/local/sbin/restart-marppa-cert-consumers.sh
+
 sudo install -d -m 0755 -o root -g root /etc/marppa
 sudo install -m 0640 -o root -g root \
   /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cert-targets.json \
@@ -491,17 +495,39 @@ Starting an atom whose image declares `certMountPoint` fails with a named error 
 a container whose TLS listener will not bind.
 
 The manifest's `reload` for such a target has to **restart the container**, not signal it:
-Redis in particular reads its certificate once at startup and never again. Atom ids are
-generated per host, so that reload line is host-specific — it belongs in the installed
-`/etc/marppa/cert-targets.json`, not necessarily in the version committed here.
+Redis in particular reads its certificate once at startup and never again.
+
+`restart-marppa-cert-consumers.sh` is that reload. It takes the certificate directory and
+restarts every running container that bind-mounts it, discovered from `docker inspect`:
+
+```
+/usr/local/sbin/restart-marppa-cert-consumers.sh /etc/marppa/certs/host.cloud.marppa.com
+```
+
+Naming the containers instead would not survive contact with the platform. Atom ids are
+generated per host and change whenever an atom is recreated, so a hardcoded `docker restart
+a-cfeb4c` is a line that silently stops matching anything — and a certificate that renews
+without its consumer noticing is exactly the failure this whole mechanism exists to avoid.
+Deriving the set from the mount keeps the reload correct through recreations, and keeps the
+manifest committable instead of host-specific.
+
+It restarts only *running* containers: a stopped atom picks the certificate up when it next
+starts, and one that does not mount the directory is left alone.
 
 ### Turning TLS on for an atom
 
-Worth adding a **separate** catalog entry rather than editing the shared image: the flags
-below take the plaintext listener away, and every atom on that image inherits them.
+An atom's image cannot be changed after creation — `UpdateAtomDto` only accepts a rename —
+but the container is rebuilt from the row on every start, so **editing the image the atom
+already uses is enough**: stop and start the atom and it comes back with TLS, keeping its
+node, its address and therefore the fiber pointing at it. Deleting and recreating the atom
+would give it a new IP and orphan that DNAT rule.
 
-1. In the catalog admin, add an image (e.g. `redis-tls`, `redis:7-alpine`) with
-   **Certificate mount point** `/certs` and a command of
+The flags below take the plaintext listener away, so every atom on that image inherits
+them. Edit the shared entry when it has one consumer; add a separate catalog entry (e.g.
+`redis-tls`) when a plaintext one has to keep working.
+
+1. In the catalog admin, set the image's **Certificate mount point** to `/certs` and its
+   command to
 
    ```
    redis-server
@@ -516,13 +542,17 @@ below take the plaintext listener away, and every atom on that image inherits th
    the exercise bought nothing. `--tls-auth-clients no` avoids issuing client certificates.
    Some Redis builds also want `--tls-ca-cert-file` pointing at the same `.crt`.
 
-2. Set `ATOM_CERT_DOMAIN` in the host's `.env.local` and add a destination to
-   `/etc/marppa/cert-targets.json` with `owner` `999:999` (the uid `redis:7-alpine` runs as)
-   and a `reload` that restarts the atom.
+2. Check `ATOM_CERT_DOMAIN` is set in the host's `.env.local`, and that
+   `/etc/marppa/cert-targets.json` has a destination for that domain whose `owner` matches
+   the uid the image runs as — `999:999` for `redis:7-alpine`. The committed manifest
+   already carries one for `host.cloud.marppa.com`.
 
-3. `--tls-port` is the port **inside** the container. The public port comes from the fiber's
-   DNAT rule and is unrelated; the rewrite happens at the IP layer, below TLS, so a client
-   dialing the host by name still validates the certificate.
+3. Stop and start the atom. It comes back with the certificate mounted; from then on the
+   daily sync restarts it on its own whenever the certificate changes.
+
+`--tls-port` is the port **inside** the container. The public port comes from the fiber's
+DNAT rule and is unrelated; the rewrite happens at the IP layer, below TLS, so a client
+dialing the host by name still validates the certificate.
 
 ## Secrets / `.env`
 
