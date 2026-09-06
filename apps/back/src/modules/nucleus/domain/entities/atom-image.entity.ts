@@ -10,6 +10,7 @@ interface AtomImageOptionalProps {
   command?: string[];
   requiredEnvVars?: string[];
   dataPaths?: string[];
+  certMountPoint?: string;
   ownerId?: string;
 }
 
@@ -24,6 +25,7 @@ export class AtomImageEntity extends PatchableEntity {
   public readonly command: string[];
   public readonly requiredEnvVars: string[];
   public readonly dataPaths: string[];
+  public readonly certMountPoint?: string;
   public readonly ownerId?: string;
 
   constructor(
@@ -45,6 +47,7 @@ export class AtomImageEntity extends PatchableEntity {
     this.command = optionals.command ?? [];
     this.requiredEnvVars = optionals.requiredEnvVars ?? [];
     this.dataPaths = optionals.dataPaths ?? [];
+    this.certMountPoint = optionals.certMountPoint ?? undefined;
     this.ownerId = optionals.ownerId ?? undefined;
   }
 
@@ -72,6 +75,7 @@ export class AtomImageEntity extends PatchableEntity {
       command: this.command,
       requiredEnvVars: this.requiredEnvVars,
       dataPaths: this.dataPaths,
+      certMountPoint: this.certMountPoint,
       ownerId: this.ownerId,
     };
   }
@@ -93,6 +97,7 @@ export class AtomImageEntity extends PatchableEntity {
         command: data.command,
         requiredEnvVars: data.requiredEnvVars,
         dataPaths: data.dataPaths,
+        certMountPoint: data.certMountPoint,
         ownerId: data.ownerId,
       },
     );

@@ -35,8 +35,11 @@ const SAFE_COMMAND_TOKEN = /^[^\r\n\0]+$/;
 const SAFE_MOUNT_POINT = /^\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
 const SAFE_VOLUME_GROUP = /^[A-Za-z0-9._+-]+$/;
 
+const SAFE_CERT_DOMAIN = /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/;
+
 const ATOM_VOLUME_DATA_DIR = 'data';
 const DEFAULT_VOLUME_GROUP = 'vg_data';
+const DEFAULT_CERT_ROOT = '/etc/marppa/certs';
 
 /**
  * What is added back after dropping everything: the set an image needs to run
@@ -132,6 +135,7 @@ export class DockerNucleusService extends NucleusService {
       '--restart', 'unless-stopped',
       ...this.hardeningArgs(specs),
       ...(await this.mountArgs(volumes)),
+      ...(await this.certificateArgs(image)),
       ...this.envArgs(env),
       ...this.capabilityArgs(image),
       ...this.sysctlArgs(image),
@@ -414,6 +418,52 @@ export class DockerNucleusService extends NucleusService {
     }
 
     return args;
+  }
+
+  // --- Certificates ---
+
+  private async certificateArgs(image: AtomImageSource): Promise<string[]> {
+    if (!image.certMountPoint) {
+      return [];
+    }
+
+    const destination = this.assertMatches(
+      image.certMountPoint, SAFE_MOUNT_POINT, 'certificate mount point',
+    );
+    const source = path.posix.join(this.certificateRoot(), this.certificateDomain());
+
+    try {
+      await fsPromises.access(source);
+    } catch {
+      throw new Error(
+        `No certificate directory at ${source}, but the image asks for TLS material on ` +
+        `${destination}. Run marppa-cert-sync.service and check its manifest.`,
+      );
+    }
+
+    return [
+      '--mount',
+      `type=bind,source=${source},destination=${destination},readonly`,
+    ];
+  }
+
+  private certificateRoot(): string {
+    const configured = process.env.ATOM_CERT_ROOT?.trim() || DEFAULT_CERT_ROOT;
+
+    return this.assertMatches(configured, SAFE_MOUNT_POINT, 'atom certificate root');
+  }
+
+  private certificateDomain(): string {
+    const configured = process.env.ATOM_CERT_DOMAIN?.trim();
+
+    if (!configured) {
+      throw new Error(
+        'ATOM_CERT_DOMAIN is unset, so there is no certificate to hand an image that ' +
+        'declares a certificate mount point',
+      );
+    }
+
+    return this.assertMatches(configured, SAFE_CERT_DOMAIN, 'atom certificate domain');
   }
 
   private volumeGroup(): string {

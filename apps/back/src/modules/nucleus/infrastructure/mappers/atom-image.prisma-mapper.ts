@@ -19,6 +19,7 @@ export class AtomImagePrismaMapper {
         command: raw.command,
         requiredEnvVars: raw.requiredEnvVars,
         dataPaths: raw.dataPaths,
+        certMountPoint: raw.certMountPoint ?? undefined,
         ownerId: raw.ownerId ?? undefined,
       },
     );

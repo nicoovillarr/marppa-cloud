@@ -397,6 +397,7 @@ model AtomImage {
   command         String[] @default([])
   requiredEnvVars String[] @default([])
   dataPaths       String[] @default([])
+  certMountPoint  String?
 
   defaultSizeId Int
   defaultSize   AtomSize @relation(fields: [defaultSizeId], references: [id])

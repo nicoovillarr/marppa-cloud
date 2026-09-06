@@ -553,6 +553,8 @@ process refuses to boot with a list of what is wrong.
 | `IP_CHECK_INTERVAL_MS` | no | How often to re-check the host's public IP and re-sync portal DNS. Default `600000`. |
 | `DRIFT_CHECK_INTERVAL_MS` | no | How often the drift reconciler compares the DB against the host's real state. Default `30000`. |
 | `ATOM_VOLUME_GROUP` | no | LVM volume group atom volumes are carved from. Default `vg_data`. |
+| `ATOM_CERT_ROOT` | no | Directory `marppa-cert-sync.service` delivers certificates to. Default `/etc/marppa/certs`. |
+| `ATOM_CERT_DOMAIN` | no | Domain whose certificate atoms get. Required only once an image declares a `certMountPoint`; starting such an atom without it fails. |
 | `LOG_DIR` | no | Log directory. Omit to log only to stdout. |
 | `MAX_LOG_SIZE`, `LOG_BACKUP_COUNT` | no | Log rotation. Defaults: 10 MB, 5 files. |
 | `USE_STUBS` | no | `true` replaces every host service with a no-op stub **and skips the preflight**. Development only — never set it on the host. |

@@ -444,13 +444,59 @@ commit plus one `install` run as `nvillar`.
 
 ### Consumers inside atoms
 
-An atom cannot see `/etc/marppa/certs` today. `DockerNucleusService.mountArgs` only emits
-`--mount type=volume,source=atomvol-<n>,…` for LVM-backed `AtomVolume` rows; there is no
-bind-mount path from a host directory into a container, and adding one needs a schema
-field on `AtomImage` so an image can declare which certificate it wants and where.
+An `AtomImage` declares `certMountPoint`, the container path where it expects TLS material.
+When it is set, `startAtom` adds
 
-Until that exists, the useful destinations for this sync are the home-server's own services
-and remote machines — not atoms.
+```
+--mount type=bind,source=$ATOM_CERT_ROOT/$ATOM_CERT_DOMAIN,destination=<certMountPoint>,readonly
+```
+
+so the image finds `<domain>.crt` and `<domain>.key` under that path. An image that does not
+serve TLS leaves the field empty and gets no mount. This is the one bind mount atoms have:
+everything else is an LVM-backed `AtomVolume`.
+
+`ATOM_CERT_DOMAIN` is a host-wide setting rather than a per-atom field because an atom is
+reached from outside through a fiber, i.e. a DNAT rule on the host's own public name — so
+the certificate that validates is the host's, not the tenant's. A per-atom override belongs
+here the day an atom is published under a name of its own.
+
+Starting an atom whose image declares `certMountPoint` fails with a named error if
+`ATOM_CERT_DOMAIN` is unset or the directory has not been delivered yet, rather than starting
+a container whose TLS listener will not bind.
+
+The manifest's `reload` for such a target has to **restart the container**, not signal it:
+Redis in particular reads its certificate once at startup and never again. Atom ids are
+generated per host, so that reload line is host-specific — it belongs in the installed
+`/etc/marppa/cert-targets.json`, not necessarily in the version committed here.
+
+### Turning TLS on for an atom
+
+Worth adding a **separate** catalog entry rather than editing the shared image: the flags
+below take the plaintext listener away, and every atom on that image inherits them.
+
+1. In the catalog admin, add an image (e.g. `redis-tls`, `redis:7-alpine`) with
+   **Certificate mount point** `/certs` and a command of
+
+   ```
+   redis-server
+   --port 0
+   --tls-port 6379
+   --tls-cert-file /certs/<domain>.crt
+   --tls-key-file /certs/<domain>.key
+   --tls-auth-clients no
+   ```
+
+   `--port 0` is what closes the plaintext listener; without it the atom answers both and
+   the exercise bought nothing. `--tls-auth-clients no` avoids issuing client certificates.
+   Some Redis builds also want `--tls-ca-cert-file` pointing at the same `.crt`.
+
+2. Set `ATOM_CERT_DOMAIN` in the host's `.env.local` and add a destination to
+   `/etc/marppa/cert-targets.json` with `owner` `999:999` (the uid `redis:7-alpine` runs as)
+   and a `reload` that restarts the atom.
+
+3. `--tls-port` is the port **inside** the container. The public port comes from the fiber's
+   DNAT rule and is unrelated; the rewrite happens at the IP layer, below TLS, so a client
+   dialing the host by name still validates the certificate.
 
 ## Secrets / `.env`
 

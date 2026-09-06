@@ -68,6 +68,7 @@ export class AtomImageService {
         command: data.command,
         requiredEnvVars: data.requiredEnvVars,
         dataPaths: data.dataPaths,
+        certMountPoint: data.certMountPoint,
         ownerId: data.ownerId,
       },
     );
@@ -99,6 +100,7 @@ export class AtomImageService {
         command: data.command,
         requiredEnvVars: data.requiredEnvVars,
         dataPaths: data.dataPaths,
+        certMountPoint: data.certMountPoint,
         ownerId: data.ownerId,
       }),
     );
