@@ -66,9 +66,6 @@ jobs:
             "deployed_at=$(date -Iseconds)" \
             > "$DEPLOY_DIR/DEPLOYED_SHA"
 
-      - name: Apply database migrations
-        run: sudo /usr/local/sbin/run-cloud-script-migrations.sh
-
       - name: Install sudo grant
         run: sudo /usr/local/sbin/install-cloud-script-sudoers.sh
 
