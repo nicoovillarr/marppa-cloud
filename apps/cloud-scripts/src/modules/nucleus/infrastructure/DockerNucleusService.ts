@@ -316,6 +316,34 @@ export class DockerNucleusService extends NucleusService {
     return this.volumeDevice(id);
   }
 
+  public async resizeAtomVolume(
+    hostPath: string,
+    sizeGiB: number,
+  ): Promise<void> {
+    const id = this.assertVolumeHostPath(hostPath);
+
+    if (!Number.isInteger(sizeGiB) || sizeGiB <= 0) {
+      throw new TypeError(`Invalid volume size: ${sizeGiB}`);
+    }
+
+    if (!(await this.logicalVolumeExists(id))) {
+      throw new Error(
+        `Volume ${this.volumeName(id)} does not exist on ${this.volumeGroup()}`,
+      );
+    }
+
+    const device = this.volumeDevice(id);
+
+    console.log(`Growing volume ${this.volumeName(id)} to ${sizeGiB}GiB`);
+
+    await Command.runCommand('sudo', [
+      'lvextend', '--size', `${sizeGiB}G`, device,
+    ]);
+
+    await Command.runCommand('sudo', ['e2fsck', '-f', '-p', device]);
+    await Command.runCommand('sudo', ['resize2fs', device]);
+  }
+
   public async deleteAtomVolume(hostPath: string): Promise<boolean> {
     const id = this.assertVolumeHostPath(hostPath);
 

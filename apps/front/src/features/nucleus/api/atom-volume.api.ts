@@ -3,6 +3,7 @@ import {
     AtomVolumeResponseDto,
     CreateAtomVolumeDto,
     UpdateAtomVolumeDto,
+    ResizeAtomVolumeDto,
 } from "./atom-volume.api.types";
 
 const baseUrl = "/nucleus/volumes";
@@ -24,8 +25,12 @@ export const atomVolumeApi = {
         return fetcher<AtomVolumeResponseDto>(`${baseUrl}/${id}`, "PUT", data);
     },
 
-    attach(id: number, atomId: string): Promise<AtomVolumeResponseDto> {
-        return fetcher<AtomVolumeResponseDto>(`${baseUrl}/${id}/attach`, "POST", { atomId });
+    resize(id: number, data: ResizeAtomVolumeDto): Promise<AtomVolumeResponseDto> {
+        return fetcher<AtomVolumeResponseDto>(`${baseUrl}/${id}/resize`, "POST", data);
+    },
+
+    attach(id: number, atomId: string, mountPoint: string): Promise<AtomVolumeResponseDto> {
+        return fetcher<AtomVolumeResponseDto>(`${baseUrl}/${id}/attach`, "POST", { atomId, mountPoint });
     },
 
     detach(id: number): Promise<AtomVolumeResponseDto> {

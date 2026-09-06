@@ -44,6 +44,10 @@ export class CreateAtomDto {
   @IsOptional()
   ownerId?: string;
 
+  @IsNumber()
+  @IsOptional()
+  volumeId?: number;
+
   @IsArray()
   @IsOptional()
   @ArrayMaxSize(MAX_ATOM_ENV_VARS)

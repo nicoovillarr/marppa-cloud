@@ -13,6 +13,7 @@ import { AtomVolumeResponseModel } from '@/nucleus/application/models/atom-volum
 import { CreateAtomVolumeDto } from '../dtos/create-atom-volume.dto';
 import { UpdateAtomVolumeDto } from '../dtos/update-atom-volume.dto';
 import { AttachAtomVolumeDto } from '../dtos/attach-atom-volume.dto';
+import { ResizeAtomVolumeDto } from '../dtos/resize-atom-volume.dto';
 
 @Controller('nucleus/volumes')
 export class AtomVolumeController {
@@ -52,12 +53,20 @@ export class AtomVolumeController {
     return await this.service.update(Number(id), data);
   }
 
+  @Post(':id/resize')
+  async resize(
+    @Param('id') id: string,
+    @Body() data: ResizeAtomVolumeDto,
+  ): Promise<AtomVolumeResponseModel> {
+    return await this.service.resize(Number(id), data);
+  }
+
   @Post(':id/attach')
   async attach(
     @Param('id') id: string,
     @Body() data: AttachAtomVolumeDto,
   ): Promise<AtomVolumeResponseModel> {
-    return await this.service.attach(Number(id), data.atomId);
+    return await this.service.attach(Number(id), data.atomId, data.mountPoint);
   }
 
   @Post(':id/detach')

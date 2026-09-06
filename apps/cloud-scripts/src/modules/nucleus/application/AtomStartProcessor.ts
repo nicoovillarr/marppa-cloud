@@ -159,11 +159,15 @@ export class AtomStartProcessor implements IEventProcessor {
         },
         Object.fromEntries(atom.envVars.map((envVar) => [envVar.key, envVar.value])),
         atom,
-        atom.volumes.map((volume) => ({
-          id: volume.id,
-          mountPoint: volume.mountPoint,
-          hostPath: volume.hostPath,
-        })),
+        atom.volumes.flatMap((volume) =>
+          volume.mountPoint == null
+            ? []
+            : [{
+              id: volume.id,
+              mountPoint: volume.mountPoint,
+              hostPath: volume.hostPath,
+            }],
+        ),
       );
 
       await updateAtomStatus(STATES.ok);

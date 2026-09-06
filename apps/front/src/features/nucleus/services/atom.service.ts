@@ -2,7 +2,7 @@ import atomsApi from "../api/atom.api";
 import {
     AtomResponseDto,
     AtomWithRelationsResponseDto,
-    CreateAtomEnvVarDto,
+    CreateAtomDto,
 } from "../api/atom.api.types";
 
 export class AtomService {
@@ -16,15 +16,8 @@ export class AtomService {
         return dto;
     }
 
-    async createAtom(
-        name: string,
-        imageId: number,
-        sizeId: number,
-        tag: string,
-        envVars?: CreateAtomEnvVarDto[],
-    ): Promise<AtomResponseDto> {
-        const dto = await atomsApi.createAtom({ name, imageId, sizeId, tag, envVars });
-        return dto;
+    async createAtom(data: CreateAtomDto): Promise<AtomResponseDto> {
+        return atomsApi.createAtom(data);
     }
 
     async updateAtom(id: string, name: string): Promise<AtomResponseDto> {

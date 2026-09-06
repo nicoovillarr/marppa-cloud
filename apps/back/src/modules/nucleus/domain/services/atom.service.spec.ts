@@ -219,10 +219,9 @@ describe('AtomService', () => {
         'cache data',
         ResourceStatus.INACTIVE,
         1,
-        '/data',
         'c-000001',
         'u-000001',
-        { id: 7, atomId: 'a-000001' },
+        { id: 7, mountPoint: '/data', atomId: 'a-000001' },
       );
       mockAtomVolumeRepository.findByAtomId.mockResolvedValue([attached]);
 

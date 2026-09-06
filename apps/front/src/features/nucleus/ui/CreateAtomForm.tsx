@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, ButtonRef } from "@/core/ui/Button";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { FormInput } from "@/core/ui/inputs/form/FormInput";
 import { FormRadioCards } from "@/core/ui/inputs/form/FormRadioCards";
@@ -9,11 +9,14 @@ import { InlineCode } from "@/core/ui/InlineCode";
 import { useDialog } from "@/core/ui/DialogProvider";
 import { toast } from "sonner";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { LuTrash2 } from "react-icons/lu";
 import { useAtom } from "../models/use-atom";
 import { useAtomImage } from "../models/use-atom-image";
 import { useAtomSize } from "../models/use-atom-size";
+import { useAtomVolume } from "../models/use-atom-volume";
 import { CreateAtomEnvVarDto } from "../api/atom.api.types";
+import { ResourceStatus } from "@/core/models/resource-status.enum";
 
 const ATOM_NAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 const ENV_KEY = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -29,6 +32,9 @@ export function CreateAtomForm() {
   const { atoms, fetchAtom, fetchAtoms, createAtom } = useAtom();
   const { images, fetchImages } = useAtomImage();
   const { sizes, fetchSizes } = useAtomSize();
+  const { volumes, load: loadVolumes } = useAtomVolume();
+
+  const [volumeId, setVolumeId] = useState("");
 
   const buttonRef = useRef<ButtonRef>(null);
 
@@ -46,6 +52,17 @@ export function CreateAtomForm() {
   const atomImageId = watch("atomImageId");
   const selectedImage = images.find((img) => String(img.id) === String(atomImageId));
   const requiredKeys = selectedImage?.requiredEnvVars ?? [];
+
+  const needsVolume = (selectedImage?.dataPaths.length ?? 0) > 0;
+
+  const freeVolumes = useMemo(
+    () =>
+      volumes.filter(
+        (volume) =>
+          volume.atomId == null && volume.status === ResourceStatus.INACTIVE,
+      ),
+    [volumes],
+  );
 
   const atomSizeId = watch("atomSizeId");
   const selectedSize = sizes.find((size) => String(size.id) === String(atomSizeId));
@@ -150,13 +167,22 @@ export function CreateAtomForm() {
       ...envVars,
     ];
 
-    const newAtom = await createAtom(
-      atomName,
-      Number(atomImageId),
-      Number(atomSizeId),
+    if (needsVolume && !volumeId) {
+      toast.error(
+        `${selectedImage!.name} keeps its state in ${selectedImage!.dataPaths[0]}: pick a volume`,
+      );
+      await buttonRef.current?.setIsLoading(false);
+      return;
+    }
+
+    const newAtom = await createAtom({
+      name: atomName,
+      imageId: Number(atomImageId),
+      sizeId: Number(atomSizeId),
       tag,
-      allEnvVars,
-    );
+      volumeId: volumeId ? Number(volumeId) : undefined,
+      envVars: allEnvVars,
+    });
 
     await buttonRef.current?.setIsLoading(false);
 
@@ -191,6 +217,7 @@ export function CreateAtomForm() {
     fetchAtoms();
     fetchImages();
     fetchSizes();
+    loadVolumes();
   }, []);
 
   return (
@@ -257,6 +284,42 @@ export function CreateAtomForm() {
                 : "The size recommended for this image is preselected; you picked another one."}
             </p>
           </>
+        )}
+
+        {needsVolume && (
+          <section className="space-y-2">
+            <h3 className="font-semibold text-sm">Volume</h3>
+
+            <p className="text-xs text-ink-muted">
+              <InlineCode code={selectedImage!.name} /> keeps its state in{" "}
+              <InlineCode code={selectedImage!.dataPaths[0]} />. Anything outside
+              a volume is discarded when the container is rebuilt on the next
+              start, so the atom needs one.
+            </p>
+
+            {freeVolumes.length > 0 ? (
+              <select
+                className="w-full text-sm border border-border dark: rounded px-2 py-1 bg-transparent"
+                value={volumeId}
+                onChange={(event) => setVolumeId(event.target.value)}
+              >
+                <option value="">Select a volume…</option>
+                {freeVolumes.map((volume) => (
+                  <option key={volume.id} value={String(volume.id)}>
+                    {volume.name} · {volume.sizeGiB} GiB
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-xs text-ink-muted">
+                No unattached volumes.{" "}
+                <Link className="underline" href="/dashboard/nucleus/volumes">
+                  Create one first
+                </Link>
+                .
+              </p>
+            )}
+          </section>
         )}
 
         {requiredKeys.length > 0 && (

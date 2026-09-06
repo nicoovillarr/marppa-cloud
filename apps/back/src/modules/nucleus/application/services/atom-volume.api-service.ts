@@ -5,6 +5,7 @@ import { AtomVolumeService } from '@/nucleus/domain/services/atom-volume.service
 import { AtomVolumeResponseModel } from '../models/atom-volume.response-model';
 import { CreateAtomVolumeDto } from '@/nucleus/presentation/dtos/create-atom-volume.dto';
 import { UpdateAtomVolumeDto } from '@/nucleus/presentation/dtos/update-atom-volume.dto';
+import { ResizeAtomVolumeDto } from '@/nucleus/presentation/dtos/resize-atom-volume.dto';
 import { EventDispatchService } from '@/event/application/services/event-dispatch.service';
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 import { AtomVolumeEntity } from '@/nucleus/domain/entities/atom-volume.entity';
@@ -48,8 +49,26 @@ export class AtomVolumeApiService {
     return this.toResponse(await this.service.update(id, data));
   }
 
-  async attach(id: number, atomId: string): Promise<AtomVolumeResponseModel> {
-    await this.service.attach(id, atomId);
+  async resize(
+    id: number,
+    data: ResizeAtomVolumeDto,
+  ): Promise<AtomVolumeResponseModel> {
+    const entity = await this.service.resize(id, data.sizeGiB);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.ATOM_VOLUME_RESIZE,
+      primary: { type: 'AtomVolume', id: String(entity.id!) },
+    });
+
+    return this.toResponse(entity);
+  }
+
+  async attach(
+    id: number,
+    atomId: string,
+    mountPoint: string,
+  ): Promise<AtomVolumeResponseModel> {
+    await this.service.attach(id, atomId, mountPoint);
     return this.findById(id);
   }
 

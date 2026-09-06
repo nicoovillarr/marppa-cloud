@@ -13,6 +13,7 @@ export type CreateAtomDto = {
     tag?: string;
     sizeId?: number;
     ownerId?: string;
+    volumeId?: number;
     envVars?: CreateAtomEnvVarDto[];
 }
 

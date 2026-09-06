@@ -31,6 +31,7 @@ import {
 import { AtomVolumeForbiddenMountPointError } from '../errors/atom-volume-forbidden-mount-point.error';
 import { AtomVolumeMountPointTakenError } from '../errors/atom-volume-mount-point-taken.error';
 import { AtomVolumeUndeclaredMountPointError } from '../errors/atom-volume-undeclared-mount-point.error';
+import { AtomVolumeShrinkError } from '../errors/atom-volume-shrink.error';
 
 const DELETABLE_STATUSES = [ResourceStatus.INACTIVE, ResourceStatus.FAILED];
 
@@ -80,10 +81,6 @@ export class AtomVolumeService {
       throw new UnauthorizedError();
     }
 
-    if (isForbiddenAtomMountPoint(data.mountPoint)) {
-      throw new AtomVolumeForbiddenMountPointError(data.mountPoint);
-    }
-
     await this.hostCapacityService.assertFitsOnCreate({
       cpuCores: 0,
       ramMB: 0,
@@ -94,12 +91,45 @@ export class AtomVolumeService {
       data.name,
       getEventStateTransition(EventTypeKey.ATOM_VOLUME_CREATE).entry,
       data.sizeGiB,
-      data.mountPoint,
       data.ownerId ?? user.companyId,
       user.userId,
     );
 
     return this.save(entity);
+  }
+
+  async resize(id: number, sizeGiB: number): Promise<AtomVolumeEntity> {
+    const user = this.currentUser();
+    const volume = await this.findById(id);
+
+    if (volume.status !== ResourceStatus.INACTIVE) {
+      throw new AtomVolumeInvalidStatusError(
+        ResourceStatus.INACTIVE,
+        volume.status,
+      );
+    }
+
+    if (sizeGiB <= volume.sizeGiB) {
+      throw new AtomVolumeShrinkError(volume.sizeGiB, sizeGiB);
+    }
+
+    if (volume.atomId != null) {
+      this.assertAtomIsStopped(await this.atomService.findById(volume.atomId));
+    }
+
+    await this.hostCapacityService.assertFitsOnCreate({
+      cpuCores: 0,
+      ramMB: 0,
+      diskGB: sizeGiB - volume.sizeGiB,
+    });
+
+    return this.save(
+      volume.clone({
+        sizeGiB,
+        status: getEventStateTransition(EventTypeKey.ATOM_VOLUME_RESIZE).entry,
+        updatedBy: user.userId,
+      }),
+    );
   }
 
   async update(
@@ -112,7 +142,11 @@ export class AtomVolumeService {
     return this.save(volume.clone({ name: data.name, updatedBy: user.userId }));
   }
 
-  async attach(id: number, atomId: string): Promise<AtomEntity> {
+  async attach(
+    id: number,
+    atomId: string,
+    mountPoint: string,
+  ): Promise<AtomEntity> {
     const user = this.currentUser();
     const volume = await this.findById(id);
     const atom = await this.atomService.findById(atomId);
@@ -128,13 +162,42 @@ export class AtomVolumeService {
       throw new AtomVolumeAlreadyAttachedError(volume.atomId);
     }
 
-    this.assertAtomIsStopped(atom);
-    await this.assertMountPointIsDeclared(atom, volume.mountPoint);
-    await this.assertMountPointIsFree(atomId, volume.mountPoint);
+    if (isForbiddenAtomMountPoint(mountPoint)) {
+      throw new AtomVolumeForbiddenMountPointError(mountPoint);
+    }
 
-    await this.save(volume.clone({ atomId, updatedBy: user.userId }));
+    this.assertAtomIsStopped(atom);
+    await this.assertMountPointIsDeclared(atom, mountPoint);
+    await this.assertMountPointIsFree(atomId, mountPoint);
+
+    await this.save(volume.clone({ atomId, mountPoint, updatedBy: user.userId }));
 
     return atom;
+  }
+
+  async attachToNewAtom(id: number, atom: AtomEntity): Promise<void> {
+    const user = this.currentUser();
+    const volume = await this.findById(id);
+    const image = await this.atomImageService.findById(atom.imageId);
+
+    if (volume.status !== ResourceStatus.INACTIVE) {
+      throw new AtomVolumeInvalidStatusError(
+        ResourceStatus.INACTIVE,
+        volume.status,
+      );
+    }
+
+    if (volume.atomId != null) {
+      throw new AtomVolumeAlreadyAttachedError(volume.atomId);
+    }
+
+    await this.save(
+      volume.clone({
+        atomId: atom.id,
+        mountPoint: image.dataPaths[0],
+        updatedBy: user.userId,
+      }),
+    );
   }
 
   async detach(id: number): Promise<void> {
@@ -147,7 +210,9 @@ export class AtomVolumeService {
 
     this.assertAtomIsStopped(await this.atomService.findById(volume.atomId));
 
-    await this.save(volume.clone({ atomId: null, updatedBy: user.userId }));
+    await this.save(
+      volume.clone({ atomId: null, mountPoint: null, updatedBy: user.userId }),
+    );
   }
 
   async delete(id: number): Promise<void> {

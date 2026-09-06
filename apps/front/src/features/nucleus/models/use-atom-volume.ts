@@ -62,11 +62,31 @@ export function useAtomVolume() {
     [run],
   );
 
-  const attachVolume = useCallback(
-    (volume: AtomVolumeResponseDto, atomId: string) =>
+  const renameVolume = useCallback(
+    (volume: AtomVolumeResponseDto, name: string) =>
       run(
-        () => atomVolumeApi.attach(volume.id, atomId),
-        `${volume.name} attached; it mounts on the next start`,
+        () => atomVolumeApi.update(volume.id, { name }),
+        `${volume.name} renamed to ${name}`,
+        `Failed to rename ${volume.name}`,
+      ),
+    [run],
+  );
+
+  const resizeVolume = useCallback(
+    (volume: AtomVolumeResponseDto, sizeGiB: number) =>
+      run(
+        () => atomVolumeApi.resize(volume.id, { sizeGiB }),
+        `Resize of ${volume.name} to ${sizeGiB}GiB queued`,
+        `Failed to resize ${volume.name}`,
+      ),
+    [run],
+  );
+
+  const attachVolume = useCallback(
+    (volume: AtomVolumeResponseDto, atomId: string, mountPoint: string) =>
+      run(
+        () => atomVolumeApi.attach(volume.id, atomId, mountPoint),
+        `${volume.name} attached on ${mountPoint}; it mounts on the next start`,
         `Failed to attach ${volume.name}`,
       ),
     [run],
@@ -98,6 +118,8 @@ export function useAtomVolume() {
     busy,
     load,
     createVolume,
+    renameVolume,
+    resizeVolume,
     attachVolume,
     detachVolume,
     deleteVolume,

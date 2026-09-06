@@ -5,7 +5,7 @@ import { ColumnMapping, Table } from "@/core/ui/Table";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Button } from "@/core/ui/Button";
-import { LuListPlus, LuPlay, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
+import { LuHardDrive, LuListPlus, LuPlay, LuRefreshCcw, LuTrash2 } from "react-icons/lu";
 import { ResourceStatus } from "@/core/models/resource-status.enum";
 import { useDialog } from "@/core/ui/DialogProvider";
 import { useAtom } from "../models/use-atom";
@@ -174,6 +174,14 @@ export function AtomsList() {
           icon={<LuRefreshCcw />}
           onClick={() => fetchAtoms()}
           style="secondary"
+        />
+
+        <Button
+          className="ml-2"
+          text="Volumes"
+          icon={<LuHardDrive />}
+          style="secondary"
+          href="/dashboard/nucleus/volumes"
         />
 
         <Button

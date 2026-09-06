@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useAtomStore } from "./atom.store";
 import { AtomService } from "../services/atom.service";
-import { CreateAtomEnvVarDto } from "../api/atom.api.types";
+import { CreateAtomDto } from "../api/atom.api.types";
 
 const service = new AtomService();
 
@@ -48,18 +48,12 @@ export const useAtom = () => {
         }
     }, [atoms, setAtoms, setIsLoading, setError]);
 
-    const createAtom = useCallback(async (
-        name: string,
-        imageId: number,
-        sizeId: number,
-        tag: string,
-        envVars?: CreateAtomEnvVarDto[],
-    ) => {
+    const createAtom = useCallback(async (data: CreateAtomDto) => {
         setIsLoading(true);
         setError(null);
 
         try {
-            return await service.createAtom(name, imageId, sizeId, tag, envVars);
+            return await service.createAtom(data);
         } catch (error) {
             setError(error);
         } finally {

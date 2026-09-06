@@ -30,6 +30,7 @@ export interface CreateAtomRequest {
   tag?: string;
   sizeId?: number;
   ownerId?: string;
+  volumeId?: number;
   envVars?: CreateAtomEnvVarRequest[];
 }
 
@@ -45,7 +46,6 @@ export interface CreateAtomEnvVarRequest {
 export interface CreateAtomVolumeRequest {
   name: string;
   sizeGiB: number;
-  mountPoint: string;
   ownerId?: string;
 }
 
@@ -53,8 +53,13 @@ export interface UpdateAtomVolumeRequest {
   name: string;
 }
 
+export interface ResizeAtomVolumeRequest {
+  sizeGiB: number;
+}
+
 export interface AttachAtomVolumeRequest {
   atomId: string;
+  mountPoint: string;
 }
 
 // --- Responses ---
@@ -96,7 +101,7 @@ export interface AtomVolumeResponse {
   status: string;
   sizeGiB: number;
   hostPath: string | null;
-  mountPoint: string;
+  mountPoint: string | null;
   ownerId: string;
   atomId: string | null;
   createdAt: Date;

@@ -6,7 +6,7 @@ export type AtomVolumeResponseDto = {
     status: ResourceStatus;
     sizeGiB: number;
     hostPath: string | null;
-    mountPoint: string;
+    mountPoint: string | null;
     ownerId: string;
     atomId: string | null;
     createdAt: Date;
@@ -18,10 +18,18 @@ export type AtomVolumeResponseDto = {
 export type CreateAtomVolumeDto = {
     name: string;
     sizeGiB: number;
-    mountPoint: string;
     ownerId?: string;
 }
 
 export type UpdateAtomVolumeDto = {
     name: string;
+}
+
+export type ResizeAtomVolumeDto = {
+    sizeGiB: number;
+}
+
+export type AttachAtomVolumeDto = {
+    atomId: string;
+    mountPoint: string;
 }
