@@ -188,6 +188,16 @@ delete reach the worker.
 Deleting an atom leaves its volumes behind with `atomId` cleared: they stay reattachable,
 and destroying data is always a separate, explicit delete.
 
+Two catalog images need their `command` to carry more than the process itself, and both
+reasons are worth knowing before editing those rows. Redis only chowns `/data` and drops
+to its own user when `argv[1]` is literally `redis-server`, which the shell wrapper needed
+to expand `$REDIS_PASSWORD` displaces — the row restores that with an explicit `chown` and
+`setpriv`. wg-easy's default `PostUp` calls iptables-legacy, which needs `NET_RAW`: the
+raw-socket capability the zone isolation exists to withhold. Pointing it at `iptables-nft`
+reaches the same kernel tables over netlink, which `NET_ADMIN` alone covers, so the tunnel
+runs with tenant-safe capabilities. Those rules live in the container's own network
+namespace and never reach the host ruleset.
+
 ### Passwordless sudo
 
 The grant below names `$USER`. **It must name whoever runs the process.** For a service
