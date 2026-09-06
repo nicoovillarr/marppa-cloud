@@ -66,6 +66,9 @@ jobs:
             "deployed_at=$(date -Iseconds)" \
             > "$DEPLOY_DIR/DEPLOYED_SHA"
 
+      - name: Install sudo grant
+        run: sudo /usr/local/sbin/install-cloud-script-sudoers.sh
+
       - name: Install systemd unit
         run: sudo /usr/local/sbin/install-cloud-script-unit.sh
 

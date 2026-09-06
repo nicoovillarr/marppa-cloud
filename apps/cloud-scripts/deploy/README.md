@@ -19,9 +19,11 @@ Triggered on push to `master` (paths under `apps/cloud-scripts/**`,
 6. `rsync` the tree into `/opt/cloud-script/marppa-cloud`, preserving `.env*`
    and `.logs`
 7. write `DEPLOYED_SHA` (commit, ref, timestamp) at the root of the deploy tree
-8. `sudo /usr/local/sbin/install-cloud-script-unit.sh` — installs the unit only
+8. `sudo /usr/local/sbin/install-cloud-script-sudoers.sh` — installs the runtime
+   sudo grant only when it changed, before the new code can need it
+9. `sudo /usr/local/sbin/install-cloud-script-unit.sh` — installs the unit only
    when it changed
-9. `sudo systemctl restart cloud-script`
+10. `sudo systemctl restart cloud-script`
 
 The runner runs **as the `cloud-deploy` user**, which owns the deploy tree but
 is *not* the user the service runs as. That split matters: `npm ci` executes
@@ -30,8 +32,8 @@ holds passwordless sudo for `nft`, `ip`, `virsh`, `install` and `systemctl`. A
 shared user would hand every one of those to a compromised dependency, plus read
 access to `.env.local`.
 
-`cloud-deploy` gets exactly three privileged actions: the unit installer, and
-`restart`/`is-active` on `cloud-script`.
+`cloud-deploy` gets exactly four privileged actions: the unit installer, the
+sudoers installer, and `restart`/`is-active` on `cloud-script`.
 
 ### Why the unit is installed through a wrapper
 
@@ -49,6 +51,36 @@ identity: an allowlist of directives, `User`/`Group` pinned to `cloud-script`,
 `ExecStart` arguments stay free on purpose. `cloud-deploy` already controls the
 code `node` executes, so constraining them buys nothing; the boundary worth
 enforcing is *which identity* the service runs as.
+
+### Why the sudo grant is installed through a wrapper
+
+The runtime grant changes whenever cloud-scripts learns to call a new host binary —
+`lvcreate` and `mkfs.ext4` arrived with atom volumes — and a grant only a human can install
+is a grant that drifts: the code ships, the binary is refused at runtime, and the failure
+surfaces as a broken event hours later.
+
+The hazard is the one the unit installer already answers. `cloud-deploy` writes the deploy
+tree, so it controls `deploy/cloud-scripts.sudoers`; `sudo install … /etc/sudoers.d/` would
+let it grant *itself* passwordless root.
+
+`install-cloud-script-sudoers.sh` runs as root, reads a **fixed** path, copies to a private
+temp file, and refuses anything that is not one rule granting `cloud-script`:
+
+- a single rule — a second line cannot smuggle in another user;
+- the user pinned to `cloud-script`, the spec to `ALL=(ALL) NOPASSWD:`;
+- every command an absolute path, with no arguments and no wildcards, so `ALL` and
+  `systemctl *` are both out;
+- each path under `/usr/bin`, `/usr/sbin`, `/usr/local/sbin`, `/bin` or `/sbin`, present on
+  the host, owned by root and not group- or world-writable — a grant on a binary somebody
+  else can rewrite is a grant on whatever they write;
+- nothing under the deploy tree, which `cloud-deploy` controls;
+- `visudo -cf` last, because a malformed file in `/etc/sudoers.d/` breaks sudo host-wide.
+
+Ownership is checked with `stat -L`: most of these paths are symlinks, and a symlink's own
+mode is always `0777`, which says nothing about the binary behind it.
+
+Widening the grant still takes a reviewed commit. The installer only decides whether what
+was committed is *shaped* safely, never whether it should have been asked for.
 
 The whole repo is deployed, not just `apps/cloud-scripts`: cloud-scripts
 resolves `@marppa-cloud/*` through workspace symlinks under `node_modules`, so
@@ -94,13 +126,17 @@ sudo install -m 0755 -o root -g root \
   /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/install-cloud-script-unit.sh \
   /usr/local/sbin/install-cloud-script-unit.sh
 
+sudo install -m 0755 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/install-cloud-script-sudoers.sh \
+  /usr/local/sbin/install-cloud-script-sudoers.sh
+
 sudo visudo -cf /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cloud-script-deploy.sudoers
 sudo install -m 0440 -o root -g root \
   /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cloud-script-deploy.sudoers \
   /etc/sudoers.d/cloud-script-deploy
 ```
 
-The installer must live outside the deploy tree. Under `/opt` it would be
+Both installers must live outside the deploy tree. Under `/opt` they would be
 writable by `cloud-deploy`, which defeats the point.
 
 The service runs the compiled build:

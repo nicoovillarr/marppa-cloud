@@ -215,6 +215,11 @@ install the repo ships the same rule already written for `cloud-script` —
 `/etc/sudoers.d/cloud-scripts` path, so the two replace each other rather than stacking.
 If you run both ways on one host, grant both users.
 
+On a host with continuous deployment the pipeline reinstalls that file itself on every
+deploy, through a root-owned validator — `deploy/README.md`, *Why the sudo grant is
+installed through a wrapper*. Editing `/etc/sudoers.d/cloud-scripts` by hand there is
+pointless: the next deploy overwrites it with whatever the repo says.
+
 Never write into `/etc/sudoers.d` directly. A truncated line or an indented heredoc
 terminator leaves a malformed file, and sudo then refuses **every** invocation
 host-wide — including the one you would use to fix it. Write a copy, validate it with
