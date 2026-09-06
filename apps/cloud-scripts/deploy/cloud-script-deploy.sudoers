@@ -1,1 +1,1 @@
-cloud-deploy ALL=(root) NOPASSWD: /usr/local/sbin/install-cloud-script-unit.sh, /usr/local/sbin/install-cloud-script-sudoers.sh, /usr/local/sbin/install-cloud-script-caddyfile.sh, /usr/local/sbin/run-cloud-script-migrations.sh, /usr/bin/systemctl restart cloud-script, /usr/bin/systemctl is-active cloud-script
+cloud-deploy ALL=(root) NOPASSWD: /usr/local/sbin/install-cloud-script-unit.sh, /usr/local/sbin/install-cloud-script-sudoers.sh, /usr/local/sbin/install-cloud-script-caddyfile.sh, /usr/bin/systemctl restart cloud-script, /usr/bin/systemctl is-active cloud-script
