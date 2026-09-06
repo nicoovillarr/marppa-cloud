@@ -77,6 +77,14 @@ enum EventType {
   ATOM_DELETE_FAILED
   ATOM_DELETED
 
+  ATOM_VOLUME_CREATE
+  ATOM_VOLUME_CREATE_FAILED
+  ATOM_VOLUME_CREATED
+
+  ATOM_VOLUME_DELETE
+  ATOM_VOLUME_DELETE_FAILED
+  ATOM_VOLUME_DELETED
+
   ZONE_CREATE
   ZONE_CREATE_FAILED
   ZONE_CREATED
@@ -366,6 +374,7 @@ model Atom {
   ramMB    Int
 
   envVars AtomEnvVar[]
+  volumes AtomVolume[]
 
   node Node?
 
@@ -387,6 +396,7 @@ model AtomImage {
   sysctls         Json?
   command         String[] @default([])
   requiredEnvVars String[] @default([])
+  dataPaths       String[] @default([])
 
   defaultSizeId Int
   defaultSize   AtomSize @relation(fields: [defaultSizeId], references: [id])
@@ -395,6 +405,29 @@ model AtomImage {
   owner   Company? @relation(fields: [ownerId], references: [id])
 
   atoms Atom[]
+}
+
+model AtomVolume {
+  id         Int            @id @default(autoincrement())
+  name       String
+  status     ResourceStatus @default(QUEUED)
+  sizeGiB    Int
+  hostPath   String?
+  mountPoint String
+
+  ownerId String
+  owner   Company @relation(fields: [ownerId], references: [id])
+
+  atomId String?
+  atom   Atom?   @relation(fields: [atomId], references: [id])
+
+  createdAt DateTime @default(now())
+  createdBy String
+
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@unique([atomId, mountPoint])
 }
 
 model AtomSize {
@@ -574,6 +607,7 @@ model Company {
   atomImages     AtomImage[]
   zones          Zone[]
   atoms          Atom[]
+  atomVolumes    AtomVolume[]
   storages       WorkerDisk[]
   portals        Portal[]
   events         Event[]

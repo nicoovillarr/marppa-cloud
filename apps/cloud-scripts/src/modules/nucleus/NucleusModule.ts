@@ -5,6 +5,9 @@ import { AtomCreateProcessor } from './application/AtomCreateProcessor';
 import { AtomStartProcessor } from './application/AtomStartProcessor';
 import { AtomTerminateProcessor } from './application/AtomTerminateProcessor';
 import { AtomDeleteProcessor } from './application/AtomDeleteProcessor';
+import { AtomVolumeCreateProcessor } from './application/AtomVolumeCreateProcessor';
+import { AtomVolumeDeleteProcessor } from './application/AtomVolumeDeleteProcessor';
+import { AtomVolumeTransitionService } from './application/AtomVolumeTransitionService';
 import { NUCLEUS_SERVICE_TOKEN } from './domain/services/NucleusService';
 import { DockerNucleusService } from './infrastructure/DockerNucleusService';
 import { StubNucleusService } from './infrastructure/StubNucleusService';
@@ -15,6 +18,7 @@ const useStubs = process.env.USE_STUBS === 'true';
 @Module({
   imports: [SharedModule, EventModule, MeshModule],
   providers: [
+    AtomVolumeTransitionService,
     {
       provide: NUCLEUS_SERVICE_TOKEN,
       useClass: useStubs ? StubNucleusService : DockerNucleusService,
@@ -25,6 +29,8 @@ const useStubs = process.env.USE_STUBS === 'true';
     AtomStartProcessor,
     AtomTerminateProcessor,
     AtomDeleteProcessor,
+    AtomVolumeCreateProcessor,
+    AtomVolumeDeleteProcessor,
   ],
   exports: [NUCLEUS_SERVICE_TOKEN],
 })

@@ -11,6 +11,7 @@ import { NodeSection } from "@/mesh/ui/NodeSection";
 import { AtomWithRelationsResponseDto } from "../api/atom.api.types";
 import { useAtom } from "../models/use-atom";
 import { AtomEnvVarsSection } from "./AtomEnvVarsSection";
+import { AtomVolumesSection } from "./AtomVolumesSection";
 
 interface AtomManageDialogProps {
   atom: AtomWithRelationsResponseDto;
@@ -163,6 +164,12 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
       />
 
       <AtomEnvVarsSection atomId={atom.id} editable={isOff} />
+
+      <AtomVolumesSection
+        atomId={atom.id}
+        dataPaths={atom.image?.dataPaths ?? []}
+        editable={isOff}
+      />
     </div>
   );
 }

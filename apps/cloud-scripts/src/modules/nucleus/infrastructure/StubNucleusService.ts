@@ -5,6 +5,7 @@ import {
   type AtomImageSource,
   type AtomNetworkConfig,
   type AtomResourceSpecs,
+  type AtomVolumeMount,
 } from '../domain/services/NucleusService';
 
 @Injectable()
@@ -27,11 +28,13 @@ export class StubNucleusService extends NucleusService {
     net: AtomNetworkConfig,
     env: AtomEnvironment,
     specs: AtomResourceSpecs,
+    volumes: AtomVolumeMount[],
   ): Promise<void> {
     console.log(
       `[STUB] startAtom: id=${id} name=${name} image=${image.repository}:${image.tag} ` +
       `ip=${net.ipAddress} env=${Object.keys(env).join(',')} ` +
-      `cpus=${specs.cpuCores} memory=${specs.ramMB}MB`,
+      `cpus=${specs.cpuCores} memory=${specs.ramMB}MB ` +
+      `volumes=${volumes.map((volume) => volume.mountPoint).join(',')}`,
     );
     this.running.add(id);
   }
@@ -53,6 +56,23 @@ export class StubNucleusService extends NucleusService {
   public async getRunningAtoms(): Promise<string[]> {
     console.log('[STUB] getRunningAtoms');
     return [...this.running];
+  }
+
+  public async createAtomVolume(
+    volumeId: number,
+    sizeGiB: number,
+  ): Promise<string> {
+    console.log(`[STUB] createAtomVolume: id=${volumeId} size=${sizeGiB}GiB`);
+    return `/var/lib/marppa/atom-volumes/${volumeId}`;
+  }
+
+  public async deleteAtomVolume(hostPath: string): Promise<boolean> {
+    console.log(`[STUB] deleteAtomVolume: ${hostPath}`);
+    return true;
+  }
+
+  public async ensureAtomVolumeMounted(hostPath: string): Promise<void> {
+    console.log(`[STUB] ensureAtomVolumeMounted: ${hostPath}`);
   }
 
   public async reconcileAtoms(expectedIds: string[]): Promise<string[]> {

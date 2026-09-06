@@ -2,6 +2,7 @@ import { AtomImageEntity } from '@/nucleus/domain/entities/atom-image.entity';
 import { AtomImageRepository } from '@/nucleus/domain/repositories/atom-image.repository';
 import { PrismaService } from '@/shared/infrastructure/services/prisma.service';
 import { Injectable } from '@nestjs/common';
+import { ResourceStatus } from '@marppa-cloud/db';
 import { AtomImagePrismaMapper } from '../mappers/atom-image.prisma-mapper';
 import { PrismaMapper } from '@/shared/infrastructure/mappers/prisma.mapper';
 
@@ -71,6 +72,7 @@ export class AtomImagePrismaRepository implements AtomImageRepository {
     return this.prisma.atom.count({
       where: {
         imageId: id,
+        status: { not: ResourceStatus.DELETED },
       },
     });
   }

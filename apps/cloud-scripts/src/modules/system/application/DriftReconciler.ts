@@ -245,6 +245,18 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
     );
 
     await this.releaseStuck(
+      'AtomVolume',
+      liveKeys,
+      await this.prisma.atomVolume.findMany({
+        where: stuckWhere,
+        select: { id: true, status: true, ownerId: true },
+      }),
+      (row) =>
+        this.prisma.atomVolume.update({ where: { id: row.id }, data: failed }),
+      (row) => this.wsServer.sendAtomVolumeMessage(row, 'UPDATED', broadcastData),
+    );
+
+    await this.releaseStuck(
       'Zone',
       liveKeys,
       await this.prisma.zone.findMany({

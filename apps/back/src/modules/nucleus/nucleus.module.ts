@@ -7,6 +7,7 @@ import { CompanyModule } from '@/company/company.module';
 import { AtomController } from './presentation/controllers/atom.controller';
 import { AtomImageController } from './presentation/controllers/atom-image.controller';
 import { AtomSizeController } from './presentation/controllers/atom-size.controller';
+import { AtomVolumeController } from './presentation/controllers/atom-volume.controller';
 import { AtomApiService } from './application/services/atom.api-service';
 import { AtomEnvVarApiService } from './application/services/atom-env-var.api-service';
 import { AtomImageApiService } from './application/services/atom-image.api-service';
@@ -22,10 +23,19 @@ import { AtomImagePrismaRepository } from './infrastructure/repositories/atom-im
 import { AtomSizePrismaRepository } from './infrastructure/repositories/atom-size.prisma-repository';
 import { ATOM_SIZE_REPOSITORY_SYMBOL } from './domain/repositories/atom-size.repository';
 import { AtomEnvVarPrismaRepository } from './infrastructure/repositories/atom-env-var.prisma-repository';
+import { AtomVolumeApiService } from './application/services/atom-volume.api-service';
+import { AtomVolumeService } from './domain/services/atom-volume.service';
+import { ATOM_VOLUME_REPOSITORY_SYMBOL } from './domain/repositories/atom-volume.repository';
+import { AtomVolumePrismaRepository } from './infrastructure/repositories/atom-volume.prisma-repository';
 
 @Module({
   imports: [SharedModule, AuthModule, EventModule, MeshModule, CompanyModule],
-  controllers: [AtomController, AtomImageController, AtomSizeController],
+  controllers: [
+    AtomController,
+    AtomImageController,
+    AtomSizeController,
+    AtomVolumeController,
+  ],
   providers: [
     AtomImageApiService,
     AtomImageService,
@@ -52,6 +62,13 @@ import { AtomEnvVarPrismaRepository } from './infrastructure/repositories/atom-e
     {
       provide: ATOM_ENV_VAR_REPOSITORY_SYMBOL,
       useClass: AtomEnvVarPrismaRepository,
+    },
+
+    AtomVolumeApiService,
+    AtomVolumeService,
+    {
+      provide: ATOM_VOLUME_REPOSITORY_SYMBOL,
+      useClass: AtomVolumePrismaRepository,
     },
   ],
   exports: [AtomService],

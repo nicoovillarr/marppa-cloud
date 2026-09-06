@@ -84,6 +84,9 @@ export const EVENT_STATE_MACHINE: Partial<
   [EventTypeKey.ATOM_TERMINATE]: { entry: QUEUED, work: TERMINATING, ok: INACTIVE, fail: FAILED },
   [EventTypeKey.ATOM_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
 
+  [EventTypeKey.ATOM_VOLUME_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.ATOM_VOLUME_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
+
   // --- orbit (verified) ---
   [EventTypeKey.PORTAL_CREATE]: { entry: QUEUED, work: PROVISIONING, ok: ACTIVE, fail: FAILED },
   [EventTypeKey.PORTAL_UPDATE]: { entry: QUEUED, work: UPDATING, ok: ACTIVE, fail: FAILED },

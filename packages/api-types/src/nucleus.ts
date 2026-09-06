@@ -5,6 +5,23 @@ import { NodeResponse } from './mesh';
 export const MIN_ATOM_CPU_CORES = 0.1;
 export const MIN_ATOM_RAM_MB = 64;
 
+export const MIN_ATOM_VOLUME_GB = 1;
+export const MAX_ATOM_VOLUME_GB = 2048;
+
+export const ATOM_VOLUME_MOUNT_POINT = /^\/[a-zA-Z0-9._-]+(\/[a-zA-Z0-9._-]+)*$/;
+
+const FORBIDDEN_MOUNT_POINT_ROOTS = ['dev', 'proc', 'sys'];
+
+export function isForbiddenAtomMountPoint(mountPoint: string): boolean {
+  if (!ATOM_VOLUME_MOUNT_POINT.test(mountPoint)) return true;
+
+  const segments = mountPoint.split('/').slice(1);
+
+  if (segments.some((segment) => segment === '.' || segment === '..')) return true;
+
+  return FORBIDDEN_MOUNT_POINT_ROOTS.includes(segments[0]);
+}
+
 // --- Requests ---
 
 export interface CreateAtomRequest {
@@ -23,6 +40,21 @@ export interface UpdateAtomRequest {
 export interface CreateAtomEnvVarRequest {
   key: string;
   value: string;
+}
+
+export interface CreateAtomVolumeRequest {
+  name: string;
+  sizeGiB: number;
+  mountPoint: string;
+  ownerId?: string;
+}
+
+export interface UpdateAtomVolumeRequest {
+  name: string;
+}
+
+export interface AttachAtomVolumeRequest {
+  atomId: string;
 }
 
 // --- Responses ---
@@ -53,7 +85,23 @@ export interface AtomImageResponse {
   digest: string | null;
   architecture: string;
   capabilities: string[];
+  dataPaths: string[];
   defaultSizeId: number;
+}
+
+export interface AtomVolumeResponse {
+  id: number;
+  name: string;
+  status: string;
+  sizeGiB: number;
+  hostPath: string | null;
+  mountPoint: string;
+  ownerId: string;
+  atomId: string | null;
+  createdAt: Date;
+  createdBy: string;
+  updatedAt: Date | null;
+  updatedBy: string | null;
 }
 
 export interface AtomSizeResponse {

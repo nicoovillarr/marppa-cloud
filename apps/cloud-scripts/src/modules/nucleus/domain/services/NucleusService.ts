@@ -31,6 +31,12 @@ export type AtomNetworkConfig = {
 
 export type AtomEnvironment = Record<string, string>;
 
+export type AtomVolumeMount = {
+  id: number;
+  mountPoint: string;
+  hostPath: string | null;
+};
+
 export type AtomResourceSpecs = Pick<Atom, 'cpuCores' | 'ramMB'>;
 
 export abstract class NucleusService {
@@ -45,6 +51,7 @@ export abstract class NucleusService {
     net: AtomNetworkConfig,
     env: AtomEnvironment,
     specs: AtomResourceSpecs,
+    volumes: AtomVolumeMount[],
   ): Promise<void>;
 
   abstract stopAtom(id: string): Promise<boolean>;
@@ -54,6 +61,12 @@ export abstract class NucleusService {
   abstract isAtomRunning(id: string): Promise<boolean>;
 
   abstract getRunningAtoms(): Promise<string[]>;
+
+  abstract createAtomVolume(volumeId: number, sizeGiB: number): Promise<string>;
+
+  abstract deleteAtomVolume(hostPath: string): Promise<boolean>;
+
+  abstract ensureAtomVolumeMounted(hostPath: string): Promise<void>;
 
   abstract reconcileAtoms(expectedIds: string[]): Promise<string[]>;
 

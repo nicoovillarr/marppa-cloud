@@ -679,6 +679,20 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  public sendAtomVolumeMessage(
+    volume: { id: number; ownerId?: string },
+    type: string,
+    data: unknown,
+  ): void {
+    this.sendMessage(`nucleus:volume:${volume.id}`, type, data);
+    if (volume.ownerId) {
+      this.sendMessage(`company:${volume.ownerId}:nucleus`, type, {
+        volumeId: volume.id,
+        data,
+      });
+    }
+  }
+
   public sendZoneMessage(
     zone: { id: string; ownerId: string },
     type: string,
