@@ -23,7 +23,9 @@ Triggered on push to `master` (paths under `apps/cloud-scripts/**`,
    sudo grant only when it changed, before the new code can need it
 9. `sudo /usr/local/sbin/install-cloud-script-unit.sh` — installs the unit only
    when it changed
-10. `sudo systemctl restart cloud-script`
+10. `sudo /usr/local/sbin/install-cloud-script-caddyfile.sh` — installs the
+    hand-written Caddy config only when it changed, and reloads Caddy
+11. `sudo systemctl restart cloud-script`
 
 The runner runs **as the `cloud-deploy` user**, which owns the deploy tree but
 is *not* the user the service runs as. That split matters: `npm ci` executes
@@ -32,8 +34,8 @@ holds passwordless sudo for `nft`, `ip`, `virsh`, `install` and `systemctl`. A
 shared user would hand every one of those to a compromised dependency, plus read
 access to `.env.local`.
 
-`cloud-deploy` gets exactly four privileged actions: the unit installer, the
-sudoers installer, and `restart`/`is-active` on `cloud-script`.
+`cloud-deploy` gets exactly five privileged actions: the unit, sudoers and
+Caddyfile installers, and `restart`/`is-active` on `cloud-script`.
 
 ### Why the unit is installed through a wrapper
 
@@ -82,6 +84,30 @@ mode is always `0777`, which says nothing about the binary behind it.
 Widening the grant still takes a reviewed commit. The installer only decides whether what
 was committed is *shaped* safely, never whether it should have been asked for.
 
+### Why the Caddyfile is installed through a wrapper
+
+`/etc/caddy/Caddyfile` is the one piece of the reverse proxy nobody generates: it carries
+the `ws.cloud.marppa.com` site the UI's WebSocket goes through, and the
+`import sites/*.caddy` line that pulls in every portal. Everything under `sites/` belongs to
+cloud-scripts, which writes one file per portal and reloads Caddy on its own.
+
+That split is what the installer has to preserve. It syncs **only** the top-level file and
+never touches `sites/`: a `--delete` sync over that directory would drop every live portal
+between two deploys, and the app would only put them back on the next portal event.
+
+`install-cloud-script-caddyfile.sh` refuses a config that drops `import sites/*.caddy` —
+without it Caddy still starts, still serves the WebSocket, and every customer portal quietly
+stops answering. It also refuses absolute `import` paths, keeping the config to the tree it
+owns.
+
+Validation runs on a candidate written **inside `/etc/caddy`**, because Caddy resolves
+import globs relative to the config's own directory: from `/tmp` the portals would not be
+imported and a conflict with a live portal would slip through. If the reload fails anyway,
+the previous file is restored from `Caddyfile.marppa.bak` and Caddy is reloaded again, so a
+bad deploy cannot leave the proxy down.
+
+An empty `sites/` is not an error — a host with no portals yet still starts.
+
 The whole repo is deployed, not just `apps/cloud-scripts`: cloud-scripts
 resolves `@marppa-cloud/*` through workspace symlinks under `node_modules`, so
 `packages/*` and the hoisted `node_modules` must ship with it.
@@ -129,6 +155,10 @@ sudo install -m 0755 -o root -g root \
 sudo install -m 0755 -o root -g root \
   /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/install-cloud-script-sudoers.sh \
   /usr/local/sbin/install-cloud-script-sudoers.sh
+
+sudo install -m 0755 -o root -g root \
+  /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/install-cloud-script-caddyfile.sh \
+  /usr/local/sbin/install-cloud-script-caddyfile.sh
 
 sudo visudo -cf /opt/cloud-script/marppa-cloud/apps/cloud-scripts/deploy/cloud-script-deploy.sudoers
 sudo install -m 0440 -o root -g root \

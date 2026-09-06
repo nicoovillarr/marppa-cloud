@@ -72,6 +72,9 @@ jobs:
       - name: Install systemd unit
         run: sudo /usr/local/sbin/install-cloud-script-unit.sh
 
+      - name: Sync Caddy config
+        run: sudo /usr/local/sbin/install-cloud-script-caddyfile.sh
+
       - name: Restart service
         run: sudo systemctl restart "$SERVICE_NAME"
 

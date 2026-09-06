@@ -383,6 +383,11 @@ Portals are reverse-proxy sites, one Caddy config file per portal under
 `/etc/caddy/sites/`. The app writes and removes those files and reloads Caddy; it never
 edits the main `Caddyfile`, so anything you serve from it by hand keeps working.
 
+That main `Caddyfile` lives in the repo as `deploy/Caddyfile`. On a host with continuous
+deployment the pipeline installs it on every deploy and reloads Caddy — see
+`deploy/README.md`, *Why the Caddyfile is installed through a wrapper*. Edit it there, not
+on the host: the next deploy overwrites whatever the host has.
+
 Caddy is not in the Debian repos — install it from the official repository, then wire
 the include once:
 

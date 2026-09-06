@@ -1,0 +1,14 @@
+ws.cloud.marppa.com {
+	@ws {
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+	handle @ws {
+		reverse_proxy 127.0.0.1:8080
+	}
+	handle {
+		respond "Upgrade Required" 426
+	}
+}
+
+import sites/*.caddy
