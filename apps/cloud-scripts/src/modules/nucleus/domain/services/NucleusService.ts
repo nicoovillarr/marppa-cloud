@@ -66,7 +66,7 @@ export abstract class NucleusService {
 
   abstract deleteAtomVolume(hostPath: string): Promise<boolean>;
 
-  abstract ensureAtomVolumeMounted(hostPath: string): Promise<void>;
+  abstract ensureAtomVolumeRegistered(hostPath: string): Promise<void>;
 
   abstract reconcileAtoms(expectedIds: string[]): Promise<string[]>;
 

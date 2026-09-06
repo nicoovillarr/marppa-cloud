@@ -44,7 +44,4 @@ cloud-script ALL=(ALL) NOPASSWD: /usr/bin/true, \
   /usr/sbin/lvremove, \
   /usr/sbin/lvs, \
   /usr/sbin/mkfs.ext4, \
-  /usr/bin/mount, \
-  /usr/bin/umount, \
-  /usr/bin/findmnt, \
   /usr/local/sbin/reset-dnsmasq.sh
