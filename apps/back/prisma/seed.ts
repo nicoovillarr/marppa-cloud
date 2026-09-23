@@ -387,6 +387,27 @@ const createAtomImages = async () => {
     },
 
     {
+      name: 'mongodb-8',
+      description:
+        'MongoDB 8.0, TLS-only with SCRAM-SHA-256 authentication. Requires MONGO_INITDB_ROOT_USERNAME and MONGO_INITDB_ROOT_PASSWORD. Attach a volume at /data/db to persist data.',
+      registry: 'docker.io',
+      repository: 'library/mongo',
+      defaultTag: '8.0',
+      architecture: 'amd64',
+      defaultSize: 'medium',
+      capabilities: [],
+      sysctls: undefined,
+      command: [
+        'sh',
+        '-c',
+        ': "${MONGO_INITDB_ROOT_USERNAME:?is required}" "${MONGO_INITDB_ROOT_PASSWORD:?is required}" && umask 077 && cat /certs/*.crt /certs/*.key > /tmp/mongo.pem && chown mongodb:mongodb /tmp/mongo.pem && exec docker-entrypoint.sh mongod --auth --bind_ip_all --tlsMode requireTLS --tlsCertificateKeyFile /tmp/mongo.pem --tlsCAFile /etc/ssl/certs/ca-certificates.crt --tlsAllowConnectionsWithoutCertificates --setParameter authenticationMechanisms=SCRAM-SHA-256',
+      ],
+      requiredEnvVars: ['MONGO_INITDB_ROOT_USERNAME', 'MONGO_INITDB_ROOT_PASSWORD'],
+      dataPaths: ['/data/db'],
+      certMountPoint: '/certs',
+    },
+
+    {
       name: 'ubuntu-24.04',
       description: 'Ubuntu 24.04 LTS (docker image)',
       registry: 'docker.io',
