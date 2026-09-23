@@ -400,7 +400,7 @@ const createAtomImages = async () => {
       command: [
         'sh',
         '-c',
-        ': "${MONGO_INITDB_ROOT_USERNAME:?is required}" "${MONGO_INITDB_ROOT_PASSWORD:?is required}" && umask 077 && cat /certs/*.crt /certs/*.key > /tmp/mongo.pem && chown mongodb:mongodb /tmp/mongo.pem && exec docker-entrypoint.sh mongod --auth --bind_ip_all --tlsMode requireTLS --tlsCertificateKeyFile /tmp/mongo.pem --tlsCAFile /etc/ssl/certs/ca-certificates.crt --tlsAllowConnectionsWithoutCertificates --setParameter authenticationMechanisms=SCRAM-SHA-256',
+        ': "${MONGO_INITDB_ROOT_USERNAME:?is required}" "${MONGO_INITDB_ROOT_PASSWORD:?is required}" && umask 077 && cat /certs/*.crt /certs/*.key > /tmp/mongo.pem && chown mongodb:mongodb /tmp/mongo.pem && exec docker-entrypoint.sh mongod --auth --bind_ip_all --tlsMode requireTLS --tlsCertificateKeyFile /tmp/mongo.pem --tlsCAFile /etc/ssl/certs/ca-certificates.crt --tlsAllowConnectionsWithoutCertificates --setParameter authenticationMechanisms=SCRAM-SHA-256 --maxConns 256',
       ],
       requiredEnvVars: ['MONGO_INITDB_ROOT_USERNAME', 'MONGO_INITDB_ROOT_PASSWORD'],
       dataPaths: ['/data/db'],

@@ -492,6 +492,13 @@ Three consequences shape the module:
   argument is `mongod`, and its first-run init deliberately starts a temporary
   `allowTLS` mongod on `127.0.0.1` without `--auth` to create that user. MongoDB
   5+ also needs a CPU with AVX.
+  `--maxConns 256` exists because mongod spawns a thread per connection before
+  TLS or auth: a few hundred bare TCP connects exhaust the atom's
+  `ATOM_PIDS_LIMIT` (512), after which mongod cannot start threads and nothing
+  can be forked inside the container, `docker exec` included. Idle it uses ~50
+  pids; capped at 256 connections a flood tops out around 310. The cap does not
+  stop a flood from taking the atom offline while it lasts — only filtering by
+  source would, and a `Fiber` accepts any source today.
 - **The container is rebuilt from the row on every `ATOM_START`.** That is why
   there is no `ATOM_UPDATE`: a rename or an env change is a plain DB write that
   applies on the next start, and both are refused while the atom is not
