@@ -476,6 +476,29 @@ Three consequences shape the module:
   unless-stopped` then just respawns it forever, and there is never a running
   container for `docker exec` to reach. The seeded `ubuntu-24.04` row sets
   `command: ['sleep', 'infinity']` for exactly this reason.
+- **`mongodb-8` only speaks TLS and only with a password.** Its command wraps the
+  image's entrypoint the way the live postgres atom does: it refuses to start
+  unless both `MONGO_INITDB_ROOT_*` vars are non-empty (a second guard on top of
+  `requiredEnvVars`), builds the PEM mongod wants out of the `/certs` mount with
+  owner `mongodb` and mode `0600`, and pins `--auth`, `--tlsMode requireTLS` and
+  SCRAM-SHA-256 as the only mechanism. `--auth` is pinned even though the
+  entrypoint adds it on its own when both root vars are set, so a zone-reachable
+  database never starts open if that logic changes. MongoDB 7+ refuses TLS
+  without a chain of trust, so `--tlsCAFile` points at the image's system CA
+  bundle and `--tlsAllowConnectionsWithoutCertificates` keeps client certificates
+  optional, like redis's `--tls-auth-clients no`. The wrapper must end in
+  `exec docker-entrypoint.sh mongod`: the entrypoint only creates the root user,
+  fixes ownership of `/data/db` and drops to the `mongodb` user when its first
+  argument is `mongod`, and its first-run init deliberately starts a temporary
+  `allowTLS` mongod on `127.0.0.1` without `--auth` to create that user. MongoDB
+  5+ also needs a CPU with AVX.
+  `--maxConns 256` exists because mongod spawns a thread per connection before
+  TLS or auth: a few hundred bare TCP connects exhaust the atom's
+  `ATOM_PIDS_LIMIT` (512), after which mongod cannot start threads and nothing
+  can be forked inside the container, `docker exec` included. Idle it uses ~50
+  pids; capped at 256 connections a flood tops out around 310. The cap does not
+  stop a flood from taking the atom offline while it lasts — only filtering by
+  source would, and a `Fiber` accepts any source today.
 - **The container is rebuilt from the row on every `ATOM_START`.** That is why
   there is no `ATOM_UPDATE`: a rename or an env change is a plain DB write that
   applies on the next start, and both are refused while the atom is not
