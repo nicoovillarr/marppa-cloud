@@ -20,6 +20,7 @@ import { Injectable } from '@/decorators/Injectable';
 const IMAGE_DIR = '/var/lib/libvirt/images';
 const CLOUD_INIT_DIR_BASE = '/var/lib/libvirt/cloud-init';
 const VOLUME_DIR = '/var/lib/libvirt/images/volumes';
+const PENDING_AUTHORIZED_KEYS_PATH = '/var/lib/marppa/pending-authorized-keys';
 
 const BOOT_DEVICE_TARGET = 'vda';
 const VOLUME_FSTAB_OPTIONS = 'defaults,nofail,x-systemd.device-timeout=30s';
@@ -501,7 +502,8 @@ runcmd:
   - [ ufw, allow, 80/tcp ]
   - [ ufw, enable ]
   - [ setcap, cap_net_raw+ep, /usr/bin/ping ]
-  - [ sh, -c, "echo 'VM ready - $(date)' > /home/ubuntu/ready.txt" ]
+  - [ sh, -c, '${this.installPendingAuthorizedKeysScript('ubuntu')}' ]
+  - [ sh, -c, 'echo "VM ready - $(date)" > /home/ubuntu/ready.txt' ]
 
 final_message: "Cloud-init finished. SSH should be available."`;
 
@@ -806,7 +808,6 @@ local-hostname: ${name}
     }
 
     const diskPath = path.join(IMAGE_DIR, `${vmName}.img`);
-    const sshDir = `/home/${guestUser}/.ssh`;
     const tmpPath = path.join(os.tmpdir(), `authorized_keys-${vmName}-${Date.now()}`);
 
     await fsPromises.writeFile(
@@ -820,24 +821,35 @@ local-hostname: ${name}
         'virt-customize',
         '-a',
         diskPath,
-        '--run-command',
-        `mkdir -p ${sshDir}`,
+        '--mkdir',
+        path.posix.dirname(PENDING_AUTHORIZED_KEYS_PATH),
         '--upload',
-        `${tmpPath}:${sshDir}/authorized_keys`,
+        `${tmpPath}:${PENDING_AUTHORIZED_KEYS_PATH}`,
+        '--chmod',
+        `0600:${PENDING_AUTHORIZED_KEYS_PATH}`,
         '--run-command',
-        `chown -R ${guestUser}:${guestUser} ${sshDir}`,
-        '--run-command',
-        `chmod 700 ${sshDir}`,
-        '--run-command',
-        `chmod 600 ${sshDir}/authorized_keys`,
+        this.installPendingAuthorizedKeysScript(guestUser),
       ]);
     } finally {
       await fsPromises.rm(tmpPath, { force: true });
     }
 
     console.log(
-      `Wrote ${publicKeys.length} SSH keys offline to ${vmName}:${sshDir}/authorized_keys`,
+      `Staged ${publicKeys.length} SSH keys offline for ${vmName}:${guestUser}`,
     );
+  }
+
+  private installPendingAuthorizedKeysScript(guestUser: string): string {
+    const sshDir = `/home/${guestUser}/.ssh`;
+    const owner = `-o ${guestUser} -g ${guestUser}`;
+
+    return [
+      `if id -u ${guestUser} >/dev/null 2>&1 && [ -f ${PENDING_AUTHORIZED_KEYS_PATH} ]; then`,
+      `install -d -m 700 ${owner} ${sshDir}`,
+      `&& install -m 600 ${owner} ${PENDING_AUTHORIZED_KEYS_PATH} ${sshDir}/authorized_keys`,
+      `&& rm -f ${PENDING_AUTHORIZED_KEYS_PATH};`,
+      'fi',
+    ].join(' ');
   }
 
   public async forceStopWorker(vmName: string): Promise<void> {

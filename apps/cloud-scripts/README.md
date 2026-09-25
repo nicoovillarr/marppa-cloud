@@ -774,6 +774,22 @@ triggers exactly one re-prep — no manual cleanup. Note that re-preparing the b
 does **not** retrofit workers already cloned from it: those are full copies, and need the
 package installed into each (stopped) disk separately.
 
+**Offline SSH key updates are staged, not written into the home directory.** A stopped
+worker gets its keys through `virt-customize`, and between steps 2 and 4 the disk has never
+booted, so the `ubuntu` user does not exist yet — cloud-init creates it on first boot. The
+old code did `mkdir -p /home/ubuntu/.ssh`, uploaded the file and then `chown ubuntu:ubuntu`.
+The upload keeps the host uid (`cloud-script`, 999:1001), the `chown` failed on the missing
+user and aborted the rest, and the pre-created root-owned `/home/ubuntu` made `useradd` skip
+fixing ownership. sshd's StrictModes then rejected `authorized_keys` and the worker was
+unreachable with the right key.
+
+`applySshKeysOffline` now uploads to `/var/lib/marppa/pending-authorized-keys` and installs
+it into `~ubuntu/.ssh` with `install -o/-g` only when the user already exists. Otherwise the
+file stays pending, and a `runcmd` step in the worker's user-data installs it on first boot,
+after the users module. Workers whose user-data predates that step never pick up keys staged
+before their first boot; they boot with the keys baked at `WORKER_CREATE` and need one more
+key update afterwards.
+
 The API validates the preconditions of each step, so a call out of order fails
 immediately with a clear message instead of retrying inside a processor.
 
