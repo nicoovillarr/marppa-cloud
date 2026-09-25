@@ -640,7 +640,7 @@ local-hostname: ${name}
       // No `size=`: the disk was already grown to the flavor size by
       // resizeDiskImage (virt-install ignores size= on an existing file).
       '--disk',
-      `path=${imgPath},format=qcow2`,
+      `path=${imgPath},format=qcow2,discard=unmap`,
       '--disk',
       `path=${seedIsoPath},device=cdrom`,
       '--os-variant',
@@ -878,6 +878,8 @@ local-hostname: ${name}
       console.log(`VM ${vmName} is not defined, only clearing its files`);
     }
 
+    await this.removeCloudInitPool(vmName);
+
     await fsPromises.rm(path.join(CLOUD_INIT_DIR_BASE, vmName), {
       recursive: true,
       force: true,
@@ -886,6 +888,29 @@ local-hostname: ${name}
     await fsPromises.rm(path.join(IMAGE_DIR, `${vmName}.img`), { force: true });
 
     return defined;
+  }
+
+  private async removeCloudInitPool(vmName: string): Promise<void> {
+    const pools = await Command.runCommand('sudo', [
+      'virsh',
+      'pool-list',
+      '--all',
+      '--name',
+    ]);
+
+    const poolExists = pools
+      .split('\n')
+      .map((line) => line.trim())
+      .includes(vmName);
+
+    if (!poolExists) {
+      return;
+    }
+
+    await Command.runCommand('sudo', ['virsh', 'pool-destroy', vmName]).catch(
+      () => undefined,
+    );
+    await Command.runCommand('sudo', ['virsh', 'pool-undefine', vmName]);
   }
 
   public async editWorkerZone(
@@ -1213,7 +1238,7 @@ local-hostname: ${name}
   private volumeDeviceXml(volumePath: string, deviceTarget: string): string {
     return [
       `<disk type='file' device='disk'>`,
-      `  <driver name='qemu' type='qcow2'/>`,
+      `  <driver name='qemu' type='qcow2' discard='unmap'/>`,
       `  <source file='${volumePath}'/>`,
       `  <target dev='${deviceTarget}' bus='virtio'/>`,
       `</disk>`,
