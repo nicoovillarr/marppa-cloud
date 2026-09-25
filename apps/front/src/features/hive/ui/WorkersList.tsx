@@ -125,12 +125,12 @@ export function WorkersList() {
       : null;
 
   const onStart = async (worker: WorkerWithRelationsResponseDto) => {
-    const ok = await startWorker(worker.id);
-    if (ok) {
+    const failureReason = await startWorker(worker.id);
+    if (failureReason == null) {
       toast.success(`Start of ${worker.name} queued`);
       await fetchWorkers();
     } else {
-      toast.error(`Failed to start ${worker.name}`);
+      toast.error(`Failed to start ${worker.name}`, { description: failureReason });
     }
   };
 
@@ -142,12 +142,12 @@ export function WorkersList() {
       confirmText: "Terminate",
       confirmButtonStyle: "danger",
       onConfirm: async () => {
-        const ok = await terminateWorker(worker.id);
-        if (ok) {
+        const failureReason = await terminateWorker(worker.id);
+        if (failureReason == null) {
           toast.success(`Termination of ${worker.name} queued`);
           await fetchWorkers();
         } else {
-          toast.error(`Failed to terminate ${worker.name}`);
+          toast.error(`Failed to terminate ${worker.name}`, { description: failureReason });
         }
       },
     });

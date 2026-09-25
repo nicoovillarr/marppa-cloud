@@ -40,20 +40,20 @@ export function WorkerManageDialog({
   const canDelete = isOff || hasFailed;
 
   const run = async (
-    action: () => Promise<boolean>,
+    action: () => Promise<string | null>,
     queued: string,
     failed: string,
   ) => {
     setBusy(true);
-    const ok = await action();
+    const failureReason = await action();
     setBusy(false);
 
-    if (ok) {
+    if (failureReason == null) {
       toast.success(queued);
       closeCurrentDialog();
       onChanged?.();
     } else {
-      toast.error(failed);
+      toast.error(failed, { description: failureReason });
     }
   };
 

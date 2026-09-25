@@ -14,6 +14,7 @@ import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
 import { getCurrentUser } from '@/auth/infrastructure/als/session.context';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { ConflictError } from '@/shared/domain/errors/conflict.error';
 import {
   WORKER_SSH_KEY_REPOSITORY_SYMBOL,
   WorkerSshKeyRepository,
@@ -112,13 +113,13 @@ export class WorkerApiService {
     const { node } = await this.service.findByIdWithRelations(id);
 
     if (node == null) {
-      throw new Error(
+      throw new ConflictError(
         'Worker has no node assigned: create a node for it in a zone before starting it',
       );
     }
 
     if (node.status !== ResourceStatus.ACTIVE) {
-      throw new Error(
+      throw new ConflictError(
         `Worker node must be ACTIVE to start the worker (is ${node.status})`,
       );
     }

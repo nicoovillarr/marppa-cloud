@@ -76,50 +76,36 @@ export const useWorker = () => {
         }
     }, [workers, setWorkers, setIsLoading, setError])
 
-    const startWorker = useCallback(async (id: string) => {
+    const runLifecycleAction = useCallback(async (action: () => Promise<void>): Promise<string | null> => {
         setIsLoading(true);
         setError(null);
 
         try {
-            await service.startWorker(id);
-            return true;
+            await action();
+            return null;
         } catch (error) {
-            setError(error);
-            return false;
+            const failureReason = error instanceof Error ? error.message : String(error);
+            setError(failureReason);
+            return failureReason;
         } finally {
             setIsLoading(false);
         }
     }, [setIsLoading, setError]);
 
-    const terminateWorker = useCallback(async (id: string) => {
-        setIsLoading(true);
-        setError(null);
+    const startWorker = useCallback(
+        (id: string) => runLifecycleAction(() => service.startWorker(id)),
+        [runLifecycleAction],
+    );
 
-        try {
-            await service.terminateWorker(id);
-            return true;
-        } catch (error) {
-            setError(error);
-            return false;
-        } finally {
-            setIsLoading(false);
-        }
-    }, [setIsLoading, setError]);
+    const terminateWorker = useCallback(
+        (id: string) => runLifecycleAction(() => service.terminateWorker(id)),
+        [runLifecycleAction],
+    );
 
-    const deleteWorker = useCallback(async (id: string) => {
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            await service.deleteWorker(id);
-            return true;
-        } catch (error) {
-            setError(error);
-            return false;
-        } finally {
-            setIsLoading(false);
-        }
-    }, [setIsLoading, setError]);
+    const deleteWorker = useCallback(
+        (id: string) => runLifecycleAction(() => service.deleteWorker(id)),
+        [runLifecycleAction],
+    );
 
     return {
         isLoading,
