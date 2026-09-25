@@ -146,6 +146,18 @@ boot image and cloud-init directory by path instead. The flag would delete every
 volume along with the worker, which is exactly the data the volume lifecycle exists to
 preserve.
 
+`virt-install` registers a libvirt storage pool for every directory it finds a disk in, so
+each worker leaves a `w-<id>` pool pointing at its cloud-init directory. `deleteWorker`
+destroys and undefines that pool too; otherwise `virsh pool-list` accumulates one stale,
+autostarted pool per deleted worker.
+
+Boot disks and volumes are attached with `discard='unmap'`. Without it the guest's TRIM
+never reaches the host and a qcow2 only ever grows: a worker that churns data ends up
+occupying its full virtual size on the host no matter how little it actually keeps. Ubuntu
+cloud images mount the root filesystem with `discard` and ship `fstrim.timer` enabled, so
+nothing needs configuring inside the guest. The setting only applies at domain start, so an
+existing worker needs a restart to pick it up.
+
 ### Atom volumes
 
 An atom's container is rebuilt from its row on every `ATOM_START`, so anything the process
@@ -910,6 +922,14 @@ event is still pending forever (the process died mid-work) is not swept: BullMQ
 redelivers that job, so it belongs to the queue, not here. `deleteWorker`/`deleteAtom`
 accept `FAILED` as well as `INACTIVE`, which is what makes the swept resource actionable
 — without that the sweep would only relabel the deadlock.
+
+A worker or atom that `DriftReconciler` finds crashed (DB `ACTIVE`, not running on the
+host) is marked `INACTIVE`, and its **node is left alone**. A crash does not touch the
+node's host state — the DHCP reservation and the bridge attachment are still there — so
+the result has to be indistinguishable from a regular stop, which also leaves the node
+`ACTIVE`. Marking the node `INACTIVE` as well used to make the next `WORKER_START` fail
+the backend's "node must be ACTIVE" check, forcing a `NODE_START` first that re-applied
+state which had never gone away.
 
 Host-side removals follow one contract: **absent is success, but never silent.** Every
 teardown step records into a `TeardownReport` (`removed` / `absent` / `kept`), which the

@@ -14,6 +14,7 @@ import { EventDispatchService } from '@/event/application/services/event-dispatc
 import { EventTypeKey } from '@/event/domain/enums/event-type-key.enum';
 import { mergeDto } from '@/shared/application/utils/merge-dto.utils';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
+import { ConflictError } from '@/shared/domain/errors/conflict.error';
 
 @Injectable()
 export class AtomApiService {
@@ -67,13 +68,13 @@ export class AtomApiService {
     const { node, image } = await this.service.findByIdWithRelations(id);
 
     if (node == null) {
-      throw new Error(
+      throw new ConflictError(
         'Atom has no node assigned: create a node for it in a zone before starting it',
       );
     }
 
     if (node.status !== ResourceStatus.ACTIVE) {
-      throw new Error(
+      throw new ConflictError(
         `Atom node must be ACTIVE to start the atom (is ${node.status})`,
       );
     }
@@ -84,7 +85,7 @@ export class AtomApiService {
     );
 
     if (missing.length) {
-      throw new Error(
+      throw new ConflictError(
         `Atom is missing required env vars for image "${image.name}": ${missing.join(', ')}`,
       );
     }
