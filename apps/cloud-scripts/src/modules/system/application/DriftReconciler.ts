@@ -49,9 +49,8 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
       const started = Date.now();
 
       try {
-        const crashedWorkerIds = await this.reconcileWorkers();
-        const crashedAtomIds = await this.reconcileAtoms();
-        await this.reconcileNodes(crashedWorkerIds, crashedAtomIds);
+        await this.reconcileWorkers();
+        await this.reconcileAtoms();
         await this.releaseStuckResources();
       } catch (err) {
         this.logger.error(`[DriftReconciler] Error: ${String(err)}`);
@@ -77,8 +76,7 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
     return new Date(Date.now() - UPDATE_GUARD_MS);
   }
 
-  /** Returns the ids of workers found crashed (DB ACTIVE, VM not running). */
-  private async reconcileWorkers(): Promise<string[]> {
+  private async reconcileWorkers(): Promise<void> {
     const [rows, running] = await Promise.all([
       this.prisma.worker.findMany({
         where: { status: { in: SETTLED_STATES }, updatedAt: { lt: this.updatedBeforeGuard() } },
@@ -88,7 +86,6 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
     ]);
 
     const runningSet = new Set(running);
-    const crashed: string[] = [];
 
     for (const worker of rows) {
       const isRunning = runningSet.has(worker.id);
@@ -103,7 +100,6 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
           status: ResourceStatus.INACTIVE,
           reason: 'DRIFT_DETECTED',
         });
-        crashed.push(worker.id);
         continue;
       }
 
@@ -112,12 +108,9 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         await this.hiveService.forceStopWorker(worker.id);
       }
     }
-
-    return crashed;
   }
 
-  /** Returns the ids of atoms found crashed (DB ACTIVE, container not running). */
-  private async reconcileAtoms(): Promise<string[]> {
+  private async reconcileAtoms(): Promise<void> {
     const [rows, running] = await Promise.all([
       this.prisma.atom.findMany({
         where: { status: { in: SETTLED_STATES }, updatedAt: { lt: this.updatedBeforeGuard() } },
@@ -127,7 +120,6 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
     ]);
 
     const runningSet = new Set(running);
-    const crashed: string[] = [];
 
     for (const atom of rows) {
       const isRunning = runningSet.has(atom.id);
@@ -142,7 +134,6 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
           status: ResourceStatus.INACTIVE,
           reason: 'DRIFT_DETECTED',
         });
-        crashed.push(atom.id);
         continue;
       }
 
@@ -151,8 +142,6 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
         await this.nucleusService.stopAtom(atom.id);
       }
     }
-
-    return crashed;
   }
 
   private async liveEventResourceKeys(): Promise<Set<string>> {
@@ -350,38 +339,5 @@ export class DriftReconciler implements OnModuleInit, OnModuleDestroy {
       (row, status) =>
         this.prisma.fiber.update({ where: { id: row.id }, data: { status } }),
     );
-  }
-
-  /**
-   * A Node has no host state of its own — its liveness follows the worker or
-   * atom sitting on it. It is not torn down (no DHCP/bridge changes): the VM
-   * or container can still reattach cleanly on the next START.
-   */
-  private async reconcileNodes(crashedWorkerIds: string[], crashedAtomIds: string[]): Promise<void> {
-    if (crashedWorkerIds.length === 0 && crashedAtomIds.length === 0) return;
-
-    const nodes = await this.prisma.node.findMany({
-      where: {
-        status: ResourceStatus.ACTIVE,
-        OR: [
-          { workerId: { in: crashedWorkerIds } },
-          { atomId: { in: crashedAtomIds } },
-        ],
-      },
-      select: { id: true, zone: { select: { ownerId: true } } },
-    });
-
-    for (const node of nodes) {
-      this.logger.warn(`[DriftReconciler] Node ${node.id} lost its worker/atom — marking INACTIVE`);
-      await this.prisma.node.update({
-        where: { id: node.id },
-        data: { status: ResourceStatus.INACTIVE },
-      });
-      this.wsServer.sendNodeMessage(
-        { id: node.id, ownerId: node.zone.ownerId },
-        'UPDATED',
-        { status: ResourceStatus.INACTIVE, reason: 'DRIFT_DETECTED' },
-      );
-    }
   }
 }

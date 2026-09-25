@@ -923,6 +923,14 @@ redelivers that job, so it belongs to the queue, not here. `deleteWorker`/`delet
 accept `FAILED` as well as `INACTIVE`, which is what makes the swept resource actionable
 — without that the sweep would only relabel the deadlock.
 
+A worker or atom that `DriftReconciler` finds crashed (DB `ACTIVE`, not running on the
+host) is marked `INACTIVE`, and its **node is left alone**. A crash does not touch the
+node's host state — the DHCP reservation and the bridge attachment are still there — so
+the result has to be indistinguishable from a regular stop, which also leaves the node
+`ACTIVE`. Marking the node `INACTIVE` as well used to make the next `WORKER_START` fail
+the backend's "node must be ACTIVE" check, forcing a `NODE_START` first that re-applied
+state which had never gone away.
+
 Host-side removals follow one contract: **absent is success, but never silent.** Every
 teardown step records into a `TeardownReport` (`removed` / `absent` / `kept`), which the
 delete processors ship both over WebSocket, as `teardown` in the `DELETED` payload, and
