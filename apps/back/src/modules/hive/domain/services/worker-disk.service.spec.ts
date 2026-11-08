@@ -161,7 +161,7 @@ describe('WorkerDiskService', () => {
       expect(mockHostCapacityService.assertFitsOnCreate).toHaveBeenCalledWith({
         cpuCores: 0,
         ramMB: 0,
-        diskGB: 200,
+        workerDiskGB: 200,
       });
       expect(result.status).toBe(ResourceStatus.QUEUED);
       expect(result.workerId).toBeUndefined();

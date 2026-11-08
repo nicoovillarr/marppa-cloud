@@ -458,7 +458,6 @@ describe('WorkerService', () => {
       expect(mockHostCapacityService.assertFitsOnCreate).toHaveBeenCalledWith({
         cpuCores: 4,
         ramMB: 8192,
-        diskGB: 0,
       });
     });
 

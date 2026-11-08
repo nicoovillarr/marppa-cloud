@@ -1,6 +1,7 @@
-import { UserRole } from '@marppa-cloud/db';
+import { StorageMedia, UserRole } from '@marppa-cloud/db';
 
 import { HostCapacityModel } from '@/shared/domain/models/host-capacity.model';
+import { HostUsageModel } from '@/shared/domain/models/host-usage.model';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import {
   AdminCompanyCounts,
@@ -39,15 +40,22 @@ export interface AdminHostCapacityResponse {
   hostname: string;
   cpuCores: number;
   ramMB: number;
-  diskGB: number;
+  workerDiskGB: number;
+  atomVolumeGB: number;
+  workerDiskMedia: StorageMedia | null;
+  atomVolumeMedia: StorageMedia | null;
   cpuCoresOverride: number | null;
   ramMBOverride: number | null;
-  diskGBOverride: number | null;
+  workerDiskGBOverride: number | null;
+  atomVolumeGBOverride: number | null;
   effectiveCpuCores: number;
   effectiveRamMB: number;
-  effectiveDiskGB: number;
+  effectiveWorkerDiskGB: number;
+  effectiveAtomVolumeGB: number;
   reportedAt: Date;
 }
+
+export type AdminHostUsageResponse = HostUsageModel;
 
 export interface AdminResourceResponse {
   id: string;
@@ -95,13 +103,18 @@ export function toAdminHostCapacityResponse(
     hostname: host.hostname,
     cpuCores: host.cpuCores,
     ramMB: host.ramMB,
-    diskGB: host.diskGB,
+    workerDiskGB: host.workerDiskGB,
+    atomVolumeGB: host.atomVolumeGB,
+    workerDiskMedia: host.workerDiskMedia,
+    atomVolumeMedia: host.atomVolumeMedia,
     cpuCoresOverride: host.cpuCoresOverride,
     ramMBOverride: host.ramMBOverride,
-    diskGBOverride: host.diskGBOverride,
+    workerDiskGBOverride: host.workerDiskGBOverride,
+    atomVolumeGBOverride: host.atomVolumeGBOverride,
     effectiveCpuCores: host.effectiveCpuCores,
     effectiveRamMB: host.effectiveRamMB,
-    effectiveDiskGB: host.effectiveDiskGB,
+    effectiveWorkerDiskGB: host.effectiveWorkerDiskGB,
+    effectiveAtomVolumeGB: host.effectiveAtomVolumeGB,
     reportedAt: host.reportedAt,
   };
 }

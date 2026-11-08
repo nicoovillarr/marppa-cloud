@@ -17,5 +17,11 @@ export class UpdateHostCapacityDto {
   @IsInt()
   @Min(1)
   @IsOptional()
-  diskGBOverride?: number | null;
+  workerDiskGBOverride?: number | null;
+
+  @ValidateIf((_, value) => value !== null)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  atomVolumeGBOverride?: number | null;
 }

@@ -32,7 +32,16 @@ export class AdminHostCapacityService {
 
     this.assertWithinReported('vCPU', data.cpuCoresOverride, host.cpuCores);
     this.assertWithinReported('memory', data.ramMBOverride, host.ramMB);
-    this.assertWithinReported('disk', data.diskGBOverride, host.diskGB);
+    this.assertWithinReported(
+      'worker disk',
+      data.workerDiskGBOverride,
+      host.workerDiskGB,
+    );
+    this.assertWithinReported(
+      'atom volume storage',
+      data.atomVolumeGBOverride,
+      host.atomVolumeGB,
+    );
 
     return this.repository.updateOverride(host.hostname, data);
   }

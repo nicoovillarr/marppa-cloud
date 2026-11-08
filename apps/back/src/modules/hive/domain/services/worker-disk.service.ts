@@ -95,7 +95,7 @@ export class WorkerDiskService {
     await this.hostCapacityService.assertFitsOnCreate({
       cpuCores: 0,
       ramMB: 0,
-      diskGB: data.sizeGiB,
+      workerDiskGB: data.sizeGiB,
     });
 
     const entity = new WorkerDiskEntity(

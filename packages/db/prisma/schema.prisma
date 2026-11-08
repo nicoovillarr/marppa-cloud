@@ -301,16 +301,27 @@ model WorkerFlavor {
 }
 
 model HostCapacity {
-  hostname String @id
-  cpuCores Int
-  ramMB    Int
-  diskGB   Int
+  hostname     String @id
+  cpuCores     Int
+  ramMB        Int
+  workerDiskGB Int
+  atomVolumeGB Int    @default(0)
 
-  cpuCoresOverride Int?
-  ramMBOverride    Int?
-  diskGBOverride   Int?
+  workerDiskMedia StorageMedia?
+  atomVolumeMedia StorageMedia?
+
+  cpuCoresOverride     Int?
+  ramMBOverride        Int?
+  workerDiskGBOverride Int?
+  atomVolumeGBOverride Int?
 
   reportedAt DateTime @default(now())
+}
+
+enum StorageMedia {
+  NVME
+  SSD
+  HDD
 }
 
 model WorkerStorageType {

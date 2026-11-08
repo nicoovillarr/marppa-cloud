@@ -108,7 +108,7 @@ Guardrails live in the domain services, not the UI:
   stale-JWT window of up to the 15-minute access-token TTL, since CASL reads
   `companyId` off the token — dropping the sessions closes it.
 - **Host capacity rows are bounded and hostname-shaped** (`MAX_HOST_*` in
-  `host-capacity.config.ts`). `HostCapacityService.budget()` sums every row, so an
+  `host-capacity.config.ts`). `HostCapacityService.budgetOf()` sums every row, so an
   unbounded write is a way to overcommit the host into OOM rather than a typo.
 - **Catalog rows in use cannot be deleted.** Worker images check their workers,
   storage types check images and disks, atom images check their atoms — each a
@@ -161,14 +161,21 @@ already missing, which is the argument against it.
 
 ### Host capacity: reported vs budgeted
 
-`HostPreflightService.reportCapacity()` upserts `cpuCores`/`ramMB`/`diskGB` from
-what the machine actually has (`os.cpus()`, `os.totalmem()`, `df` on the image
-volume). It runs on every cloud-scripts start and inside `SYSTEM_RESET` /
-`SYSTEM_RESET_HARD` — not on a timer. Those three columns are therefore a
-measurement, and editing them by hand only survives until the next boot.
+`HostPreflightService.reportCapacity()` upserts `cpuCores`/`ramMB`/`workerDiskGB`/
+`atomVolumeGB` from what the machine actually has (`os.cpus()`, `os.totalmem()`,
+`df` on the image volume, and `lvs` on the atom volume group), plus the media
+(`NVME`/`SSD`/`HDD`) under each disk pool. It runs on every cloud-scripts start and
+inside `SYSTEM_RESET` / `SYSTEM_RESET_HARD` — not on a timer. Those columns are
+therefore a measurement, and editing them by hand only survives until the next boot.
 
-Reserved headroom lives in `cpuCoresOverride`/`ramMBOverride`/`diskGBOverride`,
-which the preflight never writes. `HostCapacityService.budget()` sums
+Disk is two pools, budgeted separately, because they are two different places on the
+host: worker boot disks and worker volumes are qcow2 files on the
+`/var/lib/libvirt/images` filesystem, while atom volumes are logical volumes carved
+from the free extents of `ATOM_VOLUME_GROUP`. `atomVolumeGB` is that group's free space
+plus the atom volumes it already holds, so it stays stable as volumes come and go.
+
+Reserved headroom lives in `cpuCoresOverride`/`ramMBOverride`/
+`workerDiskGBOverride`/`atomVolumeGBOverride`, which the preflight never writes. `HostCapacityService.budgetOf()` sums
 `effective*` (`override ?? reported`), so an override lowers what the scheduler is
 willing to commit without lying about the hardware. An override above the reported
 value is a `400`: it reserves headroom, it cannot invent RAM. vCPU is the exception
@@ -178,6 +185,11 @@ overcommitting cores is a deliberate, separate decision.
 `reportedAt` stopped being `@updatedAt` when the overrides landed: an admin editing
 a budget is not a host reporting in, and the column is read as "when did this host
 last check in".
+
+`GET /admin/hosts/usage` (`HostCapacityService.usage()`) is what Admin › Host capacity
+shows above the table: vCPU and RAM running and allocated (stopped resources included)
+against the budget, and each disk pool's provisioned size against its budget with the
+media it sits on.
 
 ### Tenant-scoped images
 
@@ -395,7 +407,7 @@ for a tenant that genuinely needs another shape is a **private family**, not a s
 
   **The budget is measured, not configured.** The backend cannot see the host — it does
   not run on it — so cloud-scripts' host preflight measures cores, total RAM and the size
-  of the images volume at startup (and on every system reset) and upserts a `HostCapacity`
+  of both disk pools at startup (and on every system reset) and upserts a `HostCapacity`
   row. `HiveCapacityService` sums those rows. Nothing is held back for the host, atoms or
   anything else running outside the platform: the budget is the machine's full capacity.
 
@@ -411,7 +423,8 @@ for a tenant that genuinely needs another shape is a **private family**, not a s
   | `HIVE_VCPU_OVERCOMMIT` | `2` | Multiplier applied to reported cores. A policy, not a measurement. |
   | `HIVE_HOST_VCPU` | `12` | Fallback cores, used only when no `HostCapacity` row exists. |
   | `HIVE_HOST_RAM_MB` | `32026` | Fallback memory, same condition. |
-  | `HIVE_HOST_DISK_GB` | `439` | Fallback disk, same condition. |
+  | `HIVE_HOST_DISK_GB` | `439` | Fallback worker disk pool, same condition. |
+  | `HIVE_HOST_ATOM_VOLUME_GB` | `247` | Fallback atom volume pool, same condition. |
   | `WORKER_BOOT_DISK_GB` | `20` | Boot disk every worker gets. Snapshotted per worker at create. |
 
   cloud-scripts also re-checks the real host with `df` and `free` before it copies a disk

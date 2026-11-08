@@ -575,8 +575,17 @@ process refuses to boot with a list of what is wrong.
 ### Host capacity: measuring and reporting
 
 The host preflight is what tells the platform how big this machine is. After every check
-passes (at startup, and again before a system reset) it measures cores, total RAM and the
-size of `/var/lib/libvirt/images`, and upserts a `HostCapacity` row keyed by hostname. The
+passes (at startup, and again before a system reset) it measures cores, total RAM and two
+disk pools, and upserts a `HostCapacity` row keyed by hostname:
+
+- **Worker disks**: the size of the `/var/lib/libvirt/images` filesystem (`df`).
+- **Atom volumes**: the free space of `ATOM_VOLUME_GROUP` plus the `atomvol-*` volumes it
+  already holds (`sudo lvs`, already granted for the volume lifecycle).
+
+For each pool it also records the media underneath (`findmnt` and `lsblk --inverse`):
+`NVME` when every disk is NVMe, `HDD` when any disk is rotational, `SSD` otherwise. A pool
+that cannot be read is logged as a warning and reported as 0 GB with no media, so a host
+without the atom volume group still passes the preflight but cannot take atom volumes. The
 backend reads those rows as its budget — it cannot measure this host itself. A host that
 fails the preflight never publishes capacity, and `USE_STUBS=true` skips it entirely, in
 which case the backend falls back to its `HIVE_HOST_*` env values.

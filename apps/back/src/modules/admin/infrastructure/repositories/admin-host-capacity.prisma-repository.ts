@@ -50,15 +50,21 @@ export class AdminHostCapacityPrismaRepository
 
 function toModel(host: HostCapacity): HostCapacityModel {
   return new HostCapacityModel(
-    host.hostname,
-    host.cpuCores,
-    host.ramMB,
-    host.diskGB,
-    host.reportedAt,
+    {
+      hostname: host.hostname,
+      cpuCores: host.cpuCores,
+      ramMB: host.ramMB,
+      workerDiskGB: host.workerDiskGB,
+      atomVolumeGB: host.atomVolumeGB,
+      workerDiskMedia: host.workerDiskMedia,
+      atomVolumeMedia: host.atomVolumeMedia,
+      reportedAt: host.reportedAt,
+    },
     {
       cpuCoresOverride: host.cpuCoresOverride,
       ramMBOverride: host.ramMBOverride,
-      diskGBOverride: host.diskGBOverride,
+      workerDiskGBOverride: host.workerDiskGBOverride,
+      atomVolumeGBOverride: host.atomVolumeGBOverride,
     },
   );
 }
