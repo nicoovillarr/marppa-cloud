@@ -22,28 +22,38 @@ export function AtomResizeSection({
 }: AtomResizeSectionProps) {
   const { resizeAtom } = useAtom();
   const { sizes, isLoading, fetchSizes } = useAtomSize();
-  const [sizeId, setSizeId] = useState<number | null>(null);
+  const [sizeId, setSizeId] = useState<number>(atom.sizeId);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     fetchSizes();
   }, [fetchSizes]);
 
-  const currentSize = sizes.find((size) => size.id === atom.sizeId);
+  const options = useMemo(() => {
+    const available = sizes
+      .filter((size) => size.deprecatedAt == null || size.id === atom.sizeId)
+      .map((size) => ({
+        value: size.id,
+        displayText: `${size.name} — ${size.cpuCores} vCPU · ${size.ramMB} MB`,
+      }));
 
-  const options = useMemo(
-    () =>
-      sizes
-        .filter((size) => size.deprecatedAt == null && size.id !== atom.sizeId)
-        .map((size) => ({
-          value: size.id,
-          displayText: `${size.name} — ${size.cpuCores} vCPU · ${size.ramMB} MB`,
-        })),
-    [sizes, atom.sizeId],
-  );
+    if (available.some((option) => option.value === atom.sizeId)) {
+      return available;
+    }
+
+    return [
+      {
+        value: atom.sizeId,
+        displayText: `current — ${atom.cpuCores} vCPU · ${atom.ramMB} MB`,
+      },
+      ...available,
+    ];
+  }, [sizes, atom]);
+
+  const hasChanged = sizeId !== atom.sizeId;
 
   const resize = async () => {
-    if (sizeId == null) return;
+    if (!hasChanged) return;
 
     setBusy(true);
     const failureReason = await resizeAtom(atom.id, sizeId);
@@ -66,32 +76,20 @@ export function AtomResizeSection({
     <section className="space-y-3">
       <h3 className="font-semibold text-sm">Size</h3>
 
-      <p className="text-sm">
-        {currentSize?.name ?? "—"} — {atom.cpuCores} vCPU · {atom.ramMB} MB
-      </p>
-
-      {options.length === 0 && !isLoading ? (
-        <p className="text-sm text-ink-muted">
-          No other size is available for this atom.
-        </p>
-      ) : (
-        <>
-          <Select
-            options={options}
-            placeholder="Select a size"
-            isLoading={isLoading}
-            disabled={!editable}
-            onChangedValue={(value: string | number | null) =>
-              setSizeId(value == null ? null : Number(value))
-            }
-          />
-          <Button
-            text="Resize"
-            disabled={busy || !editable || sizeId == null}
-            onClick={resize}
-          />
-        </>
-      )}
+      <Select
+        options={options}
+        defaultValue={atom.sizeId}
+        isLoading={isLoading}
+        disabled={!editable}
+        onChangedValue={(value: string | number | null) =>
+          setSizeId(value == null ? atom.sizeId : Number(value))
+        }
+      />
+      <Button
+        text="Resize"
+        disabled={busy || !editable || !hasChanged}
+        onClick={resize}
+      />
 
       <p className="text-xs text-ink-muted">
         {editable
