@@ -20,6 +20,10 @@ const atomsApi = {
         return fetcher<AtomResponseDto>(`${baseUrl}/${id}`, 'PUT', data);
     },
 
+    resizeAtom: (id: string, sizeId: number): Promise<AtomResponseDto> => {
+        return fetcher<AtomResponseDto>(`${baseUrl}/${id}/resize`, 'POST', { sizeId });
+    },
+
     startAtom: (id: string): Promise<void> => {
         return fetcher<void>(`${baseUrl}/${id}/start`, 'POST');
     },

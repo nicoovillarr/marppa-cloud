@@ -20,6 +20,10 @@ const workersApi = {
         return fetcher<WorkerWithRelationsResponseDto>(`${baseUrl}/${id}`, 'PUT', data);
     },
 
+    resizeWorker: (id: string, flavorId: number): Promise<WorkerResponseDto> => {
+        return fetcher<WorkerResponseDto>(`${baseUrl}/${id}/resize`, 'POST', { flavorId });
+    },
+
     startWorker: (id: string): Promise<void> => {
         return fetcher<void>(`${baseUrl}/${id}/start`, 'POST');
     },

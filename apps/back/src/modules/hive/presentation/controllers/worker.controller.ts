@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { CreateWorkerDto } from '../dtos/create-worker.dto';
 import { UpdateWorkerDto } from '../dtos/update-worker.dto';
+import { ResizeWorkerDto } from '../dtos/resize-worker.dto';
 import { WorkerWithRelationsResponseModel } from '@/hive/application/models/worker-with-relations.response-model';
 import { WorkerResponseModel } from '@/hive/application/models/worker.response-model';
 import type { Response } from 'express';
@@ -86,6 +87,15 @@ export class WorkerController {
   @HttpCode(HttpStatus.ACCEPTED)
   async terminate(@Param('id') id: string): Promise<void> {
     await this.service.terminate(id);
+  }
+
+  @Post(':id/resize')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async resize(
+    @Param('id') id: string,
+    @Body() data: ResizeWorkerDto,
+  ): Promise<WorkerResponseModel> {
+    return await this.service.resize(id, data);
   }
 
   @Put(':id')

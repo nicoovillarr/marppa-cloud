@@ -22,6 +22,8 @@ import { HostCapacityService } from '@/shared/domain/services/host-capacity.serv
 import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
 import { WorkerArchitectureMismatchError } from '../errors/worker-architecture-mismatch.error';
 import { getWorkerBootDiskGB } from '../config/worker-boot-disk.config';
+import { WorkerFlavorUnchangedError } from '../errors/worker-flavor-unchanged.error';
+import { ResizeWorkerDto } from '@/hive/presentation/dtos/resize-worker.dto';
 
 @Injectable()
 export class WorkerService {
@@ -210,6 +212,71 @@ export class WorkerService {
     });
 
     return this.save(updated);
+  }
+
+  async resizeWorker(
+    id: string,
+    data: ResizeWorkerDto,
+  ): Promise<{ previous: WorkerEntity; updated: WorkerEntity }> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const entity = await this.findById(id);
+
+    if (entity.status !== ResourceStatus.INACTIVE) {
+      throw new WorkerInvalidStatusError(
+        ResourceStatus.INACTIVE,
+        entity.status,
+      );
+    }
+
+    if (entity.flavorId === data.flavorId) {
+      throw new WorkerFlavorUnchangedError();
+    }
+
+    const { flavor, family } = await this.workerFlavorService.findByIdWithFamily(
+      data.flavorId,
+    );
+
+    const visibleOwnerIds =
+      await this.companyHierarchyService.selfAndAncestors(user.companyId);
+
+    if (!family.isVisibleTo(visibleOwnerIds) || family.isDeprecated) {
+      throw new NotFoundError();
+    }
+
+    if (flavor.isDeprecated) {
+      throw new WorkerFlavorDeprecatedError(flavor.name);
+    }
+
+    const image = await this.workerImageService.findById(entity.imageId);
+
+    if (image.architecture !== family.architecture) {
+      throw new WorkerArchitectureMismatchError(
+        image.architecture,
+        family.architecture,
+      );
+    }
+
+    await this.hostCapacityService.assertFitsOnCreate({
+      cpuCores: flavor.cpuCores,
+      ramMB: flavor.ramMB,
+      diskGB: 0,
+    });
+
+    const updated = await this.save(
+      entity.clone({
+        flavorId: flavor.id!,
+        cpuCores: flavor.cpuCores,
+        ramMB: flavor.ramMB,
+        status: getEventStateTransition(EventTypeKey.WORKER_RESIZE).entry,
+        updatedBy: user.userId,
+      }),
+    );
+
+    return { previous: entity, updated };
   }
 
   async deleteWorker(id: string): Promise<void> {

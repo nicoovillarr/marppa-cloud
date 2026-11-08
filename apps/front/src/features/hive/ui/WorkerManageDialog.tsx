@@ -12,6 +12,7 @@ import { WorkerWithRelationsResponseDto } from "../api/worker.api.types";
 import { useWorker } from "../models/use-worker";
 import { WorkerSshKeysSection } from "./WorkerSshKeysSection";
 import { WorkerVolumesSection } from "./WorkerVolumesSection";
+import { WorkerResizeSection } from "./WorkerResizeSection";
 
 interface WorkerManageDialogProps {
   worker: WorkerWithRelationsResponseDto;
@@ -141,6 +142,12 @@ export function WorkerManageDialog({
           </p>
         )}
       </section>
+
+      <WorkerResizeSection
+        worker={worker}
+        editable={isOff}
+        onChanged={onChanged}
+      />
 
       <NodeSection
         node={worker.node}

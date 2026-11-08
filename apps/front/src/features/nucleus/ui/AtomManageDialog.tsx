@@ -12,6 +12,7 @@ import { AtomWithRelationsResponseDto } from "../api/atom.api.types";
 import { useAtom } from "../models/use-atom";
 import { AtomEnvVarsSection } from "./AtomEnvVarsSection";
 import { AtomVolumesSection } from "./AtomVolumesSection";
+import { AtomResizeSection } from "./AtomResizeSection";
 
 interface AtomManageDialogProps {
   atom: AtomWithRelationsResponseDto;
@@ -152,6 +153,12 @@ export function AtomManageDialog({ atom, onChanged }: AtomManageDialogProps) {
           <p className="text-xs text-ink-muted">Stop it first to delete it.</p>
         )}
       </section>
+
+      <AtomResizeSection
+        atom={atom}
+        editable={isOff}
+        onChanged={onChanged}
+      />
 
       <NodeSection
         node={atom.node}

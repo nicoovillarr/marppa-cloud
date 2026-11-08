@@ -102,6 +102,13 @@ export const useWorker = () => {
         [runLifecycleAction],
     );
 
+    const resizeWorker = useCallback(
+        (id: string, flavorId: number) => runLifecycleAction(async () => {
+            await service.resizeWorker(id, flavorId);
+        }),
+        [runLifecycleAction],
+    );
+
     const deleteWorker = useCallback(
         (id: string) => runLifecycleAction(() => service.deleteWorker(id)),
         [runLifecycleAction],
@@ -117,6 +124,7 @@ export const useWorker = () => {
         updateWorker,
         startWorker,
         terminateWorker,
+        resizeWorker,
         deleteWorker,
     };
 }

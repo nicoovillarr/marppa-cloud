@@ -57,12 +57,8 @@ export class StubHiveService extends HiveService {
     console.log(`[STUB] editWorkerZone: vm=${vmName} bridge=${bridgeName} mac=${mac}`);
   }
 
-  public async editWorkerMemory(vmName: string, newMemoryMb: number): Promise<void> {
-    console.log(`[STUB] editWorkerMemory: vm=${vmName} memory=${newMemoryMb}MB`);
-  }
-
-  public async editWorkerCpus(vmName: string, newVcpus: number): Promise<void> {
-    console.log(`[STUB] editWorkerCpus: vm=${vmName} vcpus=${newVcpus}`);
+  public async resizeWorker(vmName: string, memoryMB: number, cpus: number): Promise<void> {
+    console.log(`[STUB] resizeWorker: vm=${vmName} memory=${memoryMB}MB cpus=${cpus}`);
   }
 
   public async editWorkerDiskSpace(vmName: string, newDiskSizeGb: number): Promise<void> {
