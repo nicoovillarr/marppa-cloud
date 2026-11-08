@@ -12,6 +12,7 @@ import { AppContainer } from '@/libs/Container';
 import { IPChecker } from '@/system/application/IPChecker';
 import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 import { NftablesRuleset } from '@/libs/NftablesRuleset';
+import { DockerNucleusService } from '@/nucleus/infrastructure/DockerNucleusService';
 
 process.env.EVENT_QUEUE_HMAC_SECRET ??= 'test-event-queue-hmac-secret';
 const testEventSignature = (eventId: number) =>
@@ -683,4 +684,15 @@ test('the base image fingerprint is stable across runs', () => {
     LinuxHiveService.baseImageFingerprint(),
   );
   assert.match(LinuxHiveService.baseImageFingerprint(), /^[0-9a-f]{64}$/);
+});
+
+test('atoms get a fresh tmpfs /tmp so a docker restart never trips fs.protected_regular', () => {
+  const args: string[] = (new DockerNucleusService() as any).hardeningArgs({ ramMB: 256, cpuCores: 1 });
+  const tmpfs = args[args.indexOf('--tmpfs') + 1];
+
+  assert.ok(args.includes('--tmpfs'));
+  assert.match(tmpfs, /^\/tmp:/);
+  assert.ok(tmpfs.split(',').includes('mode=1777'));
+  assert.ok(tmpfs.split(',').includes('nosuid'));
+  assert.match(tmpfs, /,size=[0-9]+[a-z]?(,|$)/);
 });

@@ -550,6 +550,7 @@ export class DockerNucleusService extends NucleusService {
       '--pids-limit', this.limit('ATOM_PIDS_LIMIT', '512'),
       '--memory', `${specs.ramMB}m`,
       '--cpus', String(specs.cpuCores),
+      '--tmpfs', `/tmp:rw,nosuid,nodev,mode=1777,size=${this.limit('ATOM_TMP_SIZE', '64m')}`,
     ];
   }
 
