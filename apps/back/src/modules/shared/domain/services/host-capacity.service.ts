@@ -92,6 +92,7 @@ export class HostCapacityService {
   async usage(): Promise<HostUsageModel> {
     const hosts = await this.hostCapacityRepository.findAll();
     const budget = this.budgetOf(hosts);
+    const reported = this.reportedOf(hosts);
 
     const [running, provisioned] = await Promise.all([
       this.committedResourcesRepository.sumRunning(),
@@ -99,27 +100,50 @@ export class HostCapacityService {
     ]);
 
     return {
+      source: hosts.length === 0 ? 'CONFIGURED' : 'REPORTED',
       vcpu: {
         running: running.cpuCores,
         provisioned: provisioned.cpuCores,
         budget: budget.vcpu,
+        reported: reported.vcpu,
+        overcommit: getVcpuOvercommit(),
       },
       ramMB: {
         running: running.ramMB,
         provisioned: provisioned.ramMB,
         budget: budget.ramMB,
+        reported: reported.ramMB,
       },
       workerDiskGB: {
         provisioned: provisioned.workerDiskGB,
         budget: budget.workerDiskGB,
+        reported: reported.workerDiskGB,
         media: distinctMedia(hosts.map((host) => host.workerDiskMedia)),
       },
       atomVolumeGB: {
         provisioned: provisioned.atomVolumeGB,
         budget: budget.atomVolumeGB,
+        reported: reported.atomVolumeGB,
         media: distinctMedia(hosts.map((host) => host.atomVolumeMedia)),
       },
     };
+  }
+
+  private reportedOf(hosts: HostCapacityModel[]): HostCapacityBudget {
+    if (hosts.length === 0) {
+      const configured = getConfiguredHostCapacityBudget();
+      return { ...configured, vcpu: configured.vcpu / getVcpuOvercommit() };
+    }
+
+    return hosts.reduce<HostCapacityBudget>(
+      (total, host) => ({
+        vcpu: total.vcpu + host.cpuCores,
+        ramMB: total.ramMB + host.ramMB,
+        workerDiskGB: total.workerDiskGB + host.workerDiskGB,
+        atomVolumeGB: total.atomVolumeGB + host.atomVolumeGB,
+      }),
+      { vcpu: 0, ramMB: 0, workerDiskGB: 0, atomVolumeGB: 0 },
+    );
   }
 
   private budgetOf(hosts: HostCapacityModel[]): HostCapacityBudget {

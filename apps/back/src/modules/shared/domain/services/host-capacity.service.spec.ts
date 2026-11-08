@@ -244,11 +244,64 @@ describe('HostCapacityService', () => {
       );
 
       await expect(service.usage()).resolves.toEqual({
-        vcpu: { running: 3, provisioned: 5, budget: 24 },
-        ramMB: { running: 6144, provisioned: 10240, budget: 32026 },
-        workerDiskGB: { provisioned: 80, budget: 439, media: [StorageMedia.SSD] },
-        atomVolumeGB: { provisioned: 13, budget: 260, media: [StorageMedia.SSD] },
+        source: 'REPORTED',
+        vcpu: { running: 3, provisioned: 5, budget: 24, reported: 12, overcommit: 2 },
+        ramMB: { running: 6144, provisioned: 10240, budget: 32026, reported: 32026 },
+        workerDiskGB: {
+          provisioned: 80,
+          budget: 439,
+          reported: 439,
+          media: [StorageMedia.SSD],
+        },
+        atomVolumeGB: {
+          provisioned: 13,
+          budget: 260,
+          reported: 260,
+          media: [StorageMedia.SSD],
+        },
       });
+    });
+
+    it('should keep what the host reported apart from the overridden budget', async () => {
+      mockHostCapacityRepository.findAll.mockResolvedValue([
+        new HostCapacityModel(
+          {
+            hostname: 'home-server',
+            cpuCores: 12,
+            ramMB: 32026,
+            workerDiskGB: 439,
+            atomVolumeGB: 260,
+            reportedAt: new Date(),
+          },
+          { cpuCoresOverride: 10, ramMBOverride: 30000 },
+        ),
+      ]);
+      mockCommittedResourcesRepository.sumRunning.mockResolvedValue(
+        ResourceUsageModel.empty(),
+      );
+      mockCommittedResourcesRepository.sumProvisioned.mockResolvedValue(
+        ResourceUsageModel.empty(),
+      );
+
+      const usage = await service.usage();
+
+      expect(usage.vcpu).toMatchObject({ budget: 20, reported: 12, overcommit: 2 });
+      expect(usage.ramMB).toMatchObject({ budget: 30000, reported: 32026 });
+    });
+
+    it('should flag the configured fallback when no host reported yet', async () => {
+      mockCommittedResourcesRepository.sumRunning.mockResolvedValue(
+        ResourceUsageModel.empty(),
+      );
+      mockCommittedResourcesRepository.sumProvisioned.mockResolvedValue(
+        ResourceUsageModel.empty(),
+      );
+
+      const usage = await service.usage();
+
+      expect(usage.source).toBe('CONFIGURED');
+      expect(usage.vcpu).toMatchObject({ budget: 8, reported: 4, overcommit: 2 });
+      expect(usage.atomVolumeGB).toMatchObject({ budget: 50, reported: 50 });
     });
 
     it('should list each distinct media across hosts and skip unknown ones', async () => {

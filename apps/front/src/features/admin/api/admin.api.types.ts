@@ -100,20 +100,29 @@ export type UpdateHostCapacityDto = {
     atomVolumeGBOverride?: number | null;
 }
 
+export type HostBudgetSource = "REPORTED" | "CONFIGURED";
+
 export type ComputeUsageDto = {
     running: number;
     provisioned: number;
     budget: number;
+    reported: number;
+}
+
+export type VcpuUsageDto = ComputeUsageDto & {
+    overcommit: number;
 }
 
 export type StoragePoolUsageDto = {
     provisioned: number;
     budget: number;
+    reported: number;
     media: StorageMedia[];
 }
 
 export type AdminHostUsageResponseDto = {
-    vcpu: ComputeUsageDto;
+    source: HostBudgetSource;
+    vcpu: VcpuUsageDto;
     ramMB: ComputeUsageDto;
     workerDiskGB: StoragePoolUsageDto;
     atomVolumeGB: StoragePoolUsageDto;

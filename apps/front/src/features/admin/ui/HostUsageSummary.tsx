@@ -5,7 +5,9 @@ import { IconType } from "react-icons";
 import { LuBox, LuCpu, LuHardDrive, LuMemoryStick } from "react-icons/lu";
 import {
   AdminHostUsageResponseDto,
+  HostBudgetSource,
   StorageMedia,
+  VcpuUsageDto,
 } from "../api/admin.api.types";
 
 const NEAR_FULL_RATIO = 0.9;
@@ -24,6 +26,7 @@ interface UsageTileProps {
   used: number;
   budget: number;
   reserved?: number;
+  breakdown: string;
   detail: string;
 }
 
@@ -44,6 +47,7 @@ function UsageTile({
   used,
   budget,
   reserved,
+  breakdown,
   detail,
 }: UsageTileProps) {
   const usedRatio = ratio(used, budget);
@@ -84,7 +88,8 @@ function UsageTile({
         />
       </div>
 
-      <p className="mt-2 text-sm text-ink-muted">{detail}</p>
+      <p className="mt-2 text-sm text-ink-muted">{breakdown}</p>
+      <p className="text-sm text-ink-muted">{detail}</p>
     </Card>
   );
 }
@@ -101,6 +106,35 @@ function gigabytes(value: number): string {
   return `${value} GB`;
 }
 
+const SOURCE_LABEL: Record<HostBudgetSource, string> = {
+  REPORTED: "reported",
+  CONFIGURED: "configured fallback",
+};
+
+function vcpuBreakdown(vcpu: VcpuUsageDto, source: HostBudgetSource): string {
+  const budgetedCores = vcpu.budget / vcpu.overcommit;
+  const formula = `Budget ${cores(vcpu.budget)} = ${cores(budgetedCores)} cores × ${cores(vcpu.overcommit)} overcommit`;
+
+  if (budgetedCores === vcpu.reported) {
+    return `${formula} (${SOURCE_LABEL[source]})`;
+  }
+
+  return `${formula} (${cores(vcpu.reported)} ${SOURCE_LABEL[source]})`;
+}
+
+function capacityBreakdown(
+  budget: number,
+  reported: number,
+  source: HostBudgetSource,
+  format: (value: number) => string,
+): string {
+  if (budget === reported) {
+    return `Budget ${format(budget)}, all of it ${SOURCE_LABEL[source]}`;
+  }
+
+  return `Budget ${format(budget)} of ${format(reported)} ${SOURCE_LABEL[source]}, ${format(Math.max(reported - budget, 0))} held back`;
+}
+
 function mediaLabel(media: StorageMedia[]): string {
   if (media.length === 0) return "media not reported";
   return media.map((value) => MEDIA_LABEL[value]).join(" + ");
@@ -112,11 +146,12 @@ export function HostUsageSummary({ usage }: { usage: AdminHostUsageResponseDto }
       <UsageTile
         icon={LuCpu}
         title="vCPU"
-        subtitle="Running vs budget, overcommit included"
+        subtitle="Running vs budget"
         format={cores}
         used={usage.vcpu.running}
         reserved={usage.vcpu.provisioned}
         budget={usage.vcpu.budget}
+        breakdown={vcpuBreakdown(usage.vcpu, usage.source)}
         detail={`${cores(usage.vcpu.provisioned)} allocated including stopped resources`}
       />
       <UsageTile
@@ -127,6 +162,7 @@ export function HostUsageSummary({ usage }: { usage: AdminHostUsageResponseDto }
         used={usage.ramMB.running}
         reserved={usage.ramMB.provisioned}
         budget={usage.ramMB.budget}
+        breakdown={capacityBreakdown(usage.ramMB.budget, usage.ramMB.reported, usage.source, gibibytes)}
         detail={`${gibibytes(usage.ramMB.provisioned)} allocated including stopped resources`}
       />
       <UsageTile
@@ -136,6 +172,7 @@ export function HostUsageSummary({ usage }: { usage: AdminHostUsageResponseDto }
         format={gigabytes}
         used={usage.workerDiskGB.provisioned}
         budget={usage.workerDiskGB.budget}
+        breakdown={capacityBreakdown(usage.workerDiskGB.budget, usage.workerDiskGB.reported, usage.source, gigabytes)}
         detail={`${gigabytes(Math.max(usage.workerDiskGB.budget - usage.workerDiskGB.provisioned, 0))} free for boot disks and volumes`}
       />
       <UsageTile
@@ -145,6 +182,7 @@ export function HostUsageSummary({ usage }: { usage: AdminHostUsageResponseDto }
         format={gigabytes}
         used={usage.atomVolumeGB.provisioned}
         budget={usage.atomVolumeGB.budget}
+        breakdown={capacityBreakdown(usage.atomVolumeGB.budget, usage.atomVolumeGB.reported, usage.source, gigabytes)}
         detail={`${gigabytes(Math.max(usage.atomVolumeGB.budget - usage.atomVolumeGB.provisioned, 0))} free for new volumes`}
       />
     </div>
