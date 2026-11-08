@@ -499,6 +499,14 @@ Three consequences shape the module:
   pids; capped at 256 connections a flood tops out around 310. The cap does not
   stop a flood from taking the atom offline while it lasts — only filtering by
   source would, and a `Fiber` accepts any source today.
+- **`/tmp` is a per-start tmpfs** (`ATOM_TMP_SIZE`, 64m by default, counted
+  against the atom's memory). Docker's own `unless-stopped` restarts, such as
+  after a host reboot, reuse the container's filesystem instead of rebuilding it.
+  A wrapper that writes a file to `/tmp` and hands it to another user would then
+  find its own leftover and fail with `Permission denied`: `fs.protected_regular`
+  stops even root with `DAC_OVERRIDE` from reopening it in a sticky directory.
+  Wrappers still `rm -f` before writing so images built without the tmpfs
+  recover too.
 - **The container is rebuilt from the row on every `ATOM_START`.** That is why
   there is no `ATOM_UPDATE`: a rename or an env change is a plain DB write that
   applies on the next start, and both are refused while the atom is not
