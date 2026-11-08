@@ -42,9 +42,7 @@ export abstract class HiveService {
   
   abstract editWorkerZone(vmName: string, bridgeName?: string | null, mac?: string | null): Promise<void>;
   
-  abstract editWorkerMemory(vmName: string, newMemoryMb: number): Promise<void>;
-  
-  abstract editWorkerCpus(vmName: string, newVcpus: number): Promise<void>;
+  abstract resizeWorker(vmName: string, memoryMB: number, cpus: number): Promise<void>;
   
   abstract editWorkerDiskSpace(vmName: string, newDiskSizeGb: number): Promise<void>;
 

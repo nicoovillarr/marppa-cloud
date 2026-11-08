@@ -4,6 +4,7 @@ import { EventModule } from '@/event/EventModule';
 import { WorkerCreateProcessor } from './application/WorkerCreateProcessor';
 import { WorkerUpdateSshKeysProcessor } from './application/WorkerUpdateSshKeysProcessor';
 import { WorkerUpdateProcessor } from './application/WorkerUpdateProcessor';
+import { WorkerResizeProcessor } from './application/WorkerResizeProcessor';
 import { WorkerStartProcessor } from './application/WorkerStartProcessor';
 import { WorkerTerminateProcessor } from './application/WorkerTerminateProcessor';
 import { WorkerDeleteProcessor } from './application/WorkerDeleteProcessor';
@@ -32,6 +33,7 @@ const useStubs = process.env.USE_STUBS === 'true';
   processors: [
     WorkerCreateProcessor,
     WorkerUpdateProcessor,
+    WorkerResizeProcessor,
     WorkerUpdateSshKeysProcessor,
     WorkerStartProcessor,
     WorkerTerminateProcessor,

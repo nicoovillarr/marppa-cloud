@@ -625,7 +625,7 @@ local-hostname: ${name}
   ): Promise<void> {
     // Flavors express fractional cores (0.25, 0.5) as a share of a CPU, but a
     // domain can only be given whole vCPUs — `--vcpus 0.5` is a hard error.
-    const vcpus = Math.max(1, Math.ceil(cpus));
+    const vcpus = this.wholeVcpus(cpus);
 
     console.log(
       `Defining VM: ${name} with memory: ${memory}MB, cpus: ${vcpus} (flavor: ${cpus}), size: ${size}GB`,
@@ -666,20 +666,34 @@ local-hostname: ${name}
     await Command.runCommand('sudo', ['virsh', 'define', xmlPath]);
     await fsPromises.rm(xmlPath, { force: true });
 
-    if (cpus < vcpus) {
-      const period = 100000;
-      const quota = Math.max(1000, Math.round((cpus / vcpus) * period));
-      await Command.runCommand('sudo', [
-        'virsh',
-        'schedinfo',
-        name,
-        '--config',
-        '--set',
-        `vcpu_period=${period}`,
-        '--set',
-        `vcpu_quota=${quota}`,
-      ]);
+    await this.applyCpuShare(name, cpus, vcpus);
+  }
+
+  private wholeVcpus(cpus: number): number {
+    return Math.max(1, Math.ceil(cpus));
+  }
+
+  private async applyCpuShare(
+    name: string,
+    cpus: number,
+    vcpus: number,
+  ): Promise<void> {
+    if (cpus >= vcpus) {
+      return;
     }
+
+    const period = 100000;
+    const quota = Math.max(1000, Math.round((cpus / vcpus) * period));
+    await Command.runCommand('sudo', [
+      'virsh',
+      'schedinfo',
+      name,
+      '--config',
+      '--set',
+      `vcpu_period=${period}`,
+      '--set',
+      `vcpu_quota=${quota}`,
+    ]);
   }
 
   /**
@@ -970,26 +984,63 @@ local-hostname: ${name}
     console.log(`Network configuration updated for ${vmName}`);
   }
 
-  public async editWorkerMemory(vmName: string, newMemoryMb: number): Promise<void> {
+  public async resizeWorker(
+    vmName: string,
+    memoryMB: number,
+    cpus: number,
+  ): Promise<void> {
     this.validateVmName(vmName);
-    await Command.runCommand('sudo', [
-      'virsh',
-      'setmem',
-      vmName,
-      String(newMemoryMb * 1024),
-      '--config',
-    ]);
-  }
 
-  public async editWorkerCpus(vmName: string, newVcpus: number): Promise<void> {
-    this.validateVmName(vmName);
-    await Command.runCommand('sudo', [
+    if (await this.isWorkerRunning(vmName)) {
+      throw new Error(`Cannot resize ${vmName} while it is running`);
+    }
+
+    const vcpus = this.wholeVcpus(cpus);
+    const memoryKiB = Math.round(memoryMB * 1024);
+
+    const xml = await Command.runCommand('sudo', [
       'virsh',
-      'setvcpus',
+      'dumpxml',
+      '--inactive',
       vmName,
-      String(newVcpus),
-      '--config',
     ]);
+
+    const memoryTag = /<memory\b[^>]*>\d+<\/memory>/;
+    const currentMemoryTag = /<currentMemory\b[^>]*>\d+<\/currentMemory>/;
+    const vcpuTag = /<vcpu\b[^>]*>\d+<\/vcpu>/;
+
+    if (!memoryTag.test(xml) || !vcpuTag.test(xml)) {
+      throw new Error(`Could not read the memory/vCPU definition of ${vmName}`);
+    }
+
+    const resizedXml = xml
+      .replace(memoryTag, `<memory unit='KiB'>${memoryKiB}</memory>`)
+      .replace(
+        currentMemoryTag,
+        `<currentMemory unit='KiB'>${memoryKiB}</currentMemory>`,
+      )
+      .replace(vcpuTag, `<vcpu placement='static'>${vcpus}</vcpu>`)
+      .replace(/<topology\b[^>]*\/>/, (topology) =>
+        topology
+          .replace(/sockets='\d+'/, `sockets='${vcpus}'`)
+          .replace(/dies='\d+'/, "dies='1'")
+          .replace(/clusters='\d+'/, "clusters='1'")
+          .replace(/cores='\d+'/, "cores='1'")
+          .replace(/threads='\d+'/, "threads='1'"),
+      )
+      .replace(/\s*<period>\d+<\/period>/, '')
+      .replace(/\s*<quota>-?\d+<\/quota>/, '');
+
+    const tmpPath = `/tmp/${vmName}-resize.xml`;
+    await fsPromises.writeFile(tmpPath, resizedXml);
+
+    try {
+      await Command.runCommand('sudo', ['virsh', 'define', tmpPath]);
+    } finally {
+      await fsPromises.rm(tmpPath, { force: true });
+    }
+
+    await this.applyCpuShare(vmName, cpus, vcpus);
   }
 
   public async editWorkerDiskSpace(

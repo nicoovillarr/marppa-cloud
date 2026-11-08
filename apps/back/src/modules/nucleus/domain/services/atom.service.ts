@@ -18,6 +18,8 @@ import { AtomVolumeRequiredError } from '../errors/atom-volume-required.error';
 import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { CreateAtomDto } from '@/nucleus/presentation/dtos/create-atom.dto';
 import { UpdateAtomDto } from '@/nucleus/presentation/dtos/update-atom.dto';
+import { ResizeAtomDto } from '@/nucleus/presentation/dtos/resize-atom.dto';
+import { AtomSizeUnchangedError } from '../errors/atom-size-unchanged.error';
 import { NotFoundError } from '@/shared/domain/errors/not-found.error';
 import { UnauthorizedError } from '@/shared/domain/errors/unauthorized.error';
 import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
@@ -214,6 +216,41 @@ export class AtomService {
 
     const updated = entity.clone({
       name: data.name,
+      updatedBy: user.userId,
+    });
+
+    return this.save(updated);
+  }
+
+  async resizeAtom(id: string, data: ResizeAtomDto): Promise<AtomEntity> {
+    const user = getCurrentUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const entity = await this.findById(id);
+    this.assertStatus(entity, ResourceStatus.INACTIVE);
+
+    if (entity.sizeId === data.sizeId) {
+      throw new AtomSizeUnchangedError();
+    }
+
+    const size = await this.atomSizeService.findById(data.sizeId);
+
+    if (size.isDeprecated) {
+      throw new AtomSizeDeprecatedError(size.name);
+    }
+
+    await this.hostCapacityService.assertFitsOnCreate({
+      cpuCores: size.cpuCores,
+      ramMB: size.ramMB,
+      diskGB: 0,
+    });
+
+    const updated = entity.clone({
+      sizeId: size.id!,
+      cpuCores: size.cpuCores,
+      ramMB: size.ramMB,
       updatedBy: user.userId,
     });
 

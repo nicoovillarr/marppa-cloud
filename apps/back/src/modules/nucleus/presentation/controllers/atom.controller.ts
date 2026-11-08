@@ -20,6 +20,7 @@ import { AtomWithRelationsResponseModel } from '@/nucleus/application/models/ato
 import { AtomEnvVarModel } from '@/nucleus/domain/models/atom-env-var.model';
 import { CreateAtomDto } from '../dtos/create-atom.dto';
 import { UpdateAtomDto } from '../dtos/update-atom.dto';
+import { ResizeAtomDto } from '../dtos/resize-atom.dto';
 import { CreateAtomEnvVarDto } from '../dtos/create-atom-env-var.dto';
 import { LoggedInGuard } from '@/auth/presentation/guards/logged-in.guard';
 
@@ -88,6 +89,14 @@ export class AtomController {
   @HttpCode(HttpStatus.ACCEPTED)
   async terminate(@Param('id') id: string): Promise<void> {
     await this.service.terminate(id);
+  }
+
+  @Post(':id/resize')
+  async resize(
+    @Param('id') id: string,
+    @Body() data: ResizeAtomDto,
+  ): Promise<AtomResponseModel> {
+    return await this.service.resize(id, data);
   }
 
   @Put(':id')

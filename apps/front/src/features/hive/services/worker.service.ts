@@ -33,6 +33,10 @@ export class WorkerService {
         return dto;
     }
 
+    async resizeWorker(id: string, flavorId: number): Promise<WorkerResponseDto> {
+        return workersApi.resizeWorker(id, flavorId);
+    }
+
     async startWorker(id: string): Promise<void> {
         await workersApi.startWorker(id);
     }

@@ -106,6 +106,23 @@ export const useAtom = () => {
         }
     }, [setIsLoading, setError]);
 
+    const resizeAtom = useCallback(async (id: string, sizeId: number): Promise<string | null> => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const atom = await service.resizeAtom(id, sizeId);
+            setAtoms(atoms.map((a) => a.id === id ? { ...a, ...atom } : a));
+            return null;
+        } catch (error) {
+            const failureReason = error instanceof Error ? error.message : String(error);
+            setError(failureReason);
+            return failureReason;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [atoms, setAtoms, setIsLoading, setError]);
+
     const deleteAtom = useCallback(async (id: string) => {
         setIsLoading(true);
         setError(null);
@@ -131,6 +148,7 @@ export const useAtom = () => {
         updateAtom,
         startAtom,
         terminateAtom,
+        resizeAtom,
         deleteAtom,
     };
 }

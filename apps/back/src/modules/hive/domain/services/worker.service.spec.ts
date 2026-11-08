@@ -25,6 +25,8 @@ import { HostCapacityService } from '@/shared/domain/services/host-capacity.serv
 import { WorkerFlavorDeprecatedError } from '../errors/worker-flavor-deprecated.error';
 import { WorkerArchitectureMismatchError } from '../errors/worker-architecture-mismatch.error';
 import { HostCapacityExceededError } from '@/shared/domain/errors/host-capacity-exceeded.error';
+import { WorkerInvalidStatusError } from '../errors/worker-invalid-status.error';
+import { WorkerFlavorUnchangedError } from '../errors/worker-flavor-unchanged.error';
 
 describe('WorkerService', () => {
   let service: WorkerService;
@@ -423,6 +425,95 @@ describe('WorkerService', () => {
       await expect(service.updateWorker('w-999999', dto)).rejects.toThrow(
         NotFoundError,
       );
+    });
+  });
+
+  describe('resizeWorker', () => {
+    const largerFlavor = new WorkerFlavorEntity('Large', 4, 8192, 1, { id: 2 });
+
+    beforeEach(() => {
+      mockWorkerRepository.findById.mockResolvedValue(mockWorker);
+      mockWorkerRepository.update.mockImplementation(async (entity) => entity);
+      mockWorkerFlavorService.findByIdWithFamily.mockResolvedValue(
+        new WorkerFlavorWithFamilyModel(largerFlavor, mockFamily),
+      );
+      mockHostCapacityService.assertFitsOnCreate.mockResolvedValue(undefined);
+    });
+
+    it('snapshots the new flavor and queues the worker', async () => {
+      const { previous, updated } = await service.resizeWorker('w-000001', {
+        flavorId: 2,
+      });
+
+      expect(previous).toBe(mockWorker);
+      expect(updated).toEqual(
+        expect.objectContaining({
+          flavorId: 2,
+          cpuCores: 4,
+          ramMB: 8192,
+          diskGB: 50,
+          status: ResourceStatus.QUEUED,
+        }),
+      );
+      expect(mockHostCapacityService.assertFitsOnCreate).toHaveBeenCalledWith({
+        cpuCores: 4,
+        ramMB: 8192,
+        diskGB: 0,
+      });
+    });
+
+    it('refuses a worker that is not INACTIVE', async () => {
+      mockWorkerRepository.findById.mockResolvedValue(
+        mockWorker.clone({ status: ResourceStatus.ACTIVE }),
+      );
+
+      await expect(
+        service.resizeWorker('w-000001', { flavorId: 2 }),
+      ).rejects.toThrow(WorkerInvalidStatusError);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses the flavor the worker already uses', async () => {
+      await expect(
+        service.resizeWorker('w-000001', { flavorId: 1 }),
+      ).rejects.toThrow(WorkerFlavorUnchangedError);
+    });
+
+    it('refuses a deprecated flavor', async () => {
+      mockWorkerFlavorService.findByIdWithFamily.mockResolvedValue(
+        new WorkerFlavorWithFamilyModel(
+          largerFlavor.clone({ deprecatedAt: new Date() }),
+          mockFamily,
+        ),
+      );
+
+      await expect(
+        service.resizeWorker('w-000001', { flavorId: 2 }),
+      ).rejects.toThrow(WorkerFlavorDeprecatedError);
+    });
+
+    it('refuses a flavor from a family of another architecture', async () => {
+      mockWorkerFlavorService.findByIdWithFamily.mockResolvedValue(
+        new WorkerFlavorWithFamilyModel(
+          largerFlavor,
+          new WorkerFamilyEntity('arm', 'arm64', { id: 2 }),
+        ),
+      );
+
+      await expect(
+        service.resizeWorker('w-000001', { flavorId: 2 }),
+      ).rejects.toThrow(WorkerArchitectureMismatchError);
+    });
+
+    it('refuses when the host has no room for the new flavor', async () => {
+      mockHostCapacityService.assertFitsOnCreate.mockRejectedValue(
+        new HostCapacityExceededError('memory', 8192, 1024, 'MB'),
+      );
+
+      await expect(
+        service.resizeWorker('w-000001', { flavorId: 2 }),
+      ).rejects.toThrow(HostCapacityExceededError);
+      expect(repository.update).not.toHaveBeenCalled();
     });
   });
 

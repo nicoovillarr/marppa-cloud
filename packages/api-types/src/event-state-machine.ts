@@ -52,6 +52,7 @@ export const EVENT_STATE_MACHINE: Partial<
   // Terminate ends at INACTIVE (not TERMINATED) so the worker can be started
   // again or deleted — both of those transitions require INACTIVE.
   [EventTypeKey.WORKER_TERMINATE]: { entry: QUEUED, work: TERMINATING, ok: INACTIVE, fail: FAILED },
+  [EventTypeKey.WORKER_RESIZE]: { entry: QUEUED, work: UPDATING, ok: INACTIVE, fail: INACTIVE },
   [EventTypeKey.ZONE_DELETE]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
   [EventTypeKey.NODE_DELETE_FIBER]: { entry: QUEUED, work: DELETING, ok: DELETED, fail: FAILED },
 

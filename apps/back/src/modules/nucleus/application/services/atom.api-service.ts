@@ -5,6 +5,7 @@ import { AtomVolumeService } from '@/nucleus/domain/services/atom-volume.service
 import { AtomEnvVarApiService } from './atom-env-var.api-service';
 import { CreateAtomDto } from '@/nucleus/presentation/dtos/create-atom.dto';
 import { UpdateAtomDto } from '@/nucleus/presentation/dtos/update-atom.dto';
+import { ResizeAtomDto } from '@/nucleus/presentation/dtos/resize-atom.dto';
 import { AtomResponseModel } from '../models/atom.response-model';
 import { AtomImageResponseModel } from '../models/atom-image.response-model';
 import { AtomWithRelationsResponseModel } from '../models/atom-with-relations.response-model';
@@ -113,6 +114,17 @@ export class AtomApiService {
     data: UpdateAtomDto,
   ): Promise<AtomResponseModel> {
     const entity = await this.service.updateAtom(id, data);
+
+    return plainToInstance(AtomResponseModel, entity, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  public async resize(
+    id: string,
+    data: ResizeAtomDto,
+  ): Promise<AtomResponseModel> {
+    const entity = await this.service.resizeAtom(id, data);
 
     return plainToInstance(AtomResponseModel, entity, {
       excludeExtraneousValues: true,

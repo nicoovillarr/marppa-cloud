@@ -1,6 +1,7 @@
 import { WorkerService } from '@/hive/domain/services/worker.service';
 import { CreateWorkerDto } from '@/hive/presentation/dtos/create-worker.dto';
 import { UpdateWorkerDto } from '@/hive/presentation/dtos/update-worker.dto';
+import { ResizeWorkerDto } from '@/hive/presentation/dtos/resize-worker.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { WorkerResponseModel } from '../models/worker.response-model';
@@ -154,6 +155,27 @@ export class WorkerApiService {
     });
 
     return plainToInstance(WorkerResponseModel, entity, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  public async resize(
+    id: string,
+    data: ResizeWorkerDto,
+  ): Promise<WorkerResponseModel> {
+    const { previous, updated } = await this.service.resizeWorker(id, data);
+
+    await this.eventDispatch.dispatch({
+      type: EventTypeKey.WORKER_RESIZE,
+      primary: { type: 'Worker', id },
+      properties: {
+        PreviousFlavorId: String(previous.flavorId),
+        PreviousCpuCores: String(previous.cpuCores),
+        PreviousRamMB: String(previous.ramMB),
+      },
+    });
+
+    return plainToInstance(WorkerResponseModel, updated, {
       excludeExtraneousValues: true,
     });
   }

@@ -13,6 +13,8 @@ import { AtomEntity } from '../entities/atom.entity';
 import { AtomImageEntity } from '../entities/atom-image.entity';
 import { AtomSizeEntity } from '../entities/atom-size.entity';
 import { AtomSizeDeprecatedError } from '../errors/atom-size-deprecated.error';
+import { AtomSizeUnchangedError } from '../errors/atom-size-unchanged.error';
+import { AtomInvalidStatusError } from '../errors/atom-invalid-status.error';
 import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { HostCapacityExceededError } from '@/shared/domain/errors/host-capacity-exceeded.error';
 import { CompanyService } from '@/company/domain/services/company.service';
@@ -202,6 +204,62 @@ describe('AtomService', () => {
         HostCapacityExceededError,
       );
       expect(repository.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resizeAtom', () => {
+    const largeSize = new AtomSizeEntity('large', 2, 2048, { id: 3 });
+
+    beforeEach(() => {
+      mockAtomRepository.findById.mockResolvedValue(mockAtom);
+      mockAtomRepository.update.mockImplementation(async (entity) => entity);
+      mockAtomSizeService.findById.mockResolvedValue(largeSize);
+      mockHostCapacityService.assertFitsOnCreate.mockResolvedValue(undefined);
+    });
+
+    it('snapshots the new size and keeps the atom INACTIVE', async () => {
+      const updated = await service.resizeAtom('a-000001', { sizeId: 3 });
+
+      expect(updated).toEqual(
+        expect.objectContaining({
+          sizeId: 3,
+          cpuCores: 2,
+          ramMB: 2048,
+          status: ResourceStatus.INACTIVE,
+        }),
+      );
+      expect(mockHostCapacityService.assertFitsOnCreate).toHaveBeenCalledWith({
+        cpuCores: 2,
+        ramMB: 2048,
+        diskGB: 0,
+      });
+    });
+
+    it('refuses an atom that is not INACTIVE', async () => {
+      mockAtomRepository.findById.mockResolvedValue(
+        mockAtom.clone({ status: ResourceStatus.ACTIVE }),
+      );
+
+      await expect(
+        service.resizeAtom('a-000001', { sizeId: 3 }),
+      ).rejects.toThrow(AtomInvalidStatusError);
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses the size the atom already uses', async () => {
+      await expect(
+        service.resizeAtom('a-000001', { sizeId: 2 }),
+      ).rejects.toThrow(AtomSizeUnchangedError);
+    });
+
+    it('refuses a deprecated size', async () => {
+      mockAtomSizeService.findById.mockResolvedValue(
+        largeSize.clone({ deprecatedAt: new Date() }),
+      );
+
+      await expect(
+        service.resizeAtom('a-000001', { sizeId: 3 }),
+      ).rejects.toThrow(AtomSizeDeprecatedError);
     });
   });
 

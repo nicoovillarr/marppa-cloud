@@ -25,6 +25,10 @@ export class AtomService {
         return dto;
     }
 
+    async resizeAtom(id: string, sizeId: number): Promise<AtomResponseDto> {
+        return atomsApi.resizeAtom(id, sizeId);
+    }
+
     async startAtom(id: string): Promise<void> {
         await atomsApi.startAtom(id);
     }
