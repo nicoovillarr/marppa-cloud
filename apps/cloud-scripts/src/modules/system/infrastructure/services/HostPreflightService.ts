@@ -3,6 +3,9 @@ import os from 'os';
 import path from 'path';
 import { Command } from '@/libs/Command';
 import { NftablesRuleset } from '@/libs/NftablesRuleset';
+import { StorageProbe } from '@/libs/StorageProbe';
+import { StorageMedia } from '@marppa-cloud/db';
+import { ATOM_VOLUME_PREFIX, atomVolumeGroup } from '@/nucleus/domain/AtomVolumeGroup';
 import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
@@ -97,11 +100,15 @@ export class HostPreflightService {
 
   private async reportCapacity(): Promise<void> {
     const hostname = os.hostname();
+    const atomVolumes = await this.atomVolumePool();
 
     const capacity = {
       cpuCores: os.cpus().length,
       ramMB: Math.floor(os.totalmem() / 1024 ** 2),
-      diskGB: await this.imageVolumeSizeGB(),
+      workerDiskGB: await this.imageVolumeSizeGB(),
+      workerDiskMedia: await this.imageVolumeMedia(),
+      atomVolumeGB: atomVolumes.sizeGB,
+      atomVolumeMedia: atomVolumes.media,
     };
 
     await this.prisma.hostCapacity.upsert({
@@ -111,7 +118,9 @@ export class HostPreflightService {
     });
 
     this.logger.log(
-      `Reported host capacity for ${hostname}: ${capacity.cpuCores} cores, ${capacity.ramMB}MB RAM, ${capacity.diskGB}GB on ${IMAGE_VOLUME}.`,
+      `Reported host capacity for ${hostname}: ${capacity.cpuCores} cores, ${capacity.ramMB}MB RAM, ` +
+        `${capacity.workerDiskGB}GB ${capacity.workerDiskMedia ?? 'unknown media'} for worker disks on ${IMAGE_VOLUME}, ` +
+        `${capacity.atomVolumeGB}GB ${capacity.atomVolumeMedia ?? 'unknown media'} for atom volumes on ${atomVolumeGroup()}.`,
     );
   }
 
@@ -128,6 +137,59 @@ export class HostPreflightService {
     }
 
     return sizeGB;
+  }
+
+  private async imageVolumeMedia(): Promise<StorageMedia | null> {
+    try {
+      const source = await Command.runCommand('findmnt', [
+        '--noheadings', '--output', 'SOURCE', '--target', IMAGE_VOLUME,
+      ]);
+
+      return await this.mediaOf([source.trim()]);
+    } catch (err) {
+      this.logger.warn(
+        `Could not detect the storage media of ${IMAGE_VOLUME}: ${this.message(err)}`,
+      );
+      return null;
+    }
+  }
+
+  private async atomVolumePool(): Promise<{ sizeGB: number; media: StorageMedia | null }> {
+    const volumeGroup = atomVolumeGroup();
+
+    try {
+      const output = await Command.runCommand('sudo', [
+        'lvs', '--noheadings', '--nosuffix', '--units', 'b',
+        '--separator', StorageProbe.LVS_SEPARATOR,
+        '--options', 'lv_name,lv_size,vg_free,devices',
+        volumeGroup,
+      ]);
+
+      const pool = StorageProbe.volumeGroupPool(output, ATOM_VOLUME_PREFIX);
+
+      return {
+        sizeGB: pool.sizeGB,
+        media: await this.mediaOf(pool.physicalVolumes),
+      };
+    } catch (err) {
+      this.logger.warn(
+        `Could not read the atom volume pool on ${volumeGroup}; reporting 0GB: ${this.message(err)}`,
+      );
+      return { sizeGB: 0, media: null };
+    }
+  }
+
+  private async mediaOf(devices: string[]): Promise<StorageMedia | null> {
+    if (devices.length === 0) {
+      return null;
+    }
+
+    const output = await Command.runCommand('lsblk', [
+      '--inverse', '--pairs', '--noheadings', '--output', 'TYPE,ROTA,TRAN',
+      ...devices,
+    ]);
+
+    return StorageProbe.mediaOf(output);
   }
 
   /**

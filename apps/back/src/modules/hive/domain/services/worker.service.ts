@@ -134,7 +134,11 @@ export class WorkerService {
       diskGB: getWorkerBootDiskGB(),
     };
 
-    await this.hostCapacityService.assertFitsOnCreate(specs);
+    await this.hostCapacityService.assertFitsOnCreate({
+      cpuCores: specs.cpuCores,
+      ramMB: specs.ramMB,
+      workerDiskGB: specs.diskGB,
+    });
 
     const macAddress = this.macAddressService.generate();
 
@@ -263,7 +267,6 @@ export class WorkerService {
     await this.hostCapacityService.assertFitsOnCreate({
       cpuCores: flavor.cpuCores,
       ramMB: flavor.ramMB,
-      diskGB: 0,
     });
 
     const updated = await this.save(

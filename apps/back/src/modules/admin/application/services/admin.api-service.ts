@@ -4,6 +4,7 @@ import { AdminCompanyService } from '@/admin/domain/services/admin-company.servi
 import { AdminUserService } from '@/admin/domain/services/admin-user.service';
 import { AdminHostCapacityService } from '@/admin/domain/services/admin-host-capacity.service';
 import { AdminResourceService } from '@/admin/domain/services/admin-resource.service';
+import { HostCapacityService } from '@/shared/domain/services/host-capacity.service';
 import { PaginationQuery } from '@/shared/presentation/dtos/pagination.query';
 import { AdminResourceQuery } from '@/admin/presentation/dtos/admin-resource.query';
 import {
@@ -18,6 +19,7 @@ import { UpdateHostCapacityDto } from '@/admin/presentation/dtos/update-host-cap
 import {
   AdminCompanyResponse,
   AdminHostCapacityResponse,
+  AdminHostUsageResponse,
   AdminResourceResponse,
   AdminUserResponse,
   toAdminCompanyResponse,
@@ -33,6 +35,7 @@ export class AdminApiService {
     private readonly userService: AdminUserService,
     private readonly hostCapacityService: AdminHostCapacityService,
     private readonly resourceService: AdminResourceService,
+    private readonly hostUsageService: HostCapacityService,
   ) { }
 
   // Companies
@@ -103,6 +106,10 @@ export class AdminApiService {
   async findHosts(): Promise<AdminHostCapacityResponse[]> {
     const hosts = await this.hostCapacityService.findAll();
     return hosts.map(toAdminHostCapacityResponse);
+  }
+
+  findHostUsage(): Promise<AdminHostUsageResponse> {
+    return this.hostUsageService.usage();
   }
 
   async updateHostOverride(

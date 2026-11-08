@@ -72,24 +72,51 @@ export type UpdateAdminUserDto = {
     password?: string;
 }
 
+export type StorageMedia = "NVME" | "SSD" | "HDD";
+
 export type AdminHostCapacityResponseDto = {
     hostname: string;
     cpuCores: number;
     ramMB: number;
-    diskGB: number;
+    workerDiskGB: number;
+    atomVolumeGB: number;
+    workerDiskMedia: StorageMedia | null;
+    atomVolumeMedia: StorageMedia | null;
     cpuCoresOverride: number | null;
     ramMBOverride: number | null;
-    diskGBOverride: number | null;
+    workerDiskGBOverride: number | null;
+    atomVolumeGBOverride: number | null;
     effectiveCpuCores: number;
     effectiveRamMB: number;
-    effectiveDiskGB: number;
+    effectiveWorkerDiskGB: number;
+    effectiveAtomVolumeGB: number;
     reportedAt: string;
 }
 
 export type UpdateHostCapacityDto = {
     cpuCoresOverride?: number | null;
     ramMBOverride?: number | null;
-    diskGBOverride?: number | null;
+    workerDiskGBOverride?: number | null;
+    atomVolumeGBOverride?: number | null;
+}
+
+export type ComputeUsageDto = {
+    running: number;
+    provisioned: number;
+    budget: number;
+}
+
+export type StoragePoolUsageDto = {
+    provisioned: number;
+    budget: number;
+    media: StorageMedia[];
+}
+
+export type AdminHostUsageResponseDto = {
+    vcpu: ComputeUsageDto;
+    ramMB: ComputeUsageDto;
+    workerDiskGB: StoragePoolUsageDto;
+    atomVolumeGB: StoragePoolUsageDto;
 }
 
 export type AdminResourceType = "Worker" | "Atom" | "Zone" | "Portal";

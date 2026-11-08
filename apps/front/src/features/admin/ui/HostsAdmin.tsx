@@ -2,16 +2,26 @@
 
 import { ColumnMapping } from "@/core/ui/Table";
 import ReactTimeAgo from "react-timeago";
+import { useCallback, useEffect, useState } from "react";
 import { adminApi } from "../api/admin.api";
-import { AdminHostCapacityResponseDto } from "../api/admin.api.types";
+import {
+  AdminHostCapacityResponseDto,
+  AdminHostUsageResponseDto,
+  StorageMedia,
+} from "../api/admin.api.types";
 import { AdminCrudSection } from "./AdminCrudSection";
 import { AdminField } from "./AdminCrudForm";
+import { HostUsageSummary } from "./HostUsageSummary";
 import { Callout } from "@/core/ui/Callout";
 import { LuTriangleAlert } from "react-icons/lu";
 
 function budget(reportedValue: number, override: number | null): string {
   if (override == null) return String(reportedValue);
   return `${override} / ${reportedValue}`;
+}
+
+function withMedia(value: string, media: StorageMedia | null): string {
+  return media == null ? value : `${value} (${media})`;
 }
 
 const COLUMNS: ColumnMapping<AdminHostCapacityResponseDto> = {
@@ -28,11 +38,17 @@ const COLUMNS: ColumnMapping<AdminHostCapacityResponseDto> = {
     renderFn: (row: AdminHostCapacityResponseDto) =>
       budget(row.ramMB, row.ramMBOverride),
   },
-  diskGB: {
-    label: "Disk GB (budget / reported)",
-    minWidth: "200px",
+  workerDiskGB: {
+    label: "Worker disks GB (budget / reported)",
+    minWidth: "240px",
     renderFn: (row: AdminHostCapacityResponseDto) =>
-      budget(row.diskGB, row.diskGBOverride),
+      withMedia(budget(row.workerDiskGB, row.workerDiskGBOverride), row.workerDiskMedia),
+  },
+  atomVolumeGB: {
+    label: "Atom volumes GB (budget / reported)",
+    minWidth: "240px",
+    renderFn: (row: AdminHostCapacityResponseDto) =>
+      withMedia(budget(row.atomVolumeGB, row.atomVolumeGBOverride), row.atomVolumeMedia),
   },
   reportedAt: {
     label: "Reported",
@@ -57,16 +73,37 @@ const FIELDS: AdminField[] = [
     tooltip: "Leave empty to use what the host reported",
   },
   {
-    name: "diskGBOverride",
-    label: "Disk budget (GB)",
+    name: "workerDiskGBOverride",
+    label: "Worker disk budget (GB)",
+    type: "number",
+    tooltip: "Leave empty to use what the host reported",
+  },
+  {
+    name: "atomVolumeGBOverride",
+    label: "Atom volume budget (GB)",
     type: "number",
     tooltip: "Leave empty to use what the host reported",
   },
 ];
 
 export function HostsAdmin() {
+  const [usage, setUsage] = useState<AdminHostUsageResponseDto | null>(null);
+
+  const loadUsage = useCallback(() => {
+    adminApi
+      .findHostUsage()
+      .then(setUsage)
+      .catch(() => setUsage(null));
+  }, []);
+
+  useEffect(() => {
+    loadUsage();
+  }, [loadUsage]);
+
   return (
     <div className="flex flex-col gap-4">
+      {usage && <HostUsageSummary usage={usage} />}
+
       <Callout
         icon={<LuTriangleAlert />}
         text="Rows are created and refreshed by the host preflight, which runs on every cloud-scripts start and on every SYSTEM_RESET. Only the budget columns are yours: the preflight never touches them, and the scheduler adds up the budget of every row."
@@ -81,6 +118,7 @@ export function HostsAdmin() {
         getLabel={(row) => row.hostname}
         emptyText="No host has reported capacity yet; the configured fallback budget is in use."
         removeWarning="The row comes back on the next preflight, but the budget set here is lost."
+        onChanged={loadUsage}
         api={{
           list: () => adminApi.findHosts(),
           update: (hostname, data) =>

@@ -142,7 +142,6 @@ export class AtomService {
     await this.hostCapacityService.assertFitsOnCreate({
       cpuCores: size.cpuCores,
       ramMB: size.ramMB,
-      diskGB: 0,
     });
 
     const entity = new AtomEntity(
@@ -172,7 +171,6 @@ export class AtomService {
     await this.hostCapacityService.assertFitsOnStart(entity.id!, {
       cpuCores: entity.cpuCores,
       ramMB: entity.ramMB,
-      diskGB: 0,
     });
 
     const updated = entity.clone({
@@ -244,7 +242,6 @@ export class AtomService {
     await this.hostCapacityService.assertFitsOnCreate({
       cpuCores: size.cpuCores,
       ramMB: size.ramMB,
-      diskGB: 0,
     });
 
     const updated = entity.clone({

@@ -5,6 +5,7 @@ export {
   Prisma,
   PrismaClient,
   ResourceStatus,
+  StorageMedia,
   TransponderMode,
   UserRole,
 } from '@prisma/client';

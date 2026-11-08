@@ -14,6 +14,7 @@ import {
   type AtomResourceSpecs,
   type AtomVolumeMount,
 } from '../domain/services/NucleusService';
+import { atomVolumeGroup, atomVolumeName } from '@/nucleus/domain/AtomVolumeGroup';
 
 const ATOM_LABEL = 'marppa.atom';
 const ZONE_LABEL = 'marppa.zone';
@@ -33,12 +34,10 @@ const SAFE_SYSCTL_VALUE = /^[A-Za-z0-9._\-]+$/;
 const SAFE_LIMIT = /^[0-9]+(\.[0-9]+)?[a-z]?$/;
 const SAFE_COMMAND_TOKEN = /^[^\r\n\0]+$/;
 const SAFE_MOUNT_POINT = /^\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
-const SAFE_VOLUME_GROUP = /^[A-Za-z0-9._+-]+$/;
 
 const SAFE_CERT_DOMAIN = /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/;
 
 const ATOM_VOLUME_DATA_DIR = 'data';
-const DEFAULT_VOLUME_GROUP = 'vg_data';
 const DEFAULT_CERT_ROOT = '/etc/marppa/certs';
 
 /**
@@ -495,16 +494,11 @@ export class DockerNucleusService extends NucleusService {
   }
 
   private volumeGroup(): string {
-    const configured = process.env.ATOM_VOLUME_GROUP?.trim();
-    if (!configured) {
-      return DEFAULT_VOLUME_GROUP;
-    }
-
-    return this.assertMatches(configured, SAFE_VOLUME_GROUP, 'volume group');
+    return atomVolumeGroup();
   }
 
   private volumeName(id: number): string {
-    return `atomvol-${id}`;
+    return atomVolumeName(id);
   }
 
   private volumeDevice(id: number): string {

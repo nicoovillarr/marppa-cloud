@@ -56,6 +56,7 @@ export class CommittedResourcesPrismaRepository
       _sum.cpuCores ?? 0,
       _sum.ramMB ?? 0,
       _sum.diskGB ?? 0,
+      0,
     );
   }
 
@@ -67,7 +68,7 @@ export class CommittedResourcesPrismaRepository
       _sum: { sizeGiB: true },
     });
 
-    return new ResourceUsageModel(0, 0, _sum.sizeGiB ?? 0);
+    return new ResourceUsageModel(0, 0, _sum.sizeGiB ?? 0, 0);
   }
 
   private async sumAtomVolumes(
@@ -78,7 +79,7 @@ export class CommittedResourcesPrismaRepository
       _sum: { sizeGiB: true },
     });
 
-    return new ResourceUsageModel(0, 0, _sum.sizeGiB ?? 0);
+    return new ResourceUsageModel(0, 0, 0, _sum.sizeGiB ?? 0);
   }
 
   private async sumAtoms(
@@ -89,6 +90,6 @@ export class CommittedResourcesPrismaRepository
       _sum: { cpuCores: true, ramMB: true },
     });
 
-    return new ResourceUsageModel(_sum.cpuCores ?? 0, _sum.ramMB ?? 0, 0);
+    return new ResourceUsageModel(_sum.cpuCores ?? 0, _sum.ramMB ?? 0, 0, 0);
   }
 }

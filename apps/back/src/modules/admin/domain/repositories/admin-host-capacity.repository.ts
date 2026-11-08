@@ -7,7 +7,8 @@ export const ADMIN_HOST_CAPACITY_REPOSITORY_SYMBOL = Symbol(
 export interface HostCapacityOverrideWrite {
   cpuCoresOverride?: number | null;
   ramMBOverride?: number | null;
-  diskGBOverride?: number | null;
+  workerDiskGBOverride?: number | null;
+  atomVolumeGBOverride?: number | null;
 }
 
 export abstract class AdminHostCapacityRepository {

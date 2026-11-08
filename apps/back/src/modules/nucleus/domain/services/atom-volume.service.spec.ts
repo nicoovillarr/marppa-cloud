@@ -162,7 +162,7 @@ describe('AtomVolumeService', () => {
       expect(mockHostCapacityService.assertFitsOnCreate).toHaveBeenCalledWith({
         cpuCores: 0,
         ramMB: 0,
-        diskGB: 2,
+        atomVolumeGB: 2,
       });
       expect(result.status).toBe(ResourceStatus.QUEUED);
       expect(result.atomId).toBeUndefined();

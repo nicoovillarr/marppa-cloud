@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { StorageMedia } from '@marppa-cloud/db';
 import {
   HOST_CAPACITY_REPOSITORY_SYMBOL,
   HostCapacityRepository,
@@ -13,11 +14,14 @@ import {
   getVcpuOvercommit,
 } from '../config/host-capacity.config';
 import { HostCapacityExceededError } from '../errors/host-capacity-exceeded.error';
+import { HostCapacityModel } from '../models/host-capacity.model';
+import { HostUsageModel } from '../models/host-usage.model';
 
 export interface ResourceSpecs {
   cpuCores: number;
   ramMB: number;
-  diskGB: number;
+  workerDiskGB?: number;
+  atomVolumeGB?: number;
 }
 
 @Injectable()
@@ -31,19 +35,33 @@ export class HostCapacityService {
   ) { }
 
   async assertFitsOnCreate(specs: ResourceSpecs): Promise<void> {
-    const budget = await this.budget();
+    const budget = this.budgetOf(await this.hostCapacityRepository.findAll());
+    const workerDiskGB = specs.workerDiskGB ?? 0;
+    const atomVolumeGB = specs.atomVolumeGB ?? 0;
 
     this.assertWithinBudget('vCPU', specs.cpuCores, budget.vcpu, '');
     this.assertWithinBudget('memory', specs.ramMB, budget.ramMB, 'MB');
 
-    if (specs.diskGB > 0) {
-      const provisioned =
-        await this.committedResourcesRepository.sumProvisioned();
+    if (workerDiskGB <= 0 && atomVolumeGB <= 0) {
+      return;
+    }
 
+    const provisioned = await this.committedResourcesRepository.sumProvisioned();
+
+    if (workerDiskGB > 0) {
       this.assertWithinBudget(
-        'disk',
-        specs.diskGB,
-        budget.diskGB - provisioned.diskGB,
+        'worker disk',
+        workerDiskGB,
+        budget.workerDiskGB - provisioned.workerDiskGB,
+        'GB',
+      );
+    }
+
+    if (atomVolumeGB > 0) {
+      this.assertWithinBudget(
+        'atom volume storage',
+        atomVolumeGB,
+        budget.atomVolumeGB - provisioned.atomVolumeGB,
         'GB',
       );
     }
@@ -53,7 +71,7 @@ export class HostCapacityService {
     resourceId: string,
     specs: ResourceSpecs,
   ): Promise<void> {
-    const budget = await this.budget();
+    const budget = this.budgetOf(await this.hostCapacityRepository.findAll());
     const running =
       await this.committedResourcesRepository.sumRunning(resourceId);
 
@@ -71,8 +89,40 @@ export class HostCapacityService {
     );
   }
 
-  private async budget(): Promise<HostCapacityBudget> {
+  async usage(): Promise<HostUsageModel> {
     const hosts = await this.hostCapacityRepository.findAll();
+    const budget = this.budgetOf(hosts);
+
+    const [running, provisioned] = await Promise.all([
+      this.committedResourcesRepository.sumRunning(),
+      this.committedResourcesRepository.sumProvisioned(),
+    ]);
+
+    return {
+      vcpu: {
+        running: running.cpuCores,
+        provisioned: provisioned.cpuCores,
+        budget: budget.vcpu,
+      },
+      ramMB: {
+        running: running.ramMB,
+        provisioned: provisioned.ramMB,
+        budget: budget.ramMB,
+      },
+      workerDiskGB: {
+        provisioned: provisioned.workerDiskGB,
+        budget: budget.workerDiskGB,
+        media: distinctMedia(hosts.map((host) => host.workerDiskMedia)),
+      },
+      atomVolumeGB: {
+        provisioned: provisioned.atomVolumeGB,
+        budget: budget.atomVolumeGB,
+        media: distinctMedia(hosts.map((host) => host.atomVolumeMedia)),
+      },
+    };
+  }
+
+  private budgetOf(hosts: HostCapacityModel[]): HostCapacityBudget {
     if (hosts.length === 0) {
       return getConfiguredHostCapacityBudget();
     }
@@ -83,9 +133,10 @@ export class HostCapacityService {
       (total, host) => ({
         vcpu: total.vcpu + host.effectiveCpuCores * overcommit,
         ramMB: total.ramMB + host.effectiveRamMB,
-        diskGB: total.diskGB + host.effectiveDiskGB,
+        workerDiskGB: total.workerDiskGB + host.effectiveWorkerDiskGB,
+        atomVolumeGB: total.atomVolumeGB + host.effectiveAtomVolumeGB,
       }),
-      { vcpu: 0, ramMB: 0, diskGB: 0 },
+      { vcpu: 0, ramMB: 0, workerDiskGB: 0, atomVolumeGB: 0 },
     );
   }
 
@@ -104,4 +155,8 @@ export class HostCapacityService {
       );
     }
   }
+}
+
+function distinctMedia(media: (StorageMedia | null)[]): StorageMedia[] {
+  return [...new Set(media.filter((value): value is StorageMedia => value != null))];
 }

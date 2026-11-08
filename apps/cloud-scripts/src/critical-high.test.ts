@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { EventResourceRole, EventType, ResourceStatus } from '@marppa-cloud/db';
+import { EventResourceRole, EventType, ResourceStatus, StorageMedia } from '@marppa-cloud/db';
 import { AbortError } from '@/event/domain/errors/AbortError';
 import { EventWorker } from '@/event/application/EventWorker';
 import { LinuxOrbitService } from '@/orbit/infrastructure/services/LinuxOrbitService';
@@ -12,6 +12,7 @@ import { AppContainer } from '@/libs/Container';
 import { IPChecker } from '@/system/application/IPChecker';
 import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 import { NftablesRuleset } from '@/libs/NftablesRuleset';
+import { StorageProbe } from '@/libs/StorageProbe';
 import { DockerNucleusService } from '@/nucleus/infrastructure/DockerNucleusService';
 
 process.env.EVENT_QUEUE_HMAC_SECRET ??= 'test-event-queue-hmac-secret';
@@ -695,4 +696,37 @@ test('atoms get a fresh tmpfs /tmp so a docker restart never trips fs.protected_
   assert.ok(tmpfs.split(',').includes('mode=1777'));
   assert.ok(tmpfs.split(',').includes('nosuid'));
   assert.match(tmpfs, /,size=[0-9]+[a-z]?(,|$)/);
+});
+
+test('StorageProbe reads the media of the disk under a logical volume', () => {
+  const sata = [
+    'TYPE="lvm" ROTA="0" TRAN=""',
+    'TYPE="part" ROTA="0" TRAN=""',
+    'TYPE="disk" ROTA="0" TRAN="sata"',
+  ].join('\n');
+  const nvme = 'TYPE="lvm" ROTA="0" TRAN=""\nTYPE="disk" ROTA="0" TRAN="nvme"';
+  const spinning = 'TYPE="disk" ROTA="1" TRAN="sata"\nTYPE="disk" ROTA="0" TRAN="nvme"';
+
+  assert.equal(StorageProbe.mediaOf(sata), StorageMedia.SSD);
+  assert.equal(StorageProbe.mediaOf(nvme), StorageMedia.NVME);
+  assert.equal(StorageProbe.mediaOf(spinning), StorageMedia.HDD);
+  assert.equal(StorageProbe.mediaOf('TYPE="lvm" ROTA="0" TRAN=""'), null);
+});
+
+test('StorageProbe sizes the atom volume pool as free extents plus atom volumes', () => {
+  const gib = 1024 ** 3;
+  const free = Math.round(247.96 * gib);
+  const lvs = [
+    `  atomvol-1|${4 * gib}|${free}|/dev/sda1(114432)`,
+    `  atomvol-2|${4 * gib}|${free}|/dev/sda1(115456)`,
+    `  atomvol-3|${5 * gib}|${free}|/dev/sda1(116480)`,
+    `  data|${Math.round(223.52 * gib)}|${free}|/dev/sda1(57222)`,
+    `  libvirt-images|${Math.round(447.04 * gib)}|${free}|/dev/sda1(0)`,
+  ].join('\n');
+
+  const pool = StorageProbe.volumeGroupPool(lvs, 'atomvol-');
+
+  assert.equal(pool.sizeGB, 260);
+  assert.deepEqual(pool.physicalVolumes, ['/dev/sda1']);
+  assert.throws(() => StorageProbe.volumeGroupPool('', 'atomvol-'));
 });

@@ -2,6 +2,7 @@ import { fetcher } from "@/core/api/fetcher";
 import {
     AdminCompanyResponseDto,
     AdminHostCapacityResponseDto,
+    AdminHostUsageResponseDto,
     AdminResourceResponseDto,
     AdminUserResponseDto,
     CreateAdminCompanyDto,
@@ -50,6 +51,10 @@ export const adminApi = {
 
     findHosts(): Promise<AdminHostCapacityResponseDto[]> {
         return fetcher<AdminHostCapacityResponseDto[]>(`${baseUrl}/hosts`);
+    },
+
+    findHostUsage(): Promise<AdminHostUsageResponseDto> {
+        return fetcher<AdminHostUsageResponseDto>(`${baseUrl}/hosts/usage`);
     },
 
     updateHostOverride(hostname: string, data: UpdateHostCapacityDto): Promise<AdminHostCapacityResponseDto> {

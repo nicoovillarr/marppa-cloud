@@ -190,7 +190,7 @@ describe('AtomService', () => {
 
       expect(mockHostCapacityService.assertFitsOnStart).toHaveBeenCalledWith(
         'a-000001',
-        { cpuCores: 0.5, ramMB: 512, diskGB: 0 },
+        { cpuCores: 0.5, ramMB: 512 },
       );
     });
 
@@ -231,7 +231,6 @@ describe('AtomService', () => {
       expect(mockHostCapacityService.assertFitsOnCreate).toHaveBeenCalledWith({
         cpuCores: 2,
         ramMB: 2048,
-        diskGB: 0,
       });
     });
 

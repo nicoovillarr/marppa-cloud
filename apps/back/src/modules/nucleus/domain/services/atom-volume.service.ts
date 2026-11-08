@@ -84,7 +84,7 @@ export class AtomVolumeService {
     await this.hostCapacityService.assertFitsOnCreate({
       cpuCores: 0,
       ramMB: 0,
-      diskGB: data.sizeGiB,
+      atomVolumeGB: data.sizeGiB,
     });
 
     const entity = new AtomVolumeEntity(
@@ -120,7 +120,7 @@ export class AtomVolumeService {
     await this.hostCapacityService.assertFitsOnCreate({
       cpuCores: 0,
       ramMB: 0,
-      diskGB: sizeGiB - volume.sizeGiB,
+      atomVolumeGB: sizeGiB - volume.sizeGiB,
     });
 
     return this.save(
