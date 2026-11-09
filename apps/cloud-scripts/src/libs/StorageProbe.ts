@@ -7,6 +7,7 @@ const SEGMENT_SUFFIX = /\(\d+\)$/;
 
 export interface VolumeGroupPool {
   sizeGB: number;
+  allocatedGB: number;
   physicalVolumes: string[];
 }
 
@@ -67,6 +68,7 @@ export class StorageProbe {
 
     return {
       sizeGB: Math.floor((freeBytes + allocatedBytes) / BYTES_PER_GIB),
+      allocatedGB: Math.floor(allocatedBytes / BYTES_PER_GIB),
       physicalVolumes: [...new Set(rows.flatMap((row) => row.devices))],
     };
   }

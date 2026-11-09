@@ -318,6 +318,28 @@ model HostCapacity {
   reportedAt DateTime @default(now())
 }
 
+model HostMetricSample {
+  id        BigInt   @id @default(autoincrement())
+  hostname  String
+  sampledAt DateTime @default(now())
+
+  cpuCores           Int
+  cpuPercent         Float
+  platformCpuPercent Float?
+  loadAverage1m      Float
+
+  memoryTotalMB    Int
+  memoryUsedMB     Int
+  platformMemoryMB Int?
+
+  atomVolumePoolGB      Int?
+  atomVolumeAllocatedGB Int?
+
+  filesystems Json
+
+  @@index([hostname, sampledAt(sort: Desc)])
+}
+
 enum StorageMedia {
   NVME
   SSD

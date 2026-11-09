@@ -13,6 +13,7 @@ import { IPChecker } from '@/system/application/IPChecker';
 import { WebSocketServer } from '@/shared/infrastructure/http/WebSocketServer';
 import { NftablesRuleset } from '@/libs/NftablesRuleset';
 import { StorageProbe } from '@/libs/StorageProbe';
+import { HostMetrics } from '@/libs/HostMetrics';
 import { DockerNucleusService } from '@/nucleus/infrastructure/DockerNucleusService';
 
 process.env.EVENT_QUEUE_HMAC_SECRET ??= 'test-event-queue-hmac-secret';
@@ -727,6 +728,67 @@ test('StorageProbe sizes the atom volume pool as free extents plus atom volumes'
   const pool = StorageProbe.volumeGroupPool(lvs, 'atomvol-');
 
   assert.equal(pool.sizeGB, 260);
+  assert.equal(pool.allocatedGB, 13);
   assert.deepEqual(pool.physicalVolumes, ['/dev/sda1']);
   assert.throws(() => StorageProbe.volumeGroupPool('', 'atomvol-'));
+});
+
+test('HostMetrics derives host CPU usage from two /proc/stat readings', () => {
+  const before = HostMetrics.cpuTimes('cpu  100 0 100 700 100 0 0 0 0 0\ncpu0 1 1 1 1');
+  const after = HostMetrics.cpuTimes('cpu  200 0 200 1300 300 0 0 0 0 0\ncpu0 1 1 1 1');
+
+  assert.deepEqual(before, { totalTicks: 1000, idleTicks: 800 });
+  assert.equal(HostMetrics.cpuPercent(before, after), 20);
+  assert.equal(HostMetrics.cpuPercent(after, after), 0);
+});
+
+test('HostMetrics counts reclaimable memory as free', () => {
+  const memory = HostMetrics.memoryInfo(
+    'MemTotal:       32795648 kB\nMemFree:         1048576 kB\nMemAvailable:   16777216 kB\n',
+  );
+
+  assert.deepEqual(memory, { totalMB: 32027, usedMB: 15643 });
+  assert.throws(() => HostMetrics.memoryInfo('MemFree: 1 kB'));
+});
+
+test('HostMetrics measures platform cgroups without their inactive page cache', () => {
+  const workingSet = HostMetrics.cgroupWorkingSetBytes(
+    '3221225472\n',
+    'anon 2147483648\ninactive_file 1073741824\nactive_file 0\n',
+  );
+  assert.equal(workingSet, 2147483648);
+  assert.equal(HostMetrics.cgroupCpuUsageUsec('usage_usec 5000000\nuser_usec 1\n'), 5000000);
+
+  const previous = new Map([
+    ['/sys/fs/cgroup/machine.slice', { cpuUsageUsec: 10_000_000, workingSetBytes: 0 }],
+    ['/sys/fs/cgroup/system.slice/docker-gone.scope', { cpuUsageUsec: 1, workingSetBytes: 0 }],
+  ]);
+  const current = new Map([
+    ['/sys/fs/cgroup/machine.slice', { cpuUsageUsec: 70_000_000, workingSetBytes: workingSet }],
+    ['/sys/fs/cgroup/system.slice/docker-new.scope', { cpuUsageUsec: 999_000_000, workingSetBytes: 1048576 }],
+  ]);
+
+  assert.equal(HostMetrics.platformCpuPercent(previous, current, 60_000_000, 12), 8.3);
+  assert.equal(HostMetrics.platformMemoryMB(current), 2049);
+});
+
+test('HostMetrics lists each block-device filesystem once and skips container mounts', () => {
+  const findmnt = [
+    'TARGET="/" SOURCE="/dev/mapper/vg_system-root" FSTYPE="ext4" SIZE="39996882944" USED="15032385536"',
+    'TARGET="/proc" SOURCE="proc" FSTYPE="proc" SIZE="0" USED="0"',
+    'TARGET="/var/lib/libvirt/images" SOURCE="/dev/mapper/vg_data-libvirt--images" FSTYPE="ext4" SIZE="471372386304" USED="65498251264"',
+    'TARGET="/var/lib/docker/volumes/atomvol-1/_data" SOURCE="/dev/mapper/vg_data-atomvol--1" FSTYPE="ext4" SIZE="4227530752" USED="1"',
+    'TARGET="/mnt/bind" SOURCE="/dev/mapper/vg_system-root[/srv]" FSTYPE="ext4" SIZE="39996882944" USED="15032385536"',
+  ].join('\n');
+
+  const filesystems = HostMetrics.filesystems(findmnt, ['/var/lib/docker/']);
+
+  assert.deepEqual(
+    filesystems.map(({ mountPoint, device }) => [mountPoint, device]),
+    [
+      ['/', '/dev/mapper/vg_system-root'],
+      ['/var/lib/libvirt/images', '/dev/mapper/vg_data-libvirt--images'],
+    ],
+  );
+  assert.equal(filesystems[1].usedBytes, 65498251264);
 });

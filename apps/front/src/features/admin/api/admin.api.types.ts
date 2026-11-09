@@ -128,6 +128,46 @@ export type AdminHostUsageResponseDto = {
     atomVolumeGB: StoragePoolUsageDto;
 }
 
+export type FilesystemMetricsDto = {
+    mountPoint: string;
+    device: string;
+    fsType: string;
+    sizeBytes: number;
+    usedBytes: number;
+    media: StorageMedia | null;
+}
+
+export type HeadroomCheckDto = {
+    reserved: number;
+    external: number;
+    exceeded: boolean;
+}
+
+export type AdminHostMetricsResponseDto = {
+    hostname: string;
+    sampledAt: string;
+    stale: boolean;
+    cpu: {
+        cores: number;
+        usedPercent: number;
+        platformPercent: number | null;
+        externalPercent: number | null;
+        loadAverage1m: number;
+    };
+    memory: {
+        totalMB: number;
+        usedMB: number;
+        platformMB: number | null;
+        externalMB: number | null;
+    };
+    atomVolumePool: { sizeGB: number; allocatedGB: number } | null;
+    filesystems: FilesystemMetricsDto[];
+    headroom: {
+        cpuCores: HeadroomCheckDto | null;
+        memoryMB: HeadroomCheckDto | null;
+    };
+}
+
 export type AdminResourceType = "Worker" | "Atom" | "Zone" | "Portal";
 
 export type AdminResourceResponseDto = {

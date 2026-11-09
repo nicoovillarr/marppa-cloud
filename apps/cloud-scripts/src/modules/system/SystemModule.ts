@@ -11,6 +11,9 @@ import { DeleteProcessor } from '@/system/application/DeleteProcessor';
 import { HostPreflightService } from './infrastructure/services/HostPreflightService';
 import { IPChecker } from './application/IPChecker';
 import { DriftReconciler } from './application/DriftReconciler';
+import { HostMetricsSampler } from './application/HostMetricsSampler';
+import { HostMetricsProbe } from './infrastructure/services/HostMetricsProbe';
+import { StorageMediaService } from './infrastructure/services/StorageMediaService';
 
 @Module({
   imports: [
@@ -21,7 +24,15 @@ import { DriftReconciler } from './application/DriftReconciler';
     NucleusModule,
     OrbitModule,
   ],
-  providers: [DeleteProcessor, HostPreflightService, IPChecker, DriftReconciler],
+  providers: [
+    DeleteProcessor,
+    HostPreflightService,
+    IPChecker,
+    DriftReconciler,
+    StorageMediaService,
+    HostMetricsProbe,
+    HostMetricsSampler,
+  ],
   processors: [SystemResetProcessor, SystemResetHardProcessor],
   exports: [HostPreflightService],
 })

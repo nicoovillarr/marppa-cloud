@@ -9,6 +9,9 @@ import { AdminCompanyService } from './domain/services/admin-company.service';
 import { AdminUserService } from './domain/services/admin-user.service';
 import { AdminHostCapacityService } from './domain/services/admin-host-capacity.service';
 import { AdminResourceService } from './domain/services/admin-resource.service';
+import { AdminHostMetricsService } from './domain/services/admin-host-metrics.service';
+import { ADMIN_HOST_METRICS_REPOSITORY_SYMBOL } from './domain/repositories/admin-host-metrics.repository';
+import { AdminHostMetricsPrismaRepository } from './infrastructure/repositories/admin-host-metrics.prisma-repository';
 import { ADMIN_COMPANY_REPOSITORY_SYMBOL } from './domain/repositories/admin-company.repository';
 import { ADMIN_USER_REPOSITORY_SYMBOL } from './domain/repositories/admin-user.repository';
 import { ADMIN_HOST_CAPACITY_REPOSITORY_SYMBOL } from './domain/repositories/admin-host-capacity.repository';
@@ -49,6 +52,12 @@ import { AdminResourceController } from './presentation/controllers/admin-resour
     {
       provide: ADMIN_HOST_CAPACITY_REPOSITORY_SYMBOL,
       useClass: AdminHostCapacityPrismaRepository,
+    },
+
+    AdminHostMetricsService,
+    {
+      provide: ADMIN_HOST_METRICS_REPOSITORY_SYMBOL,
+      useClass: AdminHostMetricsPrismaRepository,
     },
 
     AdminResourceService,
