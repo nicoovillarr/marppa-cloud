@@ -191,6 +191,16 @@ shows above the table: vCPU and RAM running and allocated (stopped resources inc
 against the budget, and each disk pool's provisioned size against its budget with the
 media it sits on.
 
+`GET /admin/hosts/metrics` (`AdminHostMetricsService`) is the other half of that page: the
+latest `HostMetricSample` per host, written by cloud-scripts' `HostMetricsSampler`. It
+splits CPU and memory into platform and *outside the platform* (host usage minus the VM and
+atom cgroups), lists every filesystem with its media, and checks the outside usage against
+the headroom held back on that host (`reported - effective`). When outside workloads use
+more than that, the budget still promises capacity the host no longer has, and the page
+says so. A host whose last sample is older than `HOST_METRICS_STALE_AFTER_MS` (default
+`180000`) is flagged stale. Live metrics inform; they never drive admission, which stays
+on committed resources against the budget.
+
 ### Tenant-scoped images
 
 `WorkerImage.ownerId` and `AtomImage.ownerId` mirror `WorkerFamily`: `NULL` is a

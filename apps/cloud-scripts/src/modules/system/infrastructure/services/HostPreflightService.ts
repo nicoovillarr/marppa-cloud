@@ -9,6 +9,7 @@ import { ATOM_VOLUME_PREFIX, atomVolumeGroup } from '@/nucleus/domain/AtomVolume
 import { Injectable } from '@/decorators/Injectable';
 import { LoggerService } from '@/shared/infrastructure/services/LoggerService';
 import { PrismaService } from '@/shared/infrastructure/services/PrismaService';
+import { StorageMediaService } from './StorageMediaService';
 
 const REQUIRED_BINARIES = [
   'nmap', 'ipcalc', 'nft', 'dnsmasq', 'virsh', 'virt-install',
@@ -64,6 +65,7 @@ export class HostPreflightService {
   constructor(
     private readonly logger: LoggerService,
     private readonly prisma: PrismaService,
+    private readonly storageMedia: StorageMediaService,
   ) {}
 
   public async run(): Promise<void> {
@@ -145,7 +147,7 @@ export class HostPreflightService {
         '--noheadings', '--output', 'SOURCE', '--target', IMAGE_VOLUME,
       ]);
 
-      return await this.mediaOf([source.trim()]);
+      return await this.storageMedia.mediaOf([source.trim()]);
     } catch (err) {
       this.logger.warn(
         `Could not detect the storage media of ${IMAGE_VOLUME}: ${this.message(err)}`,
@@ -169,7 +171,7 @@ export class HostPreflightService {
 
       return {
         sizeGB: pool.sizeGB,
-        media: await this.mediaOf(pool.physicalVolumes),
+        media: await this.storageMedia.mediaOf(pool.physicalVolumes),
       };
     } catch (err) {
       this.logger.warn(
@@ -179,18 +181,6 @@ export class HostPreflightService {
     }
   }
 
-  private async mediaOf(devices: string[]): Promise<StorageMedia | null> {
-    if (devices.length === 0) {
-      return null;
-    }
-
-    const output = await Command.runCommand('lsblk', [
-      '--inverse', '--pairs', '--noheadings', '--output', 'TYPE,ROTA,TRAN',
-      ...devices,
-    ]);
-
-    return StorageProbe.mediaOf(output);
-  }
 
   /**
    * IP forwarding is something the app owns, not a host precondition: without it

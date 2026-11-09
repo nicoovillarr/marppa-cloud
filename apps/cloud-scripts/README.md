@@ -563,6 +563,8 @@ process refuses to boot with a list of what is wrong.
 | `REQUIRE_EGRESS_HARDENING` | no | `true` fails the preflight unless `NFTABLES_RESET_SOURCE` declares an `output` chain with `policy drop`. See `docs/host-network-hardening.md`. Default `false`. |
 | `WORKER_BOOT_TIMEOUT_MS` | no | How long to wait for a VM's first boot before declaring it unreachable. Default `180000`. |
 | `IP_CHECK_INTERVAL_MS` | no | How often to re-check the host's public IP and re-sync portal DNS. Default `600000`. |
+| `HOST_METRICS_INTERVAL_MS` | no | How often `HostMetricsSampler` samples live host usage. Default `60000`. |
+| `HOST_METRICS_RETENTION_HOURS` | no | How long a host keeps its samples before they are pruned. Default `168` (7 days). |
 | `DRIFT_CHECK_INTERVAL_MS` | no | How often the drift reconciler compares the DB against the host's real state. Default `30000`. |
 | `ATOM_VOLUME_GROUP` | no | LVM volume group atom volumes are carved from. Default `vg_data`. |
 | `ATOM_CERT_ROOT` | no | Directory `marppa-cert-sync.service` delivers certificates to. Default `/etc/marppa/certs`. |
@@ -589,6 +591,28 @@ without the atom volume group still passes the preflight but cannot take atom vo
 backend reads those rows as its budget — it cannot measure this host itself. A host that
 fails the preflight never publishes capacity, and `USE_STUBS=true` skips it entirely, in
 which case the backend falls back to its `HIVE_HOST_*` env values.
+
+### Live host metrics
+
+The preflight measures what the host *has*; `HostMetricsSampler` measures what it is *using*,
+every `HOST_METRICS_INTERVAL_MS`, and writes one `HostMetricSample` row per tick. Each host
+prunes its own rows older than `HOST_METRICS_RETENTION_HOURS`. The table is deliberately not
+audited: it is an append-only time series, and the audit log would only duplicate it.
+
+| Metric | Source |
+|---|---|
+| Host CPU % | Delta of the aggregate line in `/proc/stat` between two ticks |
+| Host memory | `MemTotal - MemAvailable` from `/proc/meminfo`, so reclaimable cache counts as free |
+| Platform CPU and memory | cgroup v2: `machine.slice` (every libvirt VM) plus the scope of each container labelled `marppa.atom`, read from `cpu.stat` and `memory.current - inactive_file` |
+| Filesystems | `findmnt` over block-device mounts, minus Docker's own (`/var/lib/docker/*`), with media from `lsblk` |
+| Atom volume pool | `sudo lvs` on `ATOM_VOLUME_GROUP`, as in the preflight |
+
+Anything used by the host that is not platform cgroups is reported as *outside the platform*:
+the OS, Postgres, Docker containers without the atom label, and whatever else gets installed
+on the host. The first sample lands a few seconds after start, since CPU needs two readings
+to compute a rate. A source that cannot be read (no cgroup v2, no LVM) is logged once and
+stored as unknown rather than failing the tick. It needs no sudo beyond what is already
+granted: `docker ps` and `lvs`.
 
 ### Host capacity preflight
 

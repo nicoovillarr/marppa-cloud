@@ -2,6 +2,7 @@ import { StorageMedia, UserRole } from '@marppa-cloud/db';
 
 import { HostCapacityModel } from '@/shared/domain/models/host-capacity.model';
 import { HostUsageModel } from '@/shared/domain/models/host-usage.model';
+import { HostMetricsModel } from '@/admin/domain/models/host-metrics.model';
 import { ResourceStatus } from '@/shared/domain/enums/resource-status.enum';
 import {
   AdminCompanyCounts,
@@ -56,6 +57,8 @@ export interface AdminHostCapacityResponse {
 }
 
 export type AdminHostUsageResponse = HostUsageModel;
+
+export type AdminHostMetricsResponse = HostMetricsModel;
 
 export interface AdminResourceResponse {
   id: string;

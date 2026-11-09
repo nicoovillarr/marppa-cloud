@@ -6,18 +6,31 @@ import { useCallback, useEffect, useState } from "react";
 import { adminApi } from "../api/admin.api";
 import {
   AdminHostCapacityResponseDto,
+  AdminHostMetricsResponseDto,
   AdminHostUsageResponseDto,
   StorageMedia,
 } from "../api/admin.api.types";
 import { AdminCrudSection } from "./AdminCrudSection";
 import { AdminField } from "./AdminCrudForm";
 import { HostUsageSummary } from "./HostUsageSummary";
+import { HostMetricsPanel } from "./HostMetricsPanel";
 import { Callout } from "@/core/ui/Callout";
 import { LuTriangleAlert } from "react-icons/lu";
 
 function budget(reportedValue: number, override: number | null): string {
   if (override == null) return String(reportedValue);
   return `${override} / ${reportedValue}`;
+}
+
+const METRICS_REFRESH_MS = 30_000;
+
+function SectionHeading({ title, description }: { title: string; description: string }) {
+  return (
+    <header>
+      <h2 className="font-display text-lg font-semibold">{title}</h2>
+      <p className="text-sm text-ink-muted">{description}</p>
+    </header>
+  );
 }
 
 function withMedia(value: string, media: StorageMedia | null): string {
@@ -88,6 +101,7 @@ const FIELDS: AdminField[] = [
 
 export function HostsAdmin() {
   const [usage, setUsage] = useState<AdminHostUsageResponseDto | null>(null);
+  const [metrics, setMetrics] = useState<AdminHostMetricsResponseDto[] | null>(null);
 
   const loadUsage = useCallback(() => {
     adminApi
@@ -96,13 +110,38 @@ export function HostsAdmin() {
       .catch(() => setUsage(null));
   }, []);
 
+  const loadMetrics = useCallback(() => {
+    adminApi
+      .findHostMetrics()
+      .then(setMetrics)
+      .catch(() => setMetrics(null));
+  }, []);
+
   useEffect(() => {
     loadUsage();
-  }, [loadUsage]);
+    loadMetrics();
+
+    const timer = setInterval(() => {
+      loadUsage();
+      loadMetrics();
+    }, METRICS_REFRESH_MS);
+
+    return () => clearInterval(timer);
+  }, [loadUsage, loadMetrics]);
 
   return (
     <div className="flex flex-col gap-4">
+      <SectionHeading
+        title="Allocation"
+        description="What the platform has committed to its resources, measured against the budget the scheduler enforces."
+      />
       {usage && <HostUsageSummary usage={usage} />}
+
+      <SectionHeading
+        title="Live metrics"
+        description="What each host is actually using right now, including anything running outside the platform. Refreshed every 30 seconds."
+      />
+      {metrics && <HostMetricsPanel hosts={metrics} />}
 
       <Callout
         icon={<LuTriangleAlert />}

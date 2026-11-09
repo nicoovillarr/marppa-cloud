@@ -12,6 +12,7 @@ import { PlatformAdminGuard } from '@/shared/presentation/guards/platform-admin.
 import { AdminApiService } from '@/admin/application/services/admin.api-service';
 import {
   AdminHostCapacityResponse,
+  AdminHostMetricsResponse,
   AdminHostUsageResponse,
 } from '@/admin/application/models/admin.response';
 import { UpdateHostCapacityDto } from '../dtos/update-host-capacity.dto';
@@ -29,6 +30,11 @@ export class AdminHostCapacityController {
   @Get('usage')
   findUsage(): Promise<AdminHostUsageResponse> {
     return this.service.findHostUsage();
+  }
+
+  @Get('metrics')
+  findMetrics(): Promise<AdminHostMetricsResponse[]> {
+    return this.service.findHostMetrics();
   }
 
   @Put(':hostname')
