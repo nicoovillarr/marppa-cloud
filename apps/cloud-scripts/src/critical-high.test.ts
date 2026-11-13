@@ -268,6 +268,43 @@ test('WebSocketServer drops messages once a socket exceeds the generic flood lim
   assert.equal(unsubscribeCalls, 0);
 });
 
+function hierarchyServer(workers: Record<string, string>) {
+  const prisma = {
+    company: {
+      findMany: async () => [
+        { id: 'root', parentCompanyId: null },
+        { id: 'child', parentCompanyId: 'root' },
+        { id: 'grandchild', parentCompanyId: 'child' },
+        { id: 'other', parentCompanyId: null },
+      ],
+    },
+    worker: {
+      findUnique: async ({ where }: { where: { id: string } }) =>
+        workers[where.id] ? { ownerId: workers[where.id] } : null,
+    },
+  };
+
+  return new WebSocketServer({} as any, prisma as any, {} as any, {} as any);
+}
+
+test('WebSocketServer authorizes a parent company on its descendants resources', async () => {
+  const server = hierarchyServer({ 'w-grand': 'grandchild', 'w-root': 'root' });
+  const rootSocket = { companyId: 'root' };
+
+  assert.equal(await (server as any).isChannelAuthorized(rootSocket, 'hive:worker:w-grand'), true);
+  assert.equal(await (server as any).isChannelAuthorized(rootSocket, 'company:child:hive'), true);
+});
+
+test('WebSocketServer denies a company access to its ancestors and unrelated companies', async () => {
+  const server = hierarchyServer({ 'w-root': 'root', 'w-other': 'other' });
+  const childSocket = { companyId: 'child' };
+
+  assert.equal(await (server as any).isChannelAuthorized(childSocket, 'hive:worker:w-root'), false);
+  assert.equal(await (server as any).isChannelAuthorized(childSocket, 'hive:worker:w-other'), false);
+  assert.equal(await (server as any).isChannelAuthorized(childSocket, 'hive:worker:w-missing'), false);
+  assert.equal(await (server as any).isChannelAuthorized(childSocket, 'company:root:hive'), false);
+});
+
 test('LinuxOrbitService rejects injected proxy config values', () => {
   const service = new LinuxOrbitService({} as any);
 
