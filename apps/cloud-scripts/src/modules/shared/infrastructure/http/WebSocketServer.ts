@@ -547,61 +547,99 @@ export class WebSocketServer implements OnModuleInit, OnModuleDestroy {
     const companyId = socket.companyId;
     if (!companyId) return false;
 
-    const parts = channel.split(':');
+    const ownerId = await this.channelOwnerId(channel);
+    if (!ownerId) return false;
 
-    if (parts[0] === 'company') {
-      return parts[1] === companyId;
+    const manageable = await this.selfAndDescendantCompanyIds(companyId);
+    return manageable.includes(ownerId);
+  }
+
+  private async channelOwnerId(channel: string): Promise<string | null> {
+    const [scope, kind, id] = channel.split(':');
+
+    if (scope === 'company') {
+      return kind || null;
     }
 
-    if (parts[0] === 'mesh' && parts[1] === 'zone' && parts[2]) {
+    if (!id) return null;
+
+    if (scope === 'mesh' && kind === 'zone') {
       const zone = await this.prisma.zone.findUnique({
-        where: { id: parts[2] },
+        where: { id },
         select: { ownerId: true },
       });
-      return zone?.ownerId === companyId;
+      return zone?.ownerId ?? null;
     }
 
-    if (parts[0] === 'mesh' && parts[1] === 'node' && parts[2]) {
+    if (scope === 'mesh' && kind === 'node') {
       const node = await this.prisma.node.findUnique({
-        where: { id: parts[2] },
+        where: { id },
         select: { zone: { select: { ownerId: true } } },
       });
-      return node?.zone.ownerId === companyId;
+      return node?.zone.ownerId ?? null;
     }
 
-    if (parts[0] === 'nucleus' && parts[1] === 'atom' && parts[2]) {
+    if (scope === 'nucleus' && kind === 'atom') {
       const atom = await this.prisma.atom.findUnique({
-        where: { id: parts[2] },
+        where: { id },
         select: { ownerId: true },
       });
-      return atom?.ownerId === companyId;
+      return atom?.ownerId ?? null;
     }
 
-    if (parts[0] === 'orbit' && parts[1] === 'portal' && parts[2]) {
+    if (scope === 'orbit' && kind === 'portal') {
       const portal = await this.prisma.portal.findUnique({
-        where: { id: parts[2] },
+        where: { id },
         select: { ownerId: true },
       });
-      return portal?.ownerId === companyId;
+      return portal?.ownerId ?? null;
     }
 
-    if (parts[0] === 'orbit' && parts[1] === 'transponder' && parts[2]) {
+    if (scope === 'orbit' && kind === 'transponder') {
       const transponder = await this.prisma.transponder.findUnique({
-        where: { id: parts[2] },
+        where: { id },
         select: { portal: { select: { ownerId: true } } },
       });
-      return transponder?.portal.ownerId === companyId;
+      return transponder?.portal.ownerId ?? null;
     }
 
-    if (parts[0] === 'hive' && parts[1] === 'worker' && parts[2]) {
+    if (scope === 'hive' && kind === 'worker') {
       const worker = await this.prisma.worker.findUnique({
-        where: { id: parts[2] },
+        where: { id },
         select: { ownerId: true },
       });
-      return worker?.ownerId === companyId;
+      return worker?.ownerId ?? null;
     }
 
-    return false;
+    return null;
+  }
+
+  private async selfAndDescendantCompanyIds(companyId: string): Promise<string[]> {
+    const links = await this.prisma.company.findMany({
+      select: { id: true, parentCompanyId: true },
+    });
+
+    const childrenOf = new Map<string, string[]>();
+    for (const link of links) {
+      if (!link.parentCompanyId) continue;
+
+      const siblings = childrenOf.get(link.parentCompanyId) ?? [];
+      siblings.push(link.id);
+      childrenOf.set(link.parentCompanyId, siblings);
+    }
+
+    const tree: string[] = [];
+    const pending = [companyId];
+
+    while (pending.length) {
+      const current = pending.shift()!;
+      if (tree.includes(current)) continue;
+
+      tree.push(current);
+      pending.push(...(childrenOf.get(current) ?? []));
+    }
+
+    return tree;
   }
 
   public async onModuleDestroy(): Promise<void> {
