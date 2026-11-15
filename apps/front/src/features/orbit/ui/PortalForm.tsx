@@ -1,16 +1,21 @@
 "use client";
 
 import { FormInput } from "@/core/ui/inputs/form/FormInput";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { FormCheckbox } from "@/core/ui/inputs/form/FormCheckbox";
 import { FormSelect } from "@/core/ui/inputs/form/FormSelect";
 import { useForm, FormProvider, FieldValues } from "react-hook-form";
 import { Button, ButtonRef } from "@/core/ui/Button";
 import { LuSave } from "react-icons/lu";
-import { IoReloadSharp } from "react-icons/io5";
+import { LuKeyRound } from "react-icons/lu";
 import { useZone } from "src/features/mesh/models/use-zone";
 import { PortalTranspondersList } from "./PortalTranspondersList";
 import { CreatePortalDto, PortalWithTranspondersResponseDto } from "../api/portal.api.types";
+import { useDnsApiKey } from "../models/use-dns-api-key";
+import { formatPortalType } from "../models/format-portal-type";
+import { PortalType } from "../models/portal-type.enum";
+import { useDialog } from "@/core/ui/DialogProvider";
+import { DnsApiKeyDialog } from "./DnsApiKeyDialog";
 
 interface PortalFormProps {
   className?: string;
@@ -30,45 +35,66 @@ export function PortalForm({
     fetchZones,
   } = useZone();
 
-  const [disableApiKey, setDisableApiKey] = useState(true);
+  const { dnsApiKeys, fetchDnsApiKeys } = useDnsApiKey();
+  const { showDialog } = useDialog();
 
   const buttonRef = useRef<ButtonRef>(null);
   const methods = useForm({
     defaultValues: { corsEnabled: true, enableCompression: true } as FieldValues,
   });
 
-  const { control, handleSubmit, reset } = methods;
+  const { control, handleSubmit, reset, watch, setValue } = methods;
+
+  const selectedType = watch("type") as PortalType | undefined;
+  const selectedKeyId = watch("dnsApiKeyId") as number | undefined;
+
+  const keyOptions = useMemo(
+    () =>
+      (dnsApiKeys ?? [])
+        .filter((key) => key.type === selectedType)
+        .map((key) => ({ value: key.id, displayText: key.name })),
+    [dnsApiKeys, selectedType]
+  );
 
   const internalSubmit = async (data: CreatePortalDto) => {
-    const keepsStoredApiKey = portal != null && disableApiKey;
     const addressChanged = portal == null || data.address !== portal.address;
+    const keyChanged = portal == null || data.dnsApiKeyId !== portal.dnsApiKeyId;
 
     const form = {
       name: data.name,
       description: data.description,
       address: addressChanged ? data.address : undefined,
       type: data.type,
-      apiKey: keepsStoredApiKey ? undefined : data.apiKey,
+      dnsApiKeyId: keyChanged ? Number(data.dnsApiKeyId) : undefined,
       corsEnabled: data.corsEnabled,
       enableCompression: data.enableCompression,
       zoneId: data.zoneId,
-    };
+    } as CreatePortalDto;
 
     buttonRef.current?.setIsLoading(true);
     buttonRef.current?.setProgress(50);
 
     await onSubmit(form);
 
-    setDisableApiKey(true);
-
     buttonRef.current?.setProgress(100);
     buttonRef.current?.setIsLoading(false);
   };
 
-  const resetApiKey = () => {
-    setDisableApiKey(false);
-    methods.setValue("apiKey", "");
+  const onTypeChanged = () => {
+    setValue("dnsApiKeyId", undefined);
   };
+
+  const openNewKeyDialog = () =>
+    showDialog({
+      title: "Add API key",
+      content: (
+        <DnsApiKeyDialog
+          portalTypes={portalTypes}
+          initialType={selectedType}
+          onSaved={(key) => setValue("dnsApiKeyId", key.id, { shouldValidate: true })}
+        />
+      ),
+    });
 
   useEffect(() => {
     if (portal) {
@@ -80,14 +106,14 @@ export function PortalForm({
         corsEnabled: portal.corsEnabled,
         enableCompression: portal.enableCompression,
         zoneId: portal.zoneId,
+        dnsApiKeyId: portal.dnsApiKeyId ?? undefined,
       });
     }
-
-    setDisableApiKey(portal != null);
   }, [portal]);
 
   useEffect(() => {
     fetchZones();
+    fetchDnsApiKeys();
   }, []);
 
   return (
@@ -123,32 +149,39 @@ export function PortalForm({
             placeholder="Select Provider"
             options={portalTypes.map((tt) => ({
               value: tt,
-              displayText: tt[0].toUpperCase() + tt.slice(1).toLowerCase(),
+              displayText: formatPortalType(tt),
             }))}
-            onChangedValue={() => resetApiKey()}
+            onChangedValue={onTypeChanged}
             required
           />
 
-          <FormInput
+          <FormSelect
+            key={`${selectedType ?? "none"}-${keyOptions.length}-${selectedKeyId ?? "unset"}`}
             className="flex-1 mt-6"
-            controlName="apiKey"
+            controlName="dnsApiKeyId"
             control={control}
-            placeholder={disableApiKey ? "" : "API Key"}
-            disabled={disableApiKey}
-            disabledText="Hidden"
-            type={disableApiKey ? "password" : "text"}
-            required={!disableApiKey}
+            placeholder={
+              selectedType == null
+                ? "Select a provider first"
+                : keyOptions.length === 0
+                  ? "No API keys for this provider yet"
+                  : "Select API Key"
+            }
+            isLoading={dnsApiKeys == null}
+            disabled={selectedType == null || keyOptions.length === 0}
+            options={keyOptions}
+            required
           />
 
-          {disableApiKey && (
-            <Button
-              className="mt-6 h-[42px] aspect-square"
-              icon={<IoReloadSharp />}
-              type="button"
-              onClick={resetApiKey}
-              style="secondary"
-            />
-          )}
+          <Button
+            className="mt-6 h-[42px]"
+            text="New key"
+            icon={<LuKeyRound />}
+            type="button"
+            disabled={selectedType == null}
+            onClick={openNewKeyDialog}
+            style="secondary"
+          />
         </aside>
 
         <aside className="flex gap-x-8">

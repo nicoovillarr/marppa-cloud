@@ -16,6 +16,9 @@ import * as SessionContext from '@/auth/infrastructure/als/session.context';
 import { ZoneService } from '@/mesh/domain/services/zone.service';
 import { DNS_PROVIDER } from './dns-provider.service';
 import { ForbiddenError } from '@/shared/domain/errors/forbidden.error';
+import { BadRequestError } from '@/shared/domain/errors/bad-request.error';
+import { DnsApiKeyService } from './dns-api-key.service';
+import { DnsApiKeyEntity } from '../entities/dns-api-key.entity';
 
 describe('PortalService', () => {
   let service: PortalService;
@@ -25,7 +28,6 @@ describe('PortalService', () => {
     'Test Portal',
     '192.168.1.1',
     PortalType.CLOUDFLARE,
-    'test-api-key-123',
     ResourceStatus.ACTIVE,
     'u-000001',
     'c-000001',
@@ -36,8 +38,31 @@ describe('PortalService', () => {
       corsEnabled: true,
       zoneId: 'z-000001',
       updatedBy: 'u-000001',
+      dnsApiKeyId: 1,
     },
   );
+
+  const storedKey = new DnsApiKeyEntity(
+    'Stored key',
+    PortalType.CLOUDFLARE,
+    'test-api-key-123',
+    'u-000001',
+    'c-000001',
+    { id: 1 },
+  );
+
+  const otherKey = new DnsApiKeyEntity(
+    'Other key',
+    PortalType.CLOUDFLARE,
+    'other-api-key-456',
+    'u-000001',
+    'c-000001',
+    { id: 2 },
+  );
+
+  const mockDnsApiKeyService = {
+    findUsableForPortal: jest.fn(),
+  };
 
   const mockPortalRepository = {
     findById: jest.fn(),
@@ -81,6 +106,10 @@ describe('PortalService', () => {
           provide: DNS_PROVIDER,
           useValue: mockDnsProvider,
         },
+        {
+          provide: DnsApiKeyService,
+          useValue: mockDnsApiKeyService,
+        },
       ],
     }).compile();
 
@@ -96,6 +125,9 @@ describe('PortalService', () => {
 
     mockZoneService.findById.mockResolvedValue({ id: 'z-000002' });
     mockDnsProvider.assertCanManage.mockResolvedValue(undefined);
+    mockDnsApiKeyService.findUsableForPortal.mockImplementation(async (id: number) =>
+      id === otherKey.id ? otherKey : storedKey,
+    );
   });
 
   afterEach(() => {
@@ -151,7 +183,7 @@ describe('PortalService', () => {
       description: 'New Description',
       address: '192.168.1.2',
       type: PortalType.CLOUDFLARE,
-      apiKey: 'new-api-key-456',
+      dnsApiKeyId: 2,
       enableCompression: false,
       corsEnabled: false,
       zoneId: 'z-000002',
@@ -163,7 +195,7 @@ describe('PortalService', () => {
       const result = await service.create(createDto);
 
       expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ status: ResourceStatus.QUEUED }),
+        expect.objectContaining({ status: ResourceStatus.QUEUED, dnsApiKeyId: 2 }),
       );
       expect(result).toEqual(mockPortalEntity);
     });
@@ -176,16 +208,27 @@ describe('PortalService', () => {
       );
     });
 
-    it('should verify the token can manage the address before inserting', async () => {
+    it('should verify the selected key can manage the address before inserting', async () => {
       mockPortalRepository.create.mockResolvedValue(mockPortalEntity);
 
       await service.create(createDto);
 
+      expect(mockDnsApiKeyService.findUsableForPortal).toHaveBeenCalledWith(
+        2,
+        PortalType.CLOUDFLARE,
+      );
       expect(mockDnsProvider.assertCanManage).toHaveBeenCalledWith(
         createDto.type,
         createDto.address,
-        createDto.apiKey,
+        otherKey.apiKey,
       );
+    });
+
+    it('should not create a portal with a key it cannot use', async () => {
+      mockDnsApiKeyService.findUsableForPortal.mockRejectedValue(new NotFoundError());
+
+      await expect(service.create(createDto)).rejects.toThrow(NotFoundError);
+      expect(repository.create).not.toHaveBeenCalled();
     });
 
     it('should not create a portal for a zone the token cannot manage', async () => {
@@ -216,7 +259,7 @@ describe('PortalService', () => {
       name: 'Updated Portal',
       address: '192.168.1.1',
       type: PortalType.CLOUDFLARE,
-      apiKey: 'api-key',
+      dnsApiKeyId: 1,
       description: 'Updated Description',
       enableCompression: true,
       corsEnabled: true,
@@ -241,32 +284,48 @@ describe('PortalService', () => {
       expect(result).toEqual(mockPortalEntity);
     });
 
-    it('should apply address, type and apiKey changes', async () => {
+    it('should switch the portal to another key after verifying it', async () => {
       mockPortalRepository.findById.mockResolvedValue(mockPortalEntity);
       mockPortalRepository.update.mockResolvedValue(mockPortalEntity);
 
       await service.update('p-000001', {
         address: 'new.marppa.cloud',
-        apiKey: 'rotated-key',
+        dnsApiKeyId: 2,
       });
 
+      expect(mockDnsProvider.assertCanManage).toHaveBeenCalledWith(
+        PortalType.CLOUDFLARE,
+        'new.marppa.cloud',
+        otherKey.apiKey,
+      );
       expect(repository.update).toHaveBeenCalledWith(
         expect.objectContaining({
           address: 'new.marppa.cloud',
-          apiKey: 'rotated-key',
+          dnsApiKeyId: 2,
         }),
       );
     });
 
-    it('should keep the stored apiKey when the update omits it', async () => {
+    it('should keep the stored key when the update omits it', async () => {
       mockPortalRepository.findById.mockResolvedValue(mockPortalEntity);
       mockPortalRepository.update.mockResolvedValue(mockPortalEntity);
 
       await service.update('p-000001', { name: 'Renamed' });
 
       expect(repository.update).toHaveBeenCalledWith(
-        expect.objectContaining({ apiKey: 'test-api-key-123' }),
+        expect.objectContaining({ dnsApiKeyId: 1 }),
       );
+    });
+
+    it('should require a key when the portal has none and the address changes', async () => {
+      mockPortalRepository.findById.mockResolvedValue(
+        mockPortalEntity.clone({ dnsApiKeyId: null }),
+      );
+
+      await expect(
+        service.update('p-000001', { address: 'otro.marppa.cloud' }),
+      ).rejects.toThrow(BadRequestError);
+      expect(repository.update).not.toHaveBeenCalled();
     });
 
     it('should clear the zone when the update sends a null zoneId', async () => {
@@ -306,11 +365,11 @@ describe('PortalService', () => {
       expect(mockDnsProvider.assertCanManage).toHaveBeenCalledWith(
         mockPortalEntity.type,
         'otro.marppa.cloud',
-        mockPortalEntity.apiKey,
+        storedKey.apiKey,
       );
     });
 
-    it('should not verify anything when neither address nor apiKey change', async () => {
+    it('should not verify anything when neither address nor key change', async () => {
       mockPortalRepository.findById.mockResolvedValue(mockPortalEntity);
       mockPortalRepository.update.mockResolvedValue(mockPortalEntity);
 

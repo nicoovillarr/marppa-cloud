@@ -10,6 +10,7 @@ export type PolicySubjectType =
   | 'Zone'
   | 'Atom'
   | 'Portal'
+  | 'DnsApiKey'
   | 'Event'
   | 'User'
   | 'Company'
@@ -26,6 +27,7 @@ const OPERATIONAL_SUBJECTS: PolicySubjectType[] = [
   'Zone',
   'Atom',
   'Portal',
+  'DnsApiKey',
   'Event',
   'User',
 ];

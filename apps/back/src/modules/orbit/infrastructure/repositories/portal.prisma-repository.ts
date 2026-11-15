@@ -65,6 +65,17 @@ export class PortalPrismaRepository implements PortalRepository {
     return list.map(PortalPrismaMapper.toEntity);
   }
 
+  async findLiveByDnsApiKeyId(dnsApiKeyId: number): Promise<PortalEntity[]> {
+    const list = await this.prisma.portal.findMany({
+      where: {
+        dnsApiKeyId,
+        status: { not: ResourceStatus.DELETED },
+      },
+    });
+
+    return list.map(PortalPrismaMapper.toEntity);
+  }
+
   async create(data: PortalEntity): Promise<PortalEntity> {
     const sanitize = PrismaMapper.toCreate(data);
 

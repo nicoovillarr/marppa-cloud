@@ -7,7 +7,7 @@ export type CreatePortalDto = {
     description?: string;
     address: string;
     type: PortalType;
-    apiKey: string;
+    dnsApiKeyId: number;
     enableCompression?: boolean;
     corsEnabled?: boolean;
     zoneId?: string | null;
@@ -32,6 +32,7 @@ export type PortalResponseDto = {
     updatedAt: Date;
     updatedBy: string;
     zoneId: string;
+    dnsApiKeyId: number | null;
 }
 
 export type PortalWithTranspondersResponseDto = PortalResponseDto & {

@@ -320,8 +320,20 @@ transponders) follows one rule, encoded in `EVENT_STATE_MACHINE`
   default) so a deleted portal stops reserving its domain. Any model that soft-deletes
   a naturally-unique value needs the same treatment.
 
-Portal `apiKey` and `sslKey` are write-only: accepted on create/update, never exposed
-in a response model.
+`DnsApiKey.apiKey` is write-only: accepted on create/update, never exposed in a
+response model.
+
+### Dynamic DNS API keys
+
+A portal does not carry its own DNS credential: it points at a `DnsApiKey`
+(`dnsApiKeyId`), a named, company-owned token reused across portals and managed under
+`orbit/dns-api-keys`. Picking a key for a portal checks that it belongs to a manageable
+company and matches the portal's `type`, then verifies against the provider that it can
+manage the portal's address. Rotating a key's token re-verifies it against every live
+portal that uses it before saving (one failure keeps the old token) and requeues the
+ACTIVE/FAILED ones with `PORTAL_UPDATE`, so their ddclient configs pick up the new
+token; portals mid-transition read it when their pending event runs. A key used by any
+live portal cannot be deleted; soft-deleted portals are detached by `ON DELETE SET NULL`.
 
 ### Hive catalog (families, flavors, capacity)
 
@@ -537,7 +549,7 @@ Three consequences shape the module:
   assign time, so it is created `ACTIVE` with no assign event — but it cannot be
   deleted while its atom is live, or its IP would be handed out twice.
 
-`AtomEnvVar` values are stored in clear text, like `Portal.apiKey`: they are
+`AtomEnvVar` values are stored in clear text, like `DnsApiKey.apiKey`: they are
 secrets to the guest, not to the platform operator, and the processor needs them
 verbatim to build the container.
 

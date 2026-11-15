@@ -4,6 +4,8 @@ import {
   IsOptional,
   IsIn,
   IsBoolean,
+  IsInt,
+  IsPositive,
 } from 'class-validator';
 import { PortalType, SUPPORTED_PORTAL_TYPES } from '@marppa-cloud/api-types';
 
@@ -26,10 +28,10 @@ export class UpdatePortalDto {
   @IsOptional()
   type?: PortalType;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsInt()
+  @IsPositive()
   @IsOptional()
-  apiKey?: string;
+  dnsApiKeyId?: number;
 
   @IsBoolean()
   @IsOptional()

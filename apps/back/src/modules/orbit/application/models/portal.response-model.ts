@@ -50,4 +50,7 @@ export class PortalResponseModel {
 
   @Expose()
   public readonly zoneId: string;
+
+  @Expose()
+  public readonly dnsApiKeyId: number | null;
 }

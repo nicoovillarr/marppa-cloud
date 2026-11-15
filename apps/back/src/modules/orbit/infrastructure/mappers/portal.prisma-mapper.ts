@@ -9,7 +9,6 @@ export class PortalPrismaMapper {
       raw.name,
       raw.address,
       PortalType[raw.type as string],
-      raw.apiKey,
       ResourceStatus[raw.status as string],
       raw.createdBy,
       raw.ownerId,
@@ -24,6 +23,7 @@ export class PortalPrismaMapper {
         updatedAt: raw.updatedAt,
         updatedBy: raw.updatedBy ?? undefined,
         zoneId: raw.zoneId ?? undefined,
+        dnsApiKeyId: raw.dnsApiKeyId,
       },
     );
   }

@@ -15,10 +15,15 @@ import { EventModule } from '@/event/event.module';
 import { MeshModule } from '@/mesh/mesh.module';
 import { DNS_PROVIDER } from './domain/services/dns-provider.service';
 import { CloudflareDnsProvider } from './infrastructure/services/cloudflare-dns-provider.service';
+import { DnsApiKeyController } from './presentation/controllers/dns-api-key.controller';
+import { DnsApiKeyApiService } from './application/services/dns-api-key.api-service';
+import { DnsApiKeyService } from './domain/services/dns-api-key.service';
+import { DNS_API_KEY_REPOSITORY } from './domain/repositories/dns-api-key.repository';
+import { DnsApiKeyPrismaRepository } from './infrastructure/repositories/dns-api-key.prisma-repository';
 
 @Module({
   imports: [SharedModule, AuthModule, EventModule, MeshModule],
-  controllers: [PortalController, TransponderController],
+  controllers: [PortalController, TransponderController, DnsApiKeyController],
   providers: [
     PortalApiService,
     PortalService,
@@ -29,6 +34,13 @@ import { CloudflareDnsProvider } from './infrastructure/services/cloudflare-dns-
     {
       provide: DNS_PROVIDER,
       useClass: CloudflareDnsProvider,
+    },
+
+    DnsApiKeyApiService,
+    DnsApiKeyService,
+    {
+      provide: DNS_API_KEY_REPOSITORY,
+      useClass: DnsApiKeyPrismaRepository,
     },
 
     TransponderApiService,

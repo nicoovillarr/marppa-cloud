@@ -20,6 +20,8 @@ import { ZoneService } from '@/mesh/domain/services/zone.service';
 import { DNS_PROVIDER, DnsProvider } from './dns-provider.service';
 import { authorize } from '@/shared/domain/policy/authorize';
 import { CompanyHierarchyService } from '@/shared/domain/services/company-hierarchy.service';
+import { DnsApiKeyService } from './dns-api-key.service';
+import { BadRequestError } from '@/shared/domain/errors/bad-request.error';
 
 @Injectable()
 export class PortalService {
@@ -32,6 +34,7 @@ export class PortalService {
     private readonly dnsProvider: DnsProvider,
 
     private readonly companyHierarchyService: CompanyHierarchyService,
+    private readonly dnsApiKeyService: DnsApiKeyService,
   ) { }
 
   public getPortalTypes(): string[] {
@@ -90,13 +93,16 @@ export class PortalService {
     }
 
     await this.assertOwnedZone(data.zoneId);
-    await this.dnsProvider.assertCanManage(data.type, data.address, data.apiKey);
+    const dnsApiKey = await this.dnsApiKeyService.findUsableForPortal(
+      data.dnsApiKeyId,
+      data.type,
+    );
+    await this.dnsProvider.assertCanManage(data.type, data.address, dnsApiKey.apiKey);
 
     const portal = new PortalEntity(
       data.name,
       data.address,
       data.type,
-      data.apiKey,
       getEventStateTransition(EventTypeKey.PORTAL_CREATE).entry,
       user.userId,
       user.companyId,
@@ -105,6 +111,7 @@ export class PortalService {
         enableCompression: data.enableCompression,
         corsEnabled: data.corsEnabled,
         zoneId: data.zoneId,
+        dnsApiKeyId: dnsApiKey.id,
       },
     );
 
@@ -121,11 +128,21 @@ export class PortalService {
 
     await this.assertOwnedZone(data.zoneId);
 
-    if (data.address != null || data.apiKey != null) {
+    const type = data.type ?? portal.type;
+    const dnsApiKeyId = data.dnsApiKeyId ?? portal.dnsApiKeyId;
+    const credentialsChanged =
+      data.address != null || data.type != null || data.dnsApiKeyId != null;
+
+    if (credentialsChanged) {
+      if (dnsApiKeyId == null) {
+        throw new BadRequestError('Pick an API key for this portal.');
+      }
+
+      const dnsApiKey = await this.dnsApiKeyService.findUsableForPortal(dnsApiKeyId, type);
       await this.dnsProvider.assertCanManage(
-        data.type ?? portal.type,
+        type,
         data.address ?? portal.address,
-        data.apiKey ?? portal.apiKey,
+        dnsApiKey.apiKey,
       );
     }
 
@@ -134,7 +151,7 @@ export class PortalService {
       description: data.description,
       address: data.address,
       type: data.type,
-      apiKey: data.apiKey,
+      dnsApiKeyId: data.dnsApiKeyId,
       enableCompression: data.enableCompression,
       corsEnabled: data.corsEnabled,
       zoneId: data.zoneId,

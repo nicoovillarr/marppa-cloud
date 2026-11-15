@@ -15,6 +15,7 @@ export type {
   AtomEnvVar,
   AtomImage,
   Company,
+  DnsApiKey,
   Event,
   EventProperty,
   EventResource,
