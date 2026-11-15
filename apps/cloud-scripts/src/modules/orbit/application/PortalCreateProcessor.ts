@@ -28,7 +28,7 @@ export class PortalCreateProcessor implements IEventProcessor {
   ) { }
 
   public async handle(event: EventPayload): Promise<void> {
-    let portal: { id: string; ownerId: string; status: string; address: string; type: string; apiKey: string; [k: string]: unknown } | null = null;
+    let portal: { id: string; ownerId: string; status: string; address: string; type: string; dnsApiKey: { apiKey: string } | null; [k: string]: unknown } | null = null;
 
     const updatePortalStatus = async (status: ResourceStatus) => {
       await this.prisma.portal.update({
@@ -54,6 +54,7 @@ export class PortalCreateProcessor implements IEventProcessor {
       portal = await this.prisma.portal.findUnique({
         where: { id: resourcePortal.resourceId, status: { not: ResourceStatus.DELETED } },
         include: {
+          dnsApiKey: { select: { apiKey: true } },
           transponders: {
             where: { status: { not: ResourceStatus.DELETED } },
             include: { node: true },
@@ -72,13 +73,20 @@ export class PortalCreateProcessor implements IEventProcessor {
         );
       }
 
+      if (!portal.dnsApiKey) {
+        throw new AbortError(
+          `Portal ${portal.id} has no DNS API key for event ID: ${event.id}`,
+          EventType.PORTAL_CREATE_FAILED,
+        );
+      }
+
       await updatePortalStatus(STATES.work);
 
       const dnsRecord = {
         id: portal.id,
         address: portal.address,
         type: portal.type,
-        apiKey: portal.apiKey,
+        apiKey: portal.dnsApiKey.apiKey,
       };
 
       await this.orbitService.ensurePortalDnsRecord(dnsRecord);

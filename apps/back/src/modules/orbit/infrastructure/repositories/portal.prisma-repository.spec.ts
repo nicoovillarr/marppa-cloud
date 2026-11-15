@@ -39,7 +39,6 @@ describe('PortalPrismaRepository (Integration)', () => {
         'Test Portal Integration',
         testAddress,
         PortalType.CLOUDFLARE,
-        'test-api-key-integration-123',
         ResourceStatus.ACTIVE,
         'u-000001',
         testCompanyId,
@@ -58,7 +57,7 @@ describe('PortalPrismaRepository (Integration)', () => {
       expect(result.name).toBe('Test Portal Integration');
       expect(result.address).toBe(testAddress);
       expect(result.type).toBe(PortalType.CLOUDFLARE);
-      expect(result.apiKey).toBe('test-api-key-integration-123');
+      expect(result.dnsApiKeyId).toBeNull();
       expect(result.ownerId).toBe(testCompanyId);
       createdPortalId = result.id!;
     });

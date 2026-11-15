@@ -466,6 +466,10 @@ portal's record only ever moves when someone edits the portal, so it is what mak
 DNS actually dynamic. The `lastPublicIP` filter is also what keeps the poll cheap: one
 IP lookup per cycle instead of one ddclient run per portal.
 
+The token comes from the portal's `DnsApiKey` relation, shared by every portal that uses
+that key. The create/update processors abort a portal that has no key, and `IPChecker`
+skips it.
+
 **Only Cloudflare is supported.** `PortalType` still carries a `DYNU` value in the
 database enum, but `SUPPORTED_PORTAL_TYPES` (in `@marppa-cloud/api-types`) is the app's
 source of truth: the API rejects any other type on create/update, and the host service
@@ -862,7 +866,7 @@ the host and dropped, and every transponder routed to that node is deleted and i
 portal's Caddy config regenerated. A portal left with zero live transponders is deleted
 too — its Caddy site and ddclient entry go away, and its address is released
 (`deletedAt` is stamped, freeing the `[address, deletedAt]` unique). That last step is
-irreversible and loses the portal's `apiKey`; portals shared with nodes that survive the
+irreversible, though the portal's `DnsApiKey` survives for reuse; portals shared with nodes that survive the
 teardown keep their remaining routes and are only regenerated. Deleting a worker used to
 abort when any transponder still pointed at its node, which left the worker stuck in
 `QUEUED` with no way forward.

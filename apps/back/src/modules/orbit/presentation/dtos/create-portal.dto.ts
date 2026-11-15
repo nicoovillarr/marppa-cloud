@@ -4,6 +4,8 @@ import {
   IsOptional,
   IsIn,
   IsBoolean,
+  IsInt,
+  IsPositive,
 } from 'class-validator';
 import { SUPPORTED_PORTAL_TYPES } from '@marppa-cloud/api-types';
 import { PortalType } from '../../domain/enum/portal-type.enum';
@@ -24,9 +26,9 @@ export class CreatePortalDto {
   @IsIn(SUPPORTED_PORTAL_TYPES)
   type: PortalType;
 
-  @IsString()
-  @IsNotEmpty()
-  apiKey: string;
+  @IsInt()
+  @IsPositive()
+  dnsApiKeyId: number;
 
   @IsBoolean()
   @IsOptional()

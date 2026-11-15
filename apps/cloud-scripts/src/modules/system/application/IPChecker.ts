@@ -39,19 +39,21 @@ export class IPChecker implements OnModuleInit, OnModuleDestroy {
         const portals = await this.prisma.portal.findMany({
           where: {
             status: ResourceStatus.ACTIVE,
+            dnsApiKeyId: { not: null },
             OR: [{ lastPublicIP: { not: ip } }, { lastPublicIP: null }],
           },
+          include: { dnsApiKey: { select: { apiKey: true } } },
         });
 
         if (portals.length > 0) {
           this.logger.log(`[IPChecker] Portals needing DNS update: ${portals.length}`);
 
           await this.orbitService.batchSyncPortalDns(
-            portals.map((p: { id: string; address: string; type: string; apiKey: string }) => ({
+            portals.map((p) => ({
               id: p.id,
               address: p.address,
               type: p.type,
-              apiKey: p.apiKey,
+              apiKey: p.dnsApiKey!.apiKey,
             })),
             ip,
           );

@@ -4,7 +4,7 @@ import { useVisibleCompanies } from "@/company/models/use-visible-companies";
 import { Button } from "@/core/ui/Button";
 import { ColumnMapping, Table, TableHandler } from "@/core/ui/Table";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { LuListPlus } from "react-icons/lu";
+import { LuKeyRound, LuListPlus } from "react-icons/lu";
 import { toast } from "sonner";
 import { PortalDetails } from "./PortalDetails";
 import ReactTimeAgo from "react-timeago";
@@ -147,11 +147,19 @@ export function PortalsList() {
         <h2 className="font-bold text-xl w-full text-ellipsis line-clamp-1">
           Your Portals
         </h2>
-        <Button
-          text="Create New"
-          icon={<LuListPlus />}
-          href="/dashboard/orbit/portals/create"
-        />
+        <div className="flex gap-x-2 shrink-0">
+          <Button
+            text="API Keys"
+            icon={<LuKeyRound />}
+            style="secondary"
+            href="/dashboard/orbit/dns-api-keys"
+          />
+          <Button
+            text="Create New"
+            icon={<LuListPlus />}
+            href="/dashboard/orbit/portals/create"
+          />
+        </div>
       </header>
 
       {portals && portals.length > 0 ? (

@@ -10,13 +10,24 @@ export interface CreatePortalRequest {
   description?: string;
   address: string;
   type: PortalType;
-  apiKey: string;
+  dnsApiKeyId: number;
   enableCompression?: boolean;
   corsEnabled?: boolean;
   zoneId?: string;
 }
 
 export type UpdatePortalRequest = Partial<CreatePortalRequest>;
+
+export interface CreateDnsApiKeyRequest {
+  name: string;
+  type: PortalType;
+  apiKey: string;
+}
+
+export interface UpdateDnsApiKeyRequest {
+  name?: string;
+  apiKey?: string;
+}
 
 export interface CreateTransponderRequest {
   path: string;
@@ -46,6 +57,19 @@ export interface PortalResponse {
   corsEnabled: boolean;
   ownerId: string;
   zoneId: string;
+  dnsApiKeyId: number | null;
+  createdAt: Date;
+  createdBy: string;
+  updatedAt: Date;
+  updatedBy: string;
+}
+
+export interface DnsApiKeyResponse {
+  id: number;
+  name: string;
+  type: PortalType;
+  portalCount: number;
+  ownerId: string;
   createdAt: Date;
   createdBy: string;
   updatedAt: Date;

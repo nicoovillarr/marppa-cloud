@@ -14,6 +14,7 @@ interface PortalOptionalProps {
   updatedAt?: Date;
   updatedBy?: string;
   zoneId?: string | null;
+  dnsApiKeyId?: number | null;
 }
 
 export class PortalEntity extends PatchableEntity {
@@ -29,12 +30,12 @@ export class PortalEntity extends PatchableEntity {
   public readonly updatedAt?: Date;
   public readonly updatedBy?: string;
   public readonly zoneId?: string | null;
+  public readonly dnsApiKeyId?: number | null;
 
   constructor(
     public readonly name: string,
     public readonly address: string,
     public readonly type: PortalType,
-    public readonly apiKey: string,
     public readonly status: ResourceStatus,
     public readonly createdBy: string,
     public readonly ownerId: string,
@@ -52,6 +53,7 @@ export class PortalEntity extends PatchableEntity {
     this.updatedAt = optionals.updatedAt;
     this.updatedBy = optionals.updatedBy;
     this.zoneId = optionals.zoneId;
+    this.dnsApiKeyId = optionals.dnsApiKeyId;
   }
 
   public toObject(): Record<string, any> {
@@ -61,7 +63,6 @@ export class PortalEntity extends PatchableEntity {
       description: this.description,
       address: this.address,
       type: this.type,
-      apiKey: this.apiKey,
       lastSyncAt: this.lastSyncAt,
       lastPublicIP: this.lastPublicIP,
       status: this.status,
@@ -72,6 +73,7 @@ export class PortalEntity extends PatchableEntity {
       updatedAt: this.updatedAt,
       updatedBy: this.updatedBy,
       zoneId: this.zoneId,
+      dnsApiKeyId: this.dnsApiKeyId,
       ownerId: this.ownerId,
     };
   }
@@ -81,7 +83,6 @@ export class PortalEntity extends PatchableEntity {
       object.name,
       object.address,
       object.type,
-      object.apiKey,
       object.status,
       object.createdBy,
       object.ownerId,
@@ -96,6 +97,7 @@ export class PortalEntity extends PatchableEntity {
         updatedAt: object.updatedAt,
         updatedBy: object.updatedBy,
         zoneId: object.zoneId,
+        dnsApiKeyId: object.dnsApiKeyId,
       },
     );
   }

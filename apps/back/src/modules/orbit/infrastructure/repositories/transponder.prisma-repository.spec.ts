@@ -34,7 +34,6 @@ describe('TransponderPrismaRepository (Integration)', () => {
         name: 'Test Portal Transponder Integration',
         address: 'integration-test.marppa.cloud',
         type: PortalType.CLOUDFLARE,
-        apiKey: 'test-api-key-transponder-integration',
         status: ResourceStatus.ACTIVE,
         createdBy: 'u-000001',
         ownerId: testCompanyId,

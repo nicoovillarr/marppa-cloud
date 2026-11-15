@@ -579,7 +579,6 @@ model Portal {
 
   address      String
   type         PortalType
-  apiKey       String
   lastSyncAt   DateTime?
   lastPublicIP String?
   status       ResourceStatus @default(QUEUED)
@@ -597,12 +596,34 @@ model Portal {
   zoneId String?
   zone   Zone?   @relation(fields: [zoneId], references: [id])
 
+  dnsApiKeyId Int?
+  dnsApiKey   DnsApiKey? @relation(fields: [dnsApiKeyId], references: [id], onDelete: SetNull)
+
   ownerId String
   owner   Company @relation(fields: [ownerId], references: [id])
 
   transponders Transponder[]
 
   @@unique([address, deletedAt])
+}
+
+model DnsApiKey {
+  id     Int        @id @default(autoincrement())
+  name   String
+  type   PortalType
+  apiKey String
+
+  createdAt DateTime @default(now())
+  createdBy String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  ownerId String
+  owner   Company @relation(fields: [ownerId], references: [id])
+
+  portals Portal[]
+
+  @@unique([ownerId, name])
 }
 
 model Transponder {
@@ -652,6 +673,7 @@ model Company {
   atomVolumes    AtomVolume[]
   storages       WorkerDisk[]
   portals        Portal[]
+  dnsApiKeys     DnsApiKey[]
   events         Event[]
 
   children Company[] @relation("CompanyHierarchy")
