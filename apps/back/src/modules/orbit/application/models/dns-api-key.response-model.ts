@@ -9,6 +9,9 @@ export class DnsApiKeyResponseModel {
   public readonly name: string;
 
   @Expose()
+  public readonly description: string | null;
+
+  @Expose()
   public readonly type: PortalType;
 
   @Expose()

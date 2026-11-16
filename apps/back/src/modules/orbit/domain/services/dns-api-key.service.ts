@@ -24,12 +24,14 @@ import { DNS_PROVIDER, DnsProvider } from './dns-provider.service';
 
 export interface CreateDnsApiKeyInput {
   name: string;
+  description?: string;
   type: PortalType;
   apiKey: string;
 }
 
 export interface UpdateDnsApiKeyInput {
   name?: string;
+  description?: string | null;
   apiKey?: string;
 }
 
@@ -106,7 +108,9 @@ export class DnsApiKeyService {
     await this.assertNameAvailable(user.companyId, name);
 
     return this.repository.create(
-      new DnsApiKeyEntity(name, data.type, data.apiKey.trim(), user.userId, user.companyId),
+      new DnsApiKeyEntity(name, data.type, data.apiKey.trim(), user.userId, user.companyId, {
+        description: this.normalizeDescription(data.description),
+      }),
     );
   }
 
@@ -135,7 +139,14 @@ export class DnsApiKeyService {
     }
 
     const updated = await this.repository.update(
-      key.clone({ name, apiKey, updatedBy: user.userId }),
+      key.clone({
+        name,
+        apiKey,
+        description: data.description === undefined
+          ? undefined
+          : this.normalizeDescription(data.description),
+        updatedBy: user.userId,
+      }),
     );
 
     const resyncedPortals: PortalEntity[] = [];
@@ -168,6 +179,11 @@ export class DnsApiKeyService {
     }
 
     await this.repository.delete(key.id!);
+  }
+
+  private normalizeDescription(description?: string | null): string | null {
+    const trimmed = description?.trim();
+    return trimmed ? trimmed : null;
   }
 
   private async assertNameAvailable(ownerId: string, name: string): Promise<void> {

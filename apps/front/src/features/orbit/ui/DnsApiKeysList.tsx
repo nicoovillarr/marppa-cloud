@@ -18,6 +18,14 @@ const COLUMNS: ColumnMapping<DnsApiKeyResponseDto> = {
     label: "Name",
     width: "100%",
     minWidth: "200px",
+    renderFn: (value: DnsApiKeyResponseDto) => (
+      <div className="min-w-0">
+        <p className="truncate">{value.name}</p>
+        {value.description && (
+          <p className="text-xs text-ink-muted truncate">{value.description}</p>
+        )}
+      </div>
+    ),
   },
   type: {
     label: "Provider",

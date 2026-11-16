@@ -99,8 +99,24 @@ describe('DnsApiKeyService', () => {
       });
 
       expect(result).toEqual(
-        expect.objectContaining({ name: 'Main', apiKey: 'token', ownerId: 'c-000001' }),
+        expect.objectContaining({
+          name: 'Main',
+          apiKey: 'token',
+          ownerId: 'c-000001',
+          description: null,
+        }),
       );
+    });
+
+    it('should keep a trimmed description', async () => {
+      const result = await service.create({
+        name: 'Main',
+        description: '  Zone marppa.com  ',
+        type: PortalType.CLOUDFLARE,
+        apiKey: 'token',
+      });
+
+      expect(result.description).toBe('Zone marppa.com');
     });
 
     it('should reject a duplicated name', async () => {
@@ -138,6 +154,22 @@ describe('DnsApiKeyService', () => {
       expect(mockPortalRepository.findLiveByDnsApiKeyId).not.toHaveBeenCalled();
       expect(result.dnsApiKey.name).toBe('Renamed');
       expect(result.resyncedPortals).toEqual([]);
+    });
+
+    it('should clear the description when it is sent empty', async () => {
+      mockRepository.findById.mockResolvedValue(key.clone({ description: 'old' }));
+
+      const result = await service.update(1, { description: '   ' });
+
+      expect(result.dnsApiKey.description).toBeNull();
+    });
+
+    it('should keep the description when the update omits it', async () => {
+      mockRepository.findById.mockResolvedValue(key.clone({ description: 'old' }));
+
+      const result = await service.update(1, { name: 'Renamed' });
+
+      expect(result.dnsApiKey.description).toBe('old');
     });
 
     it('should verify the rotated token against every portal and requeue the settled ones', async () => {

@@ -4,6 +4,7 @@ import { PortalType } from '../enum/portal-type.enum';
 
 interface DnsApiKeyOptionalProps {
   id?: number;
+  description?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
   updatedBy?: string;
@@ -13,6 +14,7 @@ export class DnsApiKeyEntity extends PatchableEntity {
   @PrimaryKey()
   public readonly id?: number;
 
+  public readonly description?: string | null;
   public readonly createdAt?: Date;
   public readonly updatedAt?: Date;
   public readonly updatedBy?: string;
@@ -28,6 +30,7 @@ export class DnsApiKeyEntity extends PatchableEntity {
     super();
 
     this.id = optionals.id;
+    this.description = optionals.description;
     this.createdAt = optionals.createdAt;
     this.updatedAt = optionals.updatedAt;
     this.updatedBy = optionals.updatedBy;
@@ -37,6 +40,7 @@ export class DnsApiKeyEntity extends PatchableEntity {
     return {
       id: this.id,
       name: this.name,
+      description: this.description,
       type: this.type,
       apiKey: this.apiKey,
       createdAt: this.createdAt,
@@ -56,6 +60,7 @@ export class DnsApiKeyEntity extends PatchableEntity {
       object.ownerId,
       {
         id: object.id,
+        description: object.description,
         createdAt: object.createdAt,
         updatedAt: object.updatedAt,
         updatedBy: object.updatedBy,

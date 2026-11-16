@@ -12,6 +12,7 @@ export class DnsApiKeyPrismaMapper {
       raw.ownerId,
       {
         id: raw.id,
+        description: raw.description,
         createdAt: raw.createdAt,
         updatedAt: raw.updatedAt,
         updatedBy: raw.updatedBy ?? undefined,
