@@ -8,6 +8,11 @@ export class UpdateDnsApiKeyDto {
   name?: string;
 
   @IsString()
+  @MaxLength(500)
+  @IsOptional()
+  description?: string | null;
+
+  @IsString()
   @IsNotEmpty()
   @IsOptional()
   apiKey?: string;

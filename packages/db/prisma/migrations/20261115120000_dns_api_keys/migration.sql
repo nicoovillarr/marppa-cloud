@@ -22,7 +22,10 @@ ALTER TABLE "Portal" ADD CONSTRAINT "Portal_dnsApiKeyId_fkey" FOREIGN KEY ("dnsA
 
 INSERT INTO "DnsApiKey" ("name", "type", "apiKey", "createdAt", "createdBy", "updatedAt", "ownerId")
 SELECT
-    initcap(lower(keys."type"::TEXT)) || ' key ' || row_number() OVER (PARTITION BY keys."ownerId" ORDER BY keys."firstCreatedAt"),
+    CASE
+        WHEN keys."nameRank" = 1 THEN keys."portalName"
+        ELSE keys."portalName" || ' (' || keys."nameRank" || ')'
+    END,
     keys."type",
     keys."apiKey",
     keys."firstCreatedAt",
@@ -30,11 +33,17 @@ SELECT
     CURRENT_TIMESTAMP,
     keys."ownerId"
 FROM (
-    SELECT DISTINCT ON ("ownerId", "type", "apiKey")
-        "ownerId", "type", "apiKey", "createdBy", "createdAt" AS "firstCreatedAt"
-    FROM "Portal"
-    WHERE "status" <> 'DELETED'
-    ORDER BY "ownerId", "type", "apiKey", "createdAt"
+    SELECT
+        firsts.*,
+        row_number() OVER (PARTITION BY firsts."ownerId", firsts."portalName" ORDER BY firsts."firstCreatedAt", firsts."portalId") AS "nameRank"
+    FROM (
+        SELECT DISTINCT ON ("ownerId", "type", "apiKey")
+            "ownerId", "type", "apiKey", "createdBy",
+            "id" AS "portalId", "name" AS "portalName", "createdAt" AS "firstCreatedAt"
+        FROM "Portal"
+        WHERE "status" <> 'DELETED'
+        ORDER BY "ownerId", "type", "apiKey", "createdAt", "id"
+    ) AS firsts
 ) AS keys;
 
 UPDATE "Portal" AS p

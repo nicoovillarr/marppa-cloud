@@ -20,12 +20,14 @@ export type UpdatePortalRequest = Partial<CreatePortalRequest>;
 
 export interface CreateDnsApiKeyRequest {
   name: string;
+  description?: string;
   type: PortalType;
   apiKey: string;
 }
 
 export interface UpdateDnsApiKeyRequest {
   name?: string;
+  description?: string | null;
   apiKey?: string;
 }
 
@@ -67,6 +69,7 @@ export interface PortalResponse {
 export interface DnsApiKeyResponse {
   id: number;
   name: string;
+  description: string | null;
   type: PortalType;
   portalCount: number;
   ownerId: string;

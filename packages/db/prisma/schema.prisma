@@ -608,8 +608,9 @@ model Portal {
 }
 
 model DnsApiKey {
-  id     Int        @id @default(autoincrement())
-  name   String
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String?
   type   PortalType
   apiKey String
 
